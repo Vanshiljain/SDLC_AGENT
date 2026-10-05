@@ -1,0 +1,16 @@
+{
+  "extends": "@forgeline/config/tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "isolatedModules": false,
+    "strictPropertyInitialization": false,
+    "declaration": false,
+    "declarationMap": false,
+    "incremental": true,
+    "types": ["node", "jest", "multer"]
+  },
+  "include": ["src", "test"]
+}

@@ -197,6 +197,16 @@ export type Simulated<O> = O extends object ? { [K in keyof O]: O[K] | null } : 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnySdlcTool = SdlcTool<any, any>;
 
+/**
+ * Platform tools whose outputs are consumed through templates: input type is
+ * inferred from the zod schema, output is a free-form record.
+ */
+export function defineLooseTool<S extends z.ZodType>(
+  tool: Omit<SdlcTool<z.output<S>, Record<string, unknown>>, 'inputSchema'> & { inputSchema: S },
+): SdlcTool<z.output<S>, Record<string, unknown>> {
+  return tool as unknown as SdlcTool<z.output<S>, Record<string, unknown>>;
+}
+
 /** Identity helper that preserves generic inference for tool definitions. */
 export function defineTool<I, O>(tool: SdlcTool<I, O>): SdlcTool<I, O> {
   return tool;

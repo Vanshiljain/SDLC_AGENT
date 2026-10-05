@@ -164,7 +164,10 @@ function allowedReferences(
     set.add(owner);
     return set;
   }
-  return ancestors(steps, step.key);
+  const set = ancestors(steps, step.key);
+  // A step may read the output of its own repair step (e.g. the commit SHA produced by a fix).
+  if (step.repair) set.add(step.repair.step);
+  return set;
 }
 
 /** Throwing variant for internal use. */

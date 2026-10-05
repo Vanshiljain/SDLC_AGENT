@@ -413,6 +413,7 @@ model Organization {
   documents         Document[]
   deployments       Deployment[]
   externalResources ExternalResource[]
+  invitations       Invitation[]
 }
 
 model Membership {
@@ -428,6 +429,24 @@ model Membership {
 
   @@unique([organizationId, userId])
   @@index([userId])
+}
+
+model Invitation {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  email          String
+  role           OrgRole   @default(MEMBER)
+  /// SHA-256 of the one-time invite token.
+  tokenHash      String    @unique
+  invitedById    String?   @db.Uuid
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, email])
 }
 
 model Team {
@@ -921,6 +940,10 @@ model WorkflowExecutionStep {
   leaseOwner     String?
   leaseExpiresAt DateTime?
   nextAttemptAt  DateTime?
+  /// Durable polling state for long-running tools (CI, deployments).
+  checkpoint     Json?
+  polls          Int        @default(0)
+  pollStartedAt  DateTime?
   startedAt      DateTime?
   completedAt    DateTime?
   durationMs     Int?

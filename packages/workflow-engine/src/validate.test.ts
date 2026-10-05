@@ -45,6 +45,10 @@ describe('validateWorkflowDefinition', () => {
       ],
     });
     expect(ok.issues).toEqual([]);
+    const ownerRef = validateWorkflowDefinition({
+      steps: [tool('ci', { input: { ref: '{{ coalesce(steps.fix.output.sha, inputs.ref) }}' }, repair: { step: 'fix' } }), tool('fix')],
+    });
+    expect(ownerRef.issues).toEqual([]);
     const bad = validateWorkflowDefinition({
       steps: [tool('tests', { repair: { step: 'fix' } }), tool('fix', { dependsOn: ['tests'] })],
     });
