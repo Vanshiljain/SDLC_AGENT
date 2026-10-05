@@ -72,3 +72,21 @@ export function truncate(s: string | null | undefined, n: number): string {
   if (!s) return '';
   return s.length > n ? `${s.slice(0, n - 1)}…` : s;
 }
+
+const PROVIDER_NAMES: Record<string, string> = {
+  GITHUB: 'GitHub',
+  GITHUB_ACTIONS: 'GitHub Actions',
+  JIRA: 'Jira',
+  TRELLO: 'Trello',
+  NOTION: 'Notion',
+  CUSTOM_DEVOPS: 'Custom DevOps',
+  SLACK: 'Slack',
+  FORGELINE: 'Forgeline',
+  SIMULATED: 'Simulated',
+};
+
+/** Product names with their real casing (GitHub, not Github). */
+export function providerName(p: string | null | undefined): string {
+  if (!p) return '—';
+  return PROVIDER_NAMES[p.toUpperCase()] ?? titleCase(p);
+}

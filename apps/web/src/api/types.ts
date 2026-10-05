@@ -87,13 +87,13 @@ export interface ProjectSettings {
   approvalPolicy?: Record<string, 'required' | 'auto'>;
 }
 export interface ProjectHealth {
-  score: number;
-  status: 'healthy' | 'attention' | 'critical' | string;
+  score: number | null;
+  status: 'healthy' | 'at_risk' | 'critical' | 'unknown';
   runs14d: number;
   successRate: number | null;
   pendingApprovals: number;
-  lastQa: { status: string; passed: number; failed: number; total: number; createdAt: string } | null;
-  deployments: { environment: string; status: DeploymentStatus; version: string; at: string }[];
+  lastQa: { status: string; passed: number; failed: number; createdAt: string } | null;
+  deployments: { environment: string; type: EnvironmentType; status: DeploymentStatus; version: string; at: string; simulated: boolean }[];
 }
 export interface ProjectSummary {
   id: string;
@@ -682,10 +682,10 @@ export interface AgentRun {
 export interface ObservabilitySummary {
   windowDays: number;
   runsDaily: { day: string; status: string; count: number }[];
-  tokensByModel: { model: string; tokens: number; calls: number }[];
-  agents: { agent: string; runs: number; failed: number; tokens: number; avgMs: number }[];
-  tools: { tool: string; total: number; failed: number; errorRate: number; avgMs: number; p95Ms: number }[];
-  stepLatency: { tool: string; p50: number; p95: number; samples: number }[];
+  tokensByModel: { model: string; runs: number; calls: number; prompt: number; completion: number; total: number }[];
+  agents: { agent: string; runs: number; failed: number; tokens: number; avgMs: number | null }[];
+  tools: { tool: string; total: number; failed: number; errorRate: number; avgMs: number | null; p95Ms: number | null }[];
+  stepLatency: { tool: string; p50: number | null; p95: number | null; samples: number }[];
   errorKinds: { kind: string; count: number }[];
 }
 export interface AuditEntry {

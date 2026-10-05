@@ -7,7 +7,7 @@ import { api } from '@/api/client';
 import { qk, useAction, useAudit, useExecution, useExecutionLogs } from '@/api/queries';
 import type { Artifact, ExecutionDetail, ExecutionLog, ExecutionStep } from '@/api/types';
 import { cn } from '@/lib/cn';
-import { durationBetween, formatDateTime, formatDuration, formatNumber, shortSha, timeAgo, titleCase } from '@/lib/format';
+import { durationBetween, formatDateTime, formatDuration, formatNumber, shortSha, timeAgo, titleCase, providerName } from '@/lib/format';
 import { realtime } from '@/lib/realtime';
 import { useDocumentTitle, usePageContext } from '@/lib/use-page-context';
 import { Button } from '@/components/ui/button';
@@ -516,7 +516,7 @@ function SideEffects({ run }: { run: ExecutionDetail }) {
           <ul className="divide-y divide-line">
             {run.externalResources.map((r) => (
               <li key={r.id} className="flex items-center gap-3 px-4 py-2.5 text-[12.5px]">
-                <Badge className="w-24 justify-center">{titleCase(r.provider)}</Badge>
+                <Badge className="w-24 justify-center">{providerName(r.provider)}</Badge>
                 <span className="w-24 shrink-0 text-fg-subtle">{titleCase(r.type)}</span>
                 <span className="min-w-0 flex-1 truncate">
                   <ExtLink href={r.simulated ? null : r.url}>{r.key ?? r.title ?? r.type}</ExtLink>

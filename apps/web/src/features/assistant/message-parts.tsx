@@ -6,7 +6,7 @@ import { api } from '@/api/client';
 import { qk, useAction, useExecution } from '@/api/queries';
 import type { Message } from '@/api/types';
 import { cn } from '@/lib/cn';
-import { titleCase } from '@/lib/format';
+import { titleCase, providerName } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { MarkdownView } from '@/components/ui/content';
 import { Badge } from '@/components/ui/primitives';
@@ -147,7 +147,7 @@ function ProposalCard({ part, conversationId, compact }: { part: FlowProposalPar
               <span>Connect first:</span>
               {part.missingIntegrations.map((m) => (
                 <Badge key={m} tone="warn">
-                  {titleCase(m)}
+                  {providerName(m)}
                 </Badge>
               ))}
               <Link to="/integrations" className="ml-1 underline underline-offset-2">

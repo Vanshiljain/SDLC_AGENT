@@ -172,7 +172,8 @@ function DemoBanner() {
   return (
     <div className="demo-stripes flex items-center justify-center gap-2 border-b border-warn/30 px-4 py-1.5 text-center text-[12px] text-warn">
       <span className="font-semibold">Demo workspace</span>
-      <span className="text-warn/80">Every run here is simulated and labelled as such — no tickets, PRs or deployments are created in real systems.</span>
+      <span className="text-warn/80 sm:hidden">All runs are simulated.</span>
+      <span className="hidden text-warn/80 sm:inline">Every run here is simulated and labelled as such — no tickets, PRs or deployments are created in real systems.</span>
     </div>
   );
 }
@@ -188,13 +189,16 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
       <button
         type="button"
         onClick={() => ui.set({ paletteOpen: true })}
-        className="flex h-8 w-full max-w-md items-center gap-2 rounded-md border border-line bg-sunken/60 px-2.5 text-[12.5px] text-fg-subtle transition-colors hover:border-line-strong hover:text-fg-muted"
+        className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-md border border-line bg-sunken/60 px-2.5 text-[12.5px] text-fg-subtle transition-colors hover:border-line-strong hover:text-fg-muted sm:max-w-md"
       >
-        <Search className="size-3.5" />
-        <span className="flex-1 truncate text-left">Search, run a command, or ask Forge…</span>
-        <Kbd>⌘K</Kbd>
+        <Search className="size-3.5 shrink-0" />
+        <span className="flex-1 truncate text-left">
+          <span className="sm:hidden">Search or ask…</span>
+          <span className="hidden sm:inline">Search, run a command, or ask Forge…</span>
+        </span>
+        <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
       </button>
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
         <Tooltip content={live ? 'Live updates connected' : 'Reconnecting to live updates…'}>
           <span className="mr-1 hidden items-center gap-1.5 rounded-sm px-1.5 text-[11px] text-fg-subtle sm:flex">
             <span className={cn('size-1.5 rounded-full', live ? 'animate-pulse-dot bg-ok text-ok' : 'bg-warn')} />
