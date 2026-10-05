@@ -7,7 +7,9 @@
 > approval, and record every action in an audit trail.
 
 This document is both the Phase 1 analysis and the Phase 2 architecture plan. It
-is kept up to date with the implementation.
+is kept up to date with the implementation. Topic guides: [Workflow engine](WORKFLOW-ENGINE.md),
+[AI agents](AI-AGENT.md), [Integrations](INTEGRATIONS.md), [Security](SECURITY.md),
+[API](API.md), [Deployment](DEPLOYMENT.md).
 
 ---
 
@@ -100,15 +102,15 @@ packages/
   ai/                  LangChain abstractions: LLM/embedding providers, prompts,
                        structured output schemas, chunking, vector store port
   config/              Shared tsconfig presets
-e2e/                   Playwright acceptance tests + mock external services
-infra/                 Dockerfiles, nginx config
+e2e/                   Mock external services, API acceptance scenario, Playwright tests
+infra/                 nginx config, Docker build helpers (Dockerfiles live in apps/*)
 docs/                  Topic documentation
 ```
 
 Why packages instead of everything in `apps/api`: the engine, integrations and
 AI layer have **no NestJS dependency**, so they are unit-tested in milliseconds,
 and providers are replaceable through interfaces (requirements 23–26). The UI
-design system lives in `apps/web/src/design-system` because only one frontend
+design system lives in `apps/web/src/components/ui` because only one frontend
 consumes it.
 
 ### Process model
@@ -217,8 +219,9 @@ apps/api/src/
 
 ### Commands — "do anything from anywhere"
 
-Business actions are **commands** (`deploy.environment`, `review.pullRequest`,
-`generate.implementation`, `run.qa`, `docs.generate`, `step.retry`, …). Every
+Business actions are **commands** (`feature.deliver`, `ticket.create`,
+`code.generate`, `pr.review`, `qa.run`, `ci.run`, `deploy.environment`,
+`deploy.rollback`, `docs.generate`, `team.notify`, …; see `packages/shared/src/commands.ts`). Every
 entry point — chat, command palette, page buttons, Jira/GitHub webhooks,
 schedules — dispatches the same command through `CommandBus`, which checks
 permissions, resolves the Flow template, and starts a Run. No business logic
@@ -335,9 +338,10 @@ interface SdlcTool<I, O> {
 
 - Each provider has an HTTP **client** (fetch, timeout, error classification →
   `ToolError{kind, retryable, retryAfterMs}`) and **tools** built on it.
-- **CI/CD is an interface** (`CiCdProvider`: build, test, lint, securityScan,
-  createArtifact, buildContainer, scanImage, deploy, rollback, environments,
-  healthCheck, smokeTest, getRun). Implementations: `HttpDevOpsProvider` (our
+- **CI/CD is an interface** (`CiCdProvider`: `startPipeline` with stages lint,
+  build, test, security_scan, artifact, container_build, image_scan;
+  `getPipeline`, `getPipelineLogs`, `cancelPipeline`, `retryPipeline`, `deploy`,
+  `getDeployment`, `rollback`, `listEnvironments`, `healthCheck`). Implementations: `HttpDevOpsProvider` (our
   DevOps platform's REST contract, HMAC-signed) and `GitHubActionsCiCdProvider`.
   Health checks and smoke tests are executed by Forgeline itself as real HTTP
   probes against the environment URL.
@@ -375,8 +379,10 @@ interface SdlcTool<I, O> {
 
 ## 9. Deployment architecture
 
-- Single Docker image for the API (roles via `APP_ROLE`), nginx-served static
-  image for the web app.
+- One Dockerfile for the API with `api`, `worker` (adds the Docker CLI for the
+  validation sandbox) and `migrate` targets; runtime images are distroless and
+  non-root. The web app is served by nginx, which also proxies `/api` and
+  `/socket.io` so cookies stay same-origin.
 - `docker-compose.yml` (full stack) and `docker-compose.dev.yml` (infra only for
   local `pnpm dev`).
 - Migrations run as a one-shot `migrate` service before API/worker start.
@@ -386,13 +392,13 @@ interface SdlcTool<I, O> {
 
 ## 10. Testing strategy
 
-| Layer           | Tooling                                                                               | Scope                                                                                                                               |
-| --------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Packages        | Vitest                                                                                | engine scheduler, expressions, templates, backoff, validation; integration clients with mocked `fetch`; chunking; crypto            |
-| API unit        | Jest + @swc/jest                                                                      | guards/RBAC, policy engine, tool executor (idempotency, permission denial, retry classification)                                    |
-| API integration | Jest + Supertest + real Postgres/Redis                                                | auth flows, tenant isolation, approvals, full workflow runs with inline queue and stubbed providers, recovery after simulated crash |
-| Web             | Vitest + Testing Library                                                              | design-system components, chat rendering, approval card, workflow graph                                                             |
-| E2E             | Playwright + mock external services (Jira, GitHub, Notion, DevOps, OpenAI-compatible) | the acceptance scenario, end to end through real adapters                                                                           |
+| Layer           | Tooling                                                                               | Scope                                                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Packages        | Vitest                                                                                | engine scheduler, expressions, templates, backoff, validation; integration clients with mocked `fetch`; chunking; crypto         |
+| API unit        | Jest + @swc/jest                                                                      | approval policy, encryption/key rotation, redaction, configuration hardening, Prisma↔shared enum parity, flow template validity  |
+| API integration | Jest + Supertest + real Postgres/Redis                                                | auth/session security, tenant isolation, RBAC, branching/approval runs (inline queue), SSRF guard, retry, crash recovery, ledger |
+| Web             | Vitest + Testing Library                                                              | design-system components, chat rendering, approval card, workflow graph                                                          |
+| E2E             | Playwright + mock external services (Jira, GitHub, Notion, DevOps, OpenAI-compatible) | the acceptance scenario, end to end through real adapters                                                                        |
 
 ---
 
