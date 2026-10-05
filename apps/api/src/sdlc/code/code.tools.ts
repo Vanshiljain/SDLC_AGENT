@@ -223,6 +223,10 @@ export class CodeTools implements OnModuleInit {
           checks.push({ name, command, status: 'skipped', exitCode: null, durationMs: 0, excerpt: 'Skipped because install failed' });
           continue;
         }
+        if (name === 'typecheck' && /\btsc\b/.test(command) && (await this.sandbox.readFile(ws, 'tsconfig.json')) === null) {
+          checks.push({ name, command, status: 'skipped', exitCode: null, durationMs: 0, excerpt: 'No tsconfig.json in repository' });
+          continue;
+        }
         ctx.progress({ message: `Running ${name}…` });
         const res: CommandResult = await this.sandbox.run(ws, command, { image: s.sandboxImage, signal: ctx.signal });
         const ok = res.exitCode === 0 && !res.timedOut;

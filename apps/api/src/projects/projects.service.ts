@@ -20,7 +20,7 @@ const DEFAULT_ENVIRONMENTS: { name: string; type: EnvironmentType; requiresAppro
 export const DEFAULT_REPOSITORY_SETTINGS: RepositorySettings = {
   installCommand: 'npm ci --no-audit --no-fund',
   lintCommand: 'npm run lint --if-present',
-  typecheckCommand: 'npx --no-install tsc --noEmit -p . || true',
+  typecheckCommand: 'npx --no-install tsc --noEmit -p .',
   testCommand: 'npm test --if-present',
   buildCommand: 'npm run build --if-present',
   ciWorkflow: 'ci.yml',

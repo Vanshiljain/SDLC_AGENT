@@ -1,0 +1,21 @@
+{
+  "name": "@forgeline/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "End-to-end acceptance tests: mock external services + API scenario + browser tests",
+  "scripts": {
+    "mocks": "tsx mock-services/server.ts",
+    "test:api": "tsx --test scenario/*.test.ts",
+    "test:ui": "playwright test",
+    "test": "pnpm test:api",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@types/node": "^22.19.0",
+    "socket.io-client": "^4.8.4",
+    "tar": "^7.5.0",
+    "tsx": "^4.20.0",
+    "typescript": "~5.9.3"
+  }
+}

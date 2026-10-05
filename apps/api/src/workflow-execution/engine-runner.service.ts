@@ -27,6 +27,7 @@ import {
 import { PrismaService } from '../common/prisma/prisma.service';
 import { RequestContext } from '../common/context/request-context';
 import { EventBus } from '../events/event-bus.service';
+import { AuditService } from '../audit/audit.service';
 import { MetricsService } from '../observability/metrics.service';
 import { JobQueue } from '../queues/job-queue.service';
 import { ToolExecutor } from '../tools/tool-executor.service';
@@ -90,6 +91,7 @@ export class EngineRunner implements OnModuleInit {
     private readonly approvals: ApprovalsService,
     private readonly projects: ProjectContextService,
     private readonly approvalContext: ApprovalContextBuilder,
+    private readonly audit: AuditService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -232,6 +234,21 @@ export class EngineRunner implements OnModuleInit {
         }
         if (terminal && execution.status !== status) {
           this.metrics.workflowRuns.inc({ status, template: execution.template ?? 'custom', mode: execution.mode });
+          await this.audit.record(
+            {
+              organizationId: execution.organizationId,
+              actorType: 'SYSTEM',
+              actorId: null,
+              action: `workflow.run_${status.toLowerCase()}`,
+              resourceType: 'workflow_execution',
+              resourceId: executionId,
+              projectId: execution.projectId,
+              executionId,
+              status: status === 'COMPLETED' || status === 'COMPENSATED' ? 'SUCCESS' : 'FAILURE',
+              output: { title: execution.title, mode: execution.mode, ...(error && { error }) },
+            },
+            tx,
+          );
         }
       },
       { timeout: 30_000, maxWait: 15_000 },
@@ -473,11 +490,11 @@ export class EngineRunner implements OnModuleInit {
         const approval = await this.prisma.approval.findUnique({ where: { executionStepId: step.id } });
         if (!approval) {
           const steps = await this.prisma.workflowExecutionStep.findMany({ where: { executionId: execution.id } });
-          const ctx = await this.approvalContext.build(execution, steps, { action, environment, version: typeof input.version === 'string' ? input.version : null, userId: execution.triggeredById });
+          const ctx = await this.approvalContext.build(execution, steps, { action: decision.action, environment, version: typeof input.version === 'string' ? input.version : null, userId: execution.triggeredById });
           await this.requestApproval(execution, step, {
             title: `${tool.title}${environment ? ` → ${environment}` : ''}`,
             description: `${decision.reason}. ${execution.title}`,
-            action,
+            action: decision.action,
             risk: ctx.risk.level === 'LOW' ? decision.risk : ctx.risk.level,
             requiredPermission: decision.requiredPermission,
             allowSelfApproval: decision.allowSelfApproval,

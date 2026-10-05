@@ -7,6 +7,7 @@ import { githubCommitFiles, githubCreateBranch, githubCreatePullRequest } from '
 import { actionsAwaitRuns } from './github-actions/tools';
 import { JiraClient } from './jira/client';
 import { jiraCreateIssue, jiraTransitionIssue } from './jira/tools';
+import { probeUrl } from './http/probes';
 import { markdownToAdf, adfToText } from './jira/adf';
 import { markdownToBlocks, blocksToMarkdown } from './notion/blocks';
 import { verifyGitHubSignature, verifyTimestampedSignature, verifyTrelloSignature } from './webhooks/signatures';
@@ -275,5 +276,13 @@ describe('OAuth', () => {
     const jira = new URL(buildAuthorizeUrl('JIRA', { config: { clientId: 'cid', clientSecret: 's' }, redirectUri: 'https://app/cb', state: 'st' }));
     expect(jira.searchParams.get('audience')).toBe('api.atlassian.com');
     expect(jira.searchParams.get('scope')).toContain('offline_access');
+  });
+});
+
+describe('probe URLs', () => {
+  it('keeps the environment base path', () => {
+    expect(probeUrl('https://example.com/app', '/health')).toBe('https://example.com/app/health');
+    expect(probeUrl('https://example.com/app/', 'login')).toBe('https://example.com/app/login');
+    expect(probeUrl('https://example.com', '/api/status?x=1')).toBe('https://example.com/api/status?x=1');
   });
 });

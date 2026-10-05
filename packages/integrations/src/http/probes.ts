@@ -11,8 +11,13 @@ export interface ProbeResult {
   detail: string;
 }
 
+/** Resolves a probe path against the environment URL, preserving any base path (e.g. https://host/app + /health). */
+export function probeUrl(baseUrl: string, path: string): string {
+  return new URL(path.replace(/^\/+/, ''), baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`).toString();
+}
+
 export async function runProbe(baseUrl: string, test: SmokeTestDefinition, options: SafeFetchOptions, signal?: AbortSignal): Promise<ProbeResult> {
-  const url = new URL(test.path, baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`).toString();
+  const url = probeUrl(baseUrl, test.path);
   const expectStatus = test.expectStatus ?? 200;
   try {
     const res = await safeFetch(

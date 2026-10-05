@@ -1,0 +1,5 @@
+{
+  "extends": "../packages/config/tsconfig.node.json",
+  "compilerOptions": { "noEmit": true, "rootDir": ".", "types": ["node"] },
+  "include": ["mock-services/**/*.ts", "scenario/**/*.ts", "ui/**/*.ts", "playwright.config.ts"]
+}
