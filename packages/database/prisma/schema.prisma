@@ -1,0 +1,1362 @@
+// Forgeline — primary relational schema.
+//
+// Conventions
+//  * UUID primary keys, createdAt/updatedAt timestamps.
+//  * Every tenant-owned row carries organizationId (tenant isolation) and is indexed on it.
+//  * deletedAt = soft delete for user-facing entities.
+//  * Secrets are never stored in plain text: IntegrationCredential.ciphertext (AES-256-GCM).
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum ProjectRole {
+  MAINTAINER
+  DEVELOPER
+  VIEWER
+}
+
+enum IntegrationProvider {
+  GITHUB
+  GITHUB_ACTIONS
+  JIRA
+  TRELLO
+  NOTION
+  CUSTOM_DEVOPS
+  SLACK
+}
+
+enum IntegrationStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+  EXPIRED
+  PENDING
+}
+
+enum IntegrationAuthType {
+  OAUTH2
+  API_TOKEN
+  BASIC
+  WEBHOOK_URL
+  HMAC
+}
+
+enum HealthStatus {
+  HEALTHY
+  DEGRADED
+  UNHEALTHY
+  UNKNOWN
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  WAITING_APPROVAL
+  PAUSED
+  COMPLETED
+  FAILED
+  CANCELLED
+  COMPENSATING
+  COMPENSATED
+}
+
+enum StepStatus {
+  PENDING
+  QUEUED
+  RUNNING
+  WAITING_APPROVAL
+  RETRY_SCHEDULED
+  REPAIRING
+  COMPLETED
+  FAILED
+  SKIPPED
+  CANCELLED
+  COMPENSATED
+}
+
+enum ExecutionMode {
+  LIVE
+  DEMO
+}
+
+enum TriggerSource {
+  CHAT
+  MANUAL
+  COMMAND_PALETTE
+  WEBHOOK
+  SCHEDULE
+  API
+  ASSISTANT
+}
+
+enum TriggerType {
+  MANUAL
+  WEBHOOK
+  SCHEDULE
+  EVENT
+}
+
+enum WorkflowStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum EnvironmentType {
+  DEVELOPMENT
+  STAGING
+  PRODUCTION
+}
+
+enum DeploymentStatus {
+  PENDING
+  AWAITING_APPROVAL
+  IN_PROGRESS
+  VERIFYING
+  SUCCEEDED
+  FAILED
+  ROLLED_BACK
+  CANCELLED
+}
+
+enum QATestType {
+  UNIT
+  INTEGRATION
+  API
+  E2E
+  REGRESSION
+  SMOKE
+  LINT
+  STATIC_ANALYSIS
+}
+
+enum QARunStatus {
+  QUEUED
+  RUNNING
+  PASSED
+  FAILED
+  ERROR
+  SKIPPED
+}
+
+enum CodeGenerationStatus {
+  PLANNING
+  GENERATING
+  VALIDATING
+  READY
+  COMMITTED
+  FAILED
+}
+
+enum ReviewVerdict {
+  APPROVE
+  REQUEST_CHANGES
+  COMMENT
+}
+
+enum ReviewStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum ArtifactType {
+  SPECIFICATION
+  IMPLEMENTATION_PLAN
+  WORKFLOW_PLAN
+  ARCHITECTURE_DIAGRAM
+  CODE_DIFF
+  TEST_REPORT
+  REVIEW_REPORT
+  DEPLOYMENT_REPORT
+  INCIDENT_REPORT
+  DOCUMENTATION
+  PR_SUMMARY
+  TICKET
+  RISK_ASSESSMENT
+  LOG
+}
+
+enum DocumentType {
+  SPECIFICATION
+  ADR
+  RUNBOOK
+  API
+  GUIDE
+  RELEASE_NOTES
+  OTHER
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  BLOCKED
+}
+
+enum TaskPriority {
+  LOWEST
+  LOW
+  MEDIUM
+  HIGH
+  HIGHEST
+}
+
+enum KnowledgeSourceType {
+  UPLOAD
+  GITHUB
+  JIRA
+  NOTION
+  URL
+  EXECUTION
+  SPECIFICATION
+  API_DOC
+  GUIDELINE
+  ARCHITECTURE
+}
+
+enum KnowledgeStatus {
+  PENDING
+  PROCESSING
+  INDEXED
+  FAILED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  TOOL
+}
+
+enum AgentKind {
+  ORCHESTRATOR
+  PLANNER
+  ARCHITECT
+  CODER
+  REVIEWER
+  QA
+  DOCS
+  RELEASE
+}
+
+enum AgentRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ToolExecutionStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum AuditActorType {
+  USER
+  AGENT
+  SYSTEM
+  WEBHOOK
+}
+
+enum AuditStatus {
+  SUCCESS
+  FAILURE
+  DENIED
+}
+
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
+}
+
+enum ExternalResourceType {
+  JIRA_ISSUE
+  TRELLO_CARD
+  GITHUB_REPOSITORY
+  GITHUB_BRANCH
+  GITHUB_COMMIT
+  GITHUB_PULL_REQUEST
+  GITHUB_ISSUE
+  CI_RUN
+  NOTION_PAGE
+  DEPLOYMENT
+  CONTAINER_IMAGE
+  BUILD_ARTIFACT
+}
+
+enum NotificationType {
+  APPROVAL_REQUESTED
+  APPROVAL_DECIDED
+  WORKFLOW_COMPLETED
+  WORKFLOW_FAILED
+  DEPLOYMENT
+  MENTION
+  INTEGRATION
+  SYSTEM
+}
+
+enum WebhookDeliveryStatus {
+  RECEIVED
+  PROCESSED
+  IGNORED
+  FAILED
+  REJECTED
+}
+
+// ───────────────────────── Identity & tenancy ─────────────────────────
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique
+  name         String
+  passwordHash String?
+  avatarUrl    String?
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  memberships        Membership[]
+  teamMemberships    TeamMember[]
+  projectMemberships ProjectMember[]
+  refreshTokens      RefreshToken[]
+  conversations      Conversation[]
+  notifications      Notification[]
+  approvalsRequested Approval[]          @relation("ApprovalRequester")
+  approvalsDecided   Approval[]          @relation("ApprovalDecider")
+  executions         WorkflowExecution[] @relation("ExecutionTrigger")
+}
+
+model RefreshToken {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  /// SHA-256 of the opaque refresh token. The raw token is never stored.
+  tokenHash    String    @unique
+  /// All rotations of one login share a family; reuse of a rotated token revokes the family.
+  familyId     String    @db.Uuid
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  replacedById String?   @db.Uuid
+  userAgent    String?
+  ip           String?
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+model Organization {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String    @unique
+  plan      String    @default("team")
+  /// Demo workspaces may only run simulated (DEMO mode) executions.
+  isDemo    Boolean   @default(false)
+  settings  Json      @default("{}")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  memberships       Membership[]
+  teams             Team[]
+  projects          Project[]
+  integrations      Integration[]
+  workflows         Workflow[]
+  executions        WorkflowExecution[]
+  conversations     Conversation[]
+  approvals         Approval[]
+  auditLogs         AuditLog[]
+  agents            Agent[]
+  knowledgeDocs     KnowledgeDocument[]
+  notifications     Notification[]
+  webhooks          Webhook[]
+  tasks             Task[]
+  documents         Document[]
+  deployments       Deployment[]
+  externalResources ExternalResource[]
+}
+
+model Membership {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  userId         String    @db.Uuid
+  role           OrgRole   @default(MEMBER)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+model Team {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  name           String
+  slug           String
+  description    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      TeamMember[]
+  projects     Project[]
+
+  @@unique([organizationId, slug])
+}
+
+model TeamMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  teamId    String   @db.Uuid
+  userId    String   @db.Uuid
+  role      String   @default("member")
+  createdAt DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([userId])
+}
+
+// ───────────────────────── Projects ─────────────────────────
+
+model Project {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  teamId         String?   @db.Uuid
+  name           String
+  slug           String
+  /// Short key used in ticket prefixes and display, e.g. "AUTH".
+  key            String
+  description    String?
+  /// Approval policy overrides, default Jira project/Trello board, commands, etc.
+  settings       Json      @default("{}")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team              Team?               @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  members           ProjectMember[]
+  repositories      Repository[]
+  environments      Environment[]
+  workflows         Workflow[]
+  executions        WorkflowExecution[]
+  tasks             Task[]
+  documents         Document[]
+  deployments       Deployment[]
+  codeGenerations   CodeGeneration[]
+  codeReviews       CodeReview[]
+  qaRuns            QATestRun[]
+  conversations     Conversation[]
+  knowledgeDocs     KnowledgeDocument[]
+  artifacts         Artifact[]
+  externalResources ExternalResource[]
+
+  @@unique([organizationId, slug])
+  @@unique([organizationId, key])
+  @@index([organizationId, deletedAt])
+}
+
+model ProjectMember {
+  id        String      @id @default(uuid()) @db.Uuid
+  projectId String      @db.Uuid
+  userId    String      @db.Uuid
+  role      ProjectRole @default(DEVELOPER)
+  createdAt DateTime    @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
+}
+
+model Repository {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  projectId      String    @db.Uuid
+  integrationId  String?   @db.Uuid
+  provider       String    @default("github")
+  owner          String
+  name           String
+  fullName       String
+  defaultBranch  String    @default("main")
+  url            String?
+  externalId     String?
+  language       String?
+  /// installCommand, lintCommand, testCommand, buildCommand, sandboxImage, ciWorkflow …
+  settings       Json      @default("{}")
+  lastIndexedAt  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  integration     Integration?     @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  codeGenerations CodeGeneration[]
+  codeReviews     CodeReview[]
+  qaRuns          QATestRun[]
+
+  @@unique([projectId, provider, fullName])
+  @@index([organizationId])
+}
+
+model Environment {
+  id               String          @id @default(uuid()) @db.Uuid
+  organizationId   String          @db.Uuid
+  projectId        String          @db.Uuid
+  name             String
+  type             EnvironmentType
+  url              String?
+  healthCheckPath  String          @default("/health")
+  /// [{ name, method, path, expectStatus, expectBodyContains }]
+  smokeTests       Json            @default("[]")
+  requiresApproval Boolean         @default(false)
+  /// Non-secret CI/CD provider configuration (target, cluster, workflow file…).
+  config           Json            @default("{}")
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  deployments Deployment[]
+
+  @@unique([projectId, name])
+  @@index([organizationId])
+}
+
+// ───────────────────────── Integrations ─────────────────────────
+
+model Integration {
+  id                  String              @id @default(uuid()) @db.Uuid
+  organizationId      String              @db.Uuid
+  provider            IntegrationProvider
+  name                String
+  status              IntegrationStatus   @default(PENDING)
+  authType            IntegrationAuthType
+  scopes              String[]            @default([])
+  externalAccountId   String?
+  externalAccountName String?
+  /// Non-secret configuration: site URL, cloudId, API base URL, default workspace…
+  config              Json                @default("{}")
+  healthStatus        HealthStatus        @default(UNKNOWN)
+  healthMessage       String?
+  lastHealthCheckAt   DateTime?
+  lastSyncAt          DateTime?
+  connectedById       String?             @db.Uuid
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  deletedAt           DateTime?
+
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  credential   IntegrationCredential?
+  repositories Repository[]
+  webhooks     Webhook[]
+
+  @@index([organizationId, provider])
+  @@index([organizationId, deletedAt])
+}
+
+model IntegrationCredential {
+  id            String    @id @default(uuid()) @db.Uuid
+  integrationId String    @unique @db.Uuid
+  /// AES-256-GCM envelope: base64(iv | authTag | ciphertext) of the JSON secret bundle.
+  ciphertext    String
+  /// Version of the data-encryption key used (supports key rotation).
+  keyVersion    Int
+  /// Access-token expiry, used to refresh ahead of time.
+  expiresAt     DateTime?
+  rotatedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+}
+
+model OAuthState {
+  id             String              @id @default(uuid()) @db.Uuid
+  /// SHA-256 of the state parameter.
+  stateHash      String              @unique
+  provider       IntegrationProvider
+  organizationId String              @db.Uuid
+  userId         String              @db.Uuid
+  /// Encrypted PKCE verifier (when used).
+  codeVerifier   String?
+  redirectUri    String
+  returnTo       String?
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  createdAt      DateTime            @default(now())
+
+  @@index([expiresAt])
+}
+
+model Webhook {
+  id               String              @id @default(uuid()) @db.Uuid
+  organizationId   String              @db.Uuid
+  integrationId    String?             @db.Uuid
+  provider         IntegrationProvider
+  /// Encrypted signing secret (same envelope as credentials).
+  secretCiphertext String
+  keyVersion       Int
+  events           String[]            @default([])
+  isActive         Boolean             @default(true)
+  externalHookId   String?
+  lastDeliveryAt   DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  integration  Integration?      @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  deliveries   WebhookDelivery[]
+
+  @@index([organizationId])
+}
+
+model WebhookDelivery {
+  id             String                @id @default(uuid()) @db.Uuid
+  webhookId      String                @db.Uuid
+  organizationId String                @db.Uuid
+  provider       IntegrationProvider
+  /// Provider delivery id (e.g. X-GitHub-Delivery) used for de-duplication.
+  deliveryId     String
+  eventType      String
+  signatureValid Boolean
+  status         WebhookDeliveryStatus @default(RECEIVED)
+  payload        Json
+  error          String?
+  executionIds   String[]              @default([])
+  processedAt    DateTime?
+  createdAt      DateTime              @default(now())
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@unique([webhookId, deliveryId])
+  @@index([organizationId, createdAt])
+}
+
+// ───────────────────────── Conversations & agents ─────────────────────────
+
+model Conversation {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  projectId      String?   @db.Uuid
+  userId         String    @db.Uuid
+  title          String    @default("New conversation")
+  /// Rolling summary of older turns (memory compaction).
+  summary        String?
+  context        Json      @default("{}")
+  archivedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project?            @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages     Message[]
+  agentRuns    AgentRun[]
+  executions   WorkflowExecution[]
+
+  @@index([organizationId, userId, updatedAt])
+}
+
+model Message {
+  id             String      @id @default(uuid()) @db.Uuid
+  conversationId String      @db.Uuid
+  role           MessageRole
+  /// Plain-text content (markdown) used for LLM memory and search.
+  content        String
+  /// Rich parts rendered by the UI (cards, proposals, artifacts…).
+  parts          Json        @default("[]")
+  agentRunId     String?     @db.Uuid
+  executionId    String?     @db.Uuid
+  status         String      @default("complete")
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model Agent {
+  id             String    @id @default(uuid()) @db.Uuid
+  /// null = built-in system agent available to every organization.
+  organizationId String?   @db.Uuid
+  key            String
+  name           String
+  description    String
+  kind           AgentKind
+  /// Model role (orchestrator, planner, coder, reviewer, fast) resolved via configuration.
+  modelRole      String    @default("orchestrator")
+  temperature    Float     @default(0.2)
+  tools          String[]  @default([])
+  instructions   String?
+  isEnabled      Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  runs         AgentRun[]
+
+  @@unique([organizationId, key])
+}
+
+model AgentRun {
+  id               String         @id @default(uuid()) @db.Uuid
+  organizationId   String         @db.Uuid
+  agentId          String         @db.Uuid
+  userId           String?        @db.Uuid
+  conversationId   String?        @db.Uuid
+  executionId      String?        @db.Uuid
+  executionStepId  String?        @db.Uuid
+  status           AgentRunStatus @default(RUNNING)
+  /// Short purpose, e.g. "Generate technical specification".
+  task             String
+  input            Json           @default("{}")
+  output           Json?
+  /// Concise decision summary shown to users (never hidden chain-of-thought).
+  summary          String?
+  model            String?
+  promptTokens     Int            @default(0)
+  completionTokens Int            @default(0)
+  totalTokens      Int            @default(0)
+  llmCalls         Int            @default(0)
+  durationMs       Int?
+  error            Json?
+  startedAt        DateTime       @default(now())
+  completedAt      DateTime?
+
+  agent        Agent         @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, startedAt])
+  @@index([executionId])
+}
+
+// ───────────────────────── Workflows ─────────────────────────
+
+model Workflow {
+  id             String         @id @default(uuid()) @db.Uuid
+  organizationId String         @db.Uuid
+  projectId      String?        @db.Uuid
+  slug           String
+  name           String
+  description    String?
+  category       String         @default("custom")
+  version        Int            @default(1)
+  /// Authoritative definition (validated against the shared zod schema).
+  definition     Json
+  status         WorkflowStatus @default(DRAFT)
+  isTemplate     Boolean        @default(false)
+  /// Built-in templates are owned by the platform and read-only for users.
+  isBuiltIn      Boolean        @default(false)
+  createdById    String?        @db.Uuid
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project?            @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  steps        WorkflowStep[]
+  triggers     WorkflowTrigger[]
+  executions   WorkflowExecution[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId, deletedAt])
+}
+
+/// Normalised projection of Workflow.definition steps (for search/analytics).
+model WorkflowStep {
+  id         String   @id @default(uuid()) @db.Uuid
+  workflowId String   @db.Uuid
+  key        String
+  name       String
+  type       String
+  tool       String?
+  dependsOn  String[] @default([])
+  position   Int
+  config     Json     @default("{}")
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, key])
+  @@index([tool])
+}
+
+model WorkflowTrigger {
+  id          String      @id @default(uuid()) @db.Uuid
+  workflowId  String      @db.Uuid
+  type        TriggerType
+  config      Json
+  isEnabled   Boolean     @default(true)
+  lastFiredAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([type, isEnabled])
+}
+
+model WorkflowExecution {
+  id              String          @id @default(uuid()) @db.Uuid
+  organizationId  String          @db.Uuid
+  projectId       String?         @db.Uuid
+  workflowId      String?         @db.Uuid
+  workflowVersion Int?
+  conversationId  String?         @db.Uuid
+  title           String
+  /// Template key or command id this run was created from.
+  template        String?
+  status          ExecutionStatus @default(PENDING)
+  mode            ExecutionMode   @default(LIVE)
+  /// Immutable snapshot of the definition at start.
+  definition      Json
+  input           Json            @default("{}")
+  /// Runtime context (variables, resolved project info).
+  context         Json            @default("{}")
+  error           Json?
+  triggeredById   String?         @db.Uuid
+  triggerSource   TriggerSource
+  /// Client-supplied key preventing duplicate runs from double submits/webhook replays.
+  idempotencyKey  String?
+  /// Optimistic-lock counter, bumped on each engine advance.
+  revision        Int             @default(0)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  pausedAt        DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  organization      Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project           Project?                @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  workflow          Workflow?               @relation(fields: [workflowId], references: [id], onDelete: SetNull)
+  conversation      Conversation?           @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  triggeredBy       User?                   @relation("ExecutionTrigger", fields: [triggeredById], references: [id], onDelete: SetNull)
+  steps             WorkflowExecutionStep[]
+  logs              ExecutionLog[]
+  approvals         Approval[]
+  artifacts         Artifact[]
+  toolExecutions    ToolExecution[]
+  externalResources ExternalResource[]
+  deployments       Deployment[]
+  codeGenerations   CodeGeneration[]
+  codeReviews       CodeReview[]
+  qaRuns            QATestRun[]
+  tasks             Task[]
+  documents         Document[]
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, projectId, createdAt])
+  @@index([status, updatedAt])
+}
+
+model WorkflowExecutionStep {
+  id             String     @id @default(uuid()) @db.Uuid
+  executionId    String     @db.Uuid
+  stepKey        String
+  name           String
+  type           String
+  tool           String?
+  agent          String?
+  status         StepStatus @default(PENDING)
+  /// Attempt within the current iteration (transient retries).
+  attempt        Int        @default(0)
+  maxAttempts    Int        @default(1)
+  /// Repair-loop iteration (tests → fix → tests).
+  iteration      Int        @default(0)
+  position       Int        @default(0)
+  input          Json?
+  output         Json?
+  error          Json?
+  /// Concise human-readable result summary.
+  summary        String?
+  leaseOwner     String?
+  leaseExpiresAt DateTime?
+  nextAttemptAt  DateTime?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  durationMs     Int?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  execution      WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  approval       Approval?
+  toolExecutions ToolExecution[]
+  logs           ExecutionLog[]
+  artifacts      Artifact[]
+
+  @@unique([executionId, stepKey])
+  @@index([status, leaseExpiresAt])
+  @@index([status, nextAttemptAt])
+}
+
+model ExecutionLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  executionId String   @db.Uuid
+  stepId      String?  @db.Uuid
+  level       LogLevel @default(INFO)
+  message     String
+  data        Json?
+  createdAt   DateTime @default(now())
+
+  execution WorkflowExecution      @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  step      WorkflowExecutionStep? @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@index([executionId, createdAt])
+}
+
+model ToolExecution {
+  id                 String              @id @default(uuid()) @db.Uuid
+  organizationId     String              @db.Uuid
+  executionId        String?             @db.Uuid
+  stepId             String?             @db.Uuid
+  agentRunId         String?             @db.Uuid
+  userId             String?             @db.Uuid
+  tool               String
+  provider           String?
+  /// Ledger key guaranteeing at-most-once side effects per (org, key).
+  idempotencyKey     String
+  status             ToolExecutionStatus @default(RUNNING)
+  input              Json?
+  output             Json?
+  error              Json?
+  externalResourceId String?
+  externalUrl        String?
+  attempt            Int                 @default(1)
+  simulated          Boolean             @default(false)
+  durationMs         Int?
+  startedAt          DateTime            @default(now())
+  completedAt        DateTime?
+
+  execution WorkflowExecution?     @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  step      WorkflowExecutionStep? @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, startedAt])
+  @@index([tool, status])
+}
+
+// ───────────────────────── Approvals & tasks ─────────────────────────
+
+model Approval {
+  id                 String         @id @default(uuid()) @db.Uuid
+  organizationId     String         @db.Uuid
+  projectId          String?        @db.Uuid
+  executionId        String         @db.Uuid
+  executionStepId    String         @unique @db.Uuid
+  title              String
+  description        String?
+  /// Policy action, e.g. "deploy.production", "pr.merge".
+  action             String
+  riskLevel          RiskLevel      @default(MEDIUM)
+  /// Changes, QA/CI status, AI risk assessment, etc.
+  context            Json           @default("{}")
+  status             ApprovalStatus @default(PENDING)
+  requiredPermission String         @default("approval:decide")
+  allowSelfApproval  Boolean        @default(true)
+  requestedById      String?        @db.Uuid
+  decidedById        String?        @db.Uuid
+  decisionComment    String?
+  decidedAt          DateTime?
+  expiresAt          DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  execution    WorkflowExecution     @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  step         WorkflowExecutionStep @relation(fields: [executionStepId], references: [id], onDelete: Cascade)
+  requestedBy  User?                 @relation("ApprovalRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+  decidedBy    User?                 @relation("ApprovalDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status, createdAt])
+}
+
+model Task {
+  id               String       @id @default(uuid()) @db.Uuid
+  organizationId   String       @db.Uuid
+  projectId        String       @db.Uuid
+  title            String
+  description      String?
+  status           TaskStatus   @default(TODO)
+  priority         TaskPriority @default(MEDIUM)
+  assigneeId       String?      @db.Uuid
+  /// JIRA | TRELLO when synchronised with an external tracker.
+  externalProvider String?
+  externalKey      String?
+  externalUrl      String?
+  executionId      String?      @db.Uuid
+  createdById      String?      @db.Uuid
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  deletedAt        DateTime?
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  execution    WorkflowExecution? @relation(fields: [executionId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, externalProvider, externalKey])
+  @@index([organizationId, projectId, status])
+}
+
+// ───────────────────────── SDLC artefacts ─────────────────────────
+
+model Artifact {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  projectId      String?      @db.Uuid
+  executionId    String?      @db.Uuid
+  stepId         String?      @db.Uuid
+  type           ArtifactType
+  title          String
+  /// Markdown/text/diff body.
+  content        String
+  contentType    String       @default("text/markdown")
+  /// Structured payload (e.g. spec sections, plan steps).
+  data           Json?
+  version        Int          @default(1)
+  url            String?
+  createdById    String?      @db.Uuid
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  project   Project?               @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  execution WorkflowExecution?     @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  step      WorkflowExecutionStep? @relation(fields: [stepId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, type, createdAt])
+  @@index([executionId])
+}
+
+model ExternalResource {
+  id             String               @id @default(uuid()) @db.Uuid
+  organizationId String               @db.Uuid
+  projectId      String?              @db.Uuid
+  executionId    String?              @db.Uuid
+  stepKey        String?
+  provider       IntegrationProvider
+  type           ExternalResourceType
+  externalId     String
+  /// Human key, e.g. "AUTH-142", "#481".
+  key            String?
+  title          String?
+  url            String?
+  status         String?
+  simulated      Boolean              @default(false)
+  data           Json                 @default("{}")
+  /// Graph edge: resource this one was derived from (e.g. PR → ticket).
+  parentId       String?              @db.Uuid
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  execution    WorkflowExecution? @relation(fields: [executionId], references: [id], onDelete: SetNull)
+  parent       ExternalResource?  @relation("ResourceParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children     ExternalResource[] @relation("ResourceParent")
+
+  @@unique([organizationId, provider, type, externalId])
+  @@index([organizationId, projectId])
+  @@index([executionId])
+}
+
+model CodeGeneration {
+  id             String               @id @default(uuid()) @db.Uuid
+  organizationId String               @db.Uuid
+  projectId      String               @db.Uuid
+  repositoryId   String?              @db.Uuid
+  executionId    String?              @db.Uuid
+  requirement    String
+  status         CodeGenerationStatus @default(PLANNING)
+  plan           Json?
+  baseBranch     String?
+  baseSha        String?
+  branch         String?
+  /// [{ path, action: create|modify|delete, summary }]
+  files          Json                 @default("[]")
+  diff           String?
+  /// { syntax, lint, tests } results from the sandbox.
+  validation     Json?
+  iterations     Int                  @default(0)
+  commitSha      String?
+  prNumber       Int?
+  prUrl          String?
+  simulated      Boolean              @default(false)
+  createdById    String?              @db.Uuid
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  project    Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  repository Repository?        @relation(fields: [repositoryId], references: [id], onDelete: SetNull)
+  execution  WorkflowExecution? @relation(fields: [executionId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+}
+
+model CodeReview {
+  id               String         @id @default(uuid()) @db.Uuid
+  organizationId   String         @db.Uuid
+  projectId        String         @db.Uuid
+  repositoryId     String?        @db.Uuid
+  executionId      String?        @db.Uuid
+  prNumber         Int?
+  prUrl            String?
+  headSha          String?
+  title            String
+  status           ReviewStatus   @default(RUNNING)
+  verdict          ReviewVerdict?
+  riskLevel        RiskLevel?
+  summary          String?
+  criticalCount    Int            @default(0)
+  highCount        Int            @default(0)
+  mediumCount      Int            @default(0)
+  lowCount         Int            @default(0)
+  /// [{ severity, category, file, line, title, detail, suggestion }]
+  findings         Json           @default("[]")
+  /// { security, architecture, tests, performance } → passed|warning|failed
+  dimensions       Json           @default("{}")
+  postedToProvider Boolean        @default(false)
+  externalReviewId String?
+  simulated        Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  project    Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  repository Repository?        @relation(fields: [repositoryId], references: [id], onDelete: SetNull)
+  execution  WorkflowExecution? @relation(fields: [executionId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+}
+
+model QATestRun {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  projectId      String       @db.Uuid
+  repositoryId   String?      @db.Uuid
+  executionId    String?      @db.Uuid
+  type           QATestType
+  status         QARunStatus  @default(QUEUED)
+  title          String
+  ref            String?
+  commitSha      String?
+  environment    String?
+  /// Generated test cases [{ id, title, type, steps, expected }]
+  testCases      Json         @default("[]")
+  total          Int          @default(0)
+  passed         Int          @default(0)
+  failed         Int          @default(0)
+  skipped        Int          @default(0)
+  durationMs     Int?
+  /// Truncated raw runner output.
+  output         String?
+  failures       Json         @default("[]")
+  /// AI root-cause analysis of failures.
+  analysis       Json?
+  command        String?
+  simulated      Boolean      @default(false)
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  project    Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  repository Repository?        @relation(fields: [repositoryId], references: [id], onDelete: SetNull)
+  execution  WorkflowExecution? @relation(fields: [executionId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([projectId, type, createdAt])
+}
+
+model Deployment {
+  id                   String           @id @default(uuid()) @db.Uuid
+  organizationId       String           @db.Uuid
+  projectId            String           @db.Uuid
+  environmentId        String           @db.Uuid
+  executionId          String?          @db.Uuid
+  version              String
+  ref                  String?
+  commitSha            String?
+  status               DeploymentStatus @default(PENDING)
+  provider             String
+  externalId           String?
+  externalUrl          String?
+  artifactRef          String?
+  /// [{ name, status, latencyMs, detail }]
+  healthChecks         Json             @default("[]")
+  smokeTests           Json             @default("[]")
+  changes              Json             @default("[]")
+  previousDeploymentId String?          @db.Uuid
+  rolledBackById       String?          @db.Uuid
+  triggeredById        String?          @db.Uuid
+  simulated            Boolean          @default(false)
+  error                String?
+  startedAt            DateTime?
+  completedAt          DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environment  Environment        @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  execution    WorkflowExecution? @relation(fields: [executionId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([environmentId, status, createdAt])
+}
+
+model Document {
+  id               String       @id @default(uuid()) @db.Uuid
+  organizationId   String       @db.Uuid
+  projectId        String?      @db.Uuid
+  executionId      String?      @db.Uuid
+  title            String
+  type             DocumentType @default(OTHER)
+  content          String
+  /// NOTION when published externally.
+  externalProvider String?
+  externalId       String?
+  externalUrl      String?
+  version          Int          @default(1)
+  createdById      String?      @db.Uuid
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  deletedAt        DateTime?
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  execution    WorkflowExecution? @relation(fields: [executionId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, projectId, updatedAt])
+}
+
+// ───────────────────────── Knowledge ─────────────────────────
+
+model KnowledgeDocument {
+  id             String              @id @default(uuid()) @db.Uuid
+  organizationId String              @db.Uuid
+  projectId      String?             @db.Uuid
+  repositoryId   String?             @db.Uuid
+  sourceType     KnowledgeSourceType
+  /// Stable source reference (path@repo, ticket key, page id, URL…) used for upserts.
+  sourceRef      String
+  title          String
+  documentType   String              @default("document")
+  /// SHA-256 of normalised content; unchanged content is not re-embedded.
+  contentHash    String
+  status         KnowledgeStatus     @default(PENDING)
+  chunkCount     Int                 @default(0)
+  tokenCount     Int                 @default(0)
+  branch         String?
+  environment    String?
+  url            String?
+  metadata       Json                @default("{}")
+  error          String?
+  /// Raw content retained for re-indexing (bounded by ingestion limits).
+  content        String?
+  createdById    String?             @db.Uuid
+  indexedAt      DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, sourceType, sourceRef])
+  @@index([organizationId, projectId, status])
+}
+
+// ───────────────────────── Notifications & audit ─────────────────────────
+
+model Notification {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  userId         String           @db.Uuid
+  type           NotificationType
+  title          String
+  body           String?
+  link           String?
+  data           Json             @default("{}")
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, organizationId, readAt, createdAt])
+}
+
+/// Append-only. Inputs/outputs are redacted before persistence.
+model AuditLog {
+  id             String         @id @default(uuid()) @db.Uuid
+  organizationId String         @db.Uuid
+  actorId        String?        @db.Uuid
+  actorType      AuditActorType
+  actorLabel     String?
+  action         String
+  resourceType   String
+  resourceId     String?
+  projectId      String?        @db.Uuid
+  executionId    String?        @db.Uuid
+  tool           String?
+  status         AuditStatus
+  input          Json?
+  output         Json?
+  ip             String?
+  userAgent      String?
+  requestId      String?
+  createdAt      DateTime       @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, action, createdAt])
+  @@index([organizationId, resourceType, resourceId])
+}

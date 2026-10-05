@@ -1,0 +1,35 @@
+{
+  "name": "@forgeline/database",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "prisma"
+  ],
+  "scripts": {
+    "generate": "prisma generate",
+    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "migrate:dev": "dotenv -e ../../.env -- prisma migrate dev",
+    "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
+    "migrate:reset": "dotenv -e ../../.env -- prisma migrate reset --force",
+    "seed": "dotenv -e ../../.env -- node dist/seed.js",
+    "studio": "dotenv -e ../../.env -- prisma studio"
+  },
+  "prisma": {
+    "schema": "prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@forgeline/shared": "workspace:*",
+    "@prisma/client": "~6.19.0",
+    "argon2": "^0.44.0"
+  },
+  "devDependencies": {
+    "@forgeline/config": "workspace:*",
+    "dotenv-cli": "^8.0.0",
+    "prisma": "~6.19.0"
+  }
+}

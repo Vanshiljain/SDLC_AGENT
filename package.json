@@ -1,0 +1,40 @@
+{
+  "name": "forgeline",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Forgeline — AI-native SDLC automation platform",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel --filter=@forgeline/api --filter=@forgeline/web",
+    "build": "turbo run build",
+    "build:packages": "turbo run build --filter=./packages/*",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "test:integration": "pnpm --filter @forgeline/api test:integration",
+    "test:e2e": "pnpm --filter @forgeline/e2e test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "pnpm --filter @forgeline/database generate",
+    "db:migrate": "pnpm --filter @forgeline/database migrate:dev",
+    "db:deploy": "pnpm --filter @forgeline/database migrate:deploy",
+    "db:seed": "pnpm --filter @forgeline/database seed",
+    "infra:up": "docker compose -f docker-compose.dev.yml up -d",
+    "infra:down": "docker compose -f docker-compose.dev.yml down",
+    "postinstall": "pnpm --filter @forgeline/database generate"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@types/node": "^22.19.0",
+    "eslint": "^9.39.0",
+    "eslint-config-prettier": "^10.1.0",
+    "globals": "^16.4.0",
+    "prettier": "^3.6.0",
+    "turbo": "^2.5.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.0"
+  }
+}
