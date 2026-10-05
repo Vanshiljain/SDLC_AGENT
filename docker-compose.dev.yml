@@ -1,0 +1,39 @@
+# Local infrastructure for development: Postgres, Redis and Qdrant.
+#   pnpm infra:up   (docker compose -f docker-compose.dev.yml up -d)
+name: forgeline-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: forgeline
+      POSTGRES_PASSWORD: forgeline
+      POSTGRES_DB: forgeline
+    ports: ['5432:5432']
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U forgeline']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    ports: ['6379:6379']
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  qdrant:
+    image: qdrant/qdrant:v1.15.4
+    ports: ['6333:6333']
+    volumes: [qdrantdata:/qdrant/storage]
+
+volumes:
+  pgdata:
+  redisdata:
+  qdrantdata:

@@ -1,0 +1,106 @@
+# Full Forgeline stack: web (nginx) → API → worker, with Postgres, Redis and Qdrant.
+#
+#   cp .env.example .env   # fill in secrets (see docs/SETUP.md)
+#   docker compose up -d --build
+#   open http://localhost:8080
+#
+# Set SEED=true on the first run to create the demo workspace and accounts.
+name: forgeline
+
+x-env: &env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://forgeline:${POSTGRES_PASSWORD:-forgeline}@postgres:5432/forgeline
+  REDIS_URL: redis://redis:6379
+  QDRANT_URL: http://qdrant:6333
+  QUEUE_DRIVER: bullmq
+  TRUST_PROXY: 'true'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: forgeline
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forgeline}
+      POSTGRES_DB: forgeline
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U forgeline']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  qdrant:
+    image: qdrant/qdrant:v1.15.4
+    restart: unless-stopped
+    volumes: [qdrantdata:/qdrant/storage]
+
+  migrate:
+    build: { context: ., dockerfile: apps/api/Dockerfile, target: migrate }
+    env_file: .env
+    environment:
+      <<: *env
+      SEED: ${SEED:-false}
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: 'no'
+
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile, target: api }
+    env_file: .env
+    environment:
+      <<: *env
+      APP_ROLE: api
+    init: true
+    restart: unless-stopped
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+      qdrant: { condition: service_started }
+
+  worker:
+    build: { context: ., dockerfile: apps/api/Dockerfile, target: worker }
+    env_file: .env
+    init: true
+    restart: unless-stopped
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    # Code validation runs in sibling containers. The workspace directory must be
+    # the same path on the host and in the container because the Docker daemon
+    # resolves bind mounts on the host. Remove these two mounts (and set
+    # SANDBOX_DRIVER=disabled) to run without validation — results then say so.
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${SANDBOX_HOST_DIR:-/var/lib/forgeline/sandbox}:${SANDBOX_HOST_DIR:-/var/lib/forgeline/sandbox}
+    environment:
+      <<: *env
+      APP_ROLE: worker
+      SANDBOX_WORKDIR: ${SANDBOX_HOST_DIR:-/var/lib/forgeline/sandbox}
+    # The image runs as uid 65532: give it the Docker socket's group (stat -c %g /var/run/docker.sock)
+    # and make the sandbox directory writable (sudo install -d -o 65532 /var/lib/forgeline/sandbox).
+    group_add: ['${DOCKER_GID:-999}']
+
+  web:
+    build: { context: ., dockerfile: apps/web/Dockerfile }
+    restart: unless-stopped
+    environment:
+      API_UPSTREAM: api:4000
+    ports: ['${WEB_PORT:-8080}:8080']
+    depends_on: [api]
+
+volumes:
+  pgdata:
+  redisdata:
+  qdrantdata:

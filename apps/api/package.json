@@ -2,6 +2,9 @@
   "name": "@forgeline/api",
   "version": "0.1.0",
   "private": true,
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "nest build",
     "dev": "dotenv -e ../../.env -- nest start --watch --preserveWatchOutput",
