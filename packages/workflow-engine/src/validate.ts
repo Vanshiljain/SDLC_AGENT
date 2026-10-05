@@ -159,15 +159,15 @@ function allowedReferences(
   repairOwners: Map<string, string>,
 ): Set<string> {
   const owner = repairOwners.get(step.key);
-  if (owner) {
-    const set = ancestors(steps, owner);
-    set.add(owner);
-    return set;
+  const base = owner ? new Set([...ancestors(steps, owner), owner]) : ancestors(steps, step.key);
+  // A step may read its own repair step and the repair steps of its ancestors:
+  // a repair step always finishes before its owner completes.
+  const byKey = new Map(steps.map((s) => [s.key, s]));
+  for (const k of [...base, step.key]) {
+    const r = byKey.get(k)?.repair?.step;
+    if (r && r !== step.key) base.add(r);
   }
-  const set = ancestors(steps, step.key);
-  // A step may read the output of its own repair step (e.g. the commit SHA produced by a fix).
-  if (step.repair) set.add(step.repair.step);
-  return set;
+  return base;
 }
 
 /** Throwing variant for internal use. */

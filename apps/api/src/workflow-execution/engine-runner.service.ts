@@ -459,6 +459,11 @@ export class EngineRunner implements OnModuleInit {
     if (step.polls === 0) await this.recordInput(step.id, input);
 
     // 2) Policy gate, evaluated at execution time (cannot be bypassed by editing a flow).
+    // A gated action executes with the authority of the approver who authorised it
+    // (they must hold the gate's required permission); otherwise as the run's initiator.
+    let principal = execution.triggeredById;
+    const existingGate = await this.prisma.approval.findUnique({ where: { executionStepId: step.id } });
+    if (existingGate?.status === 'APPROVED' && existingGate.decidedById) principal = existingGate.decidedById;
     const action = this.policy.actionFor(tool, input);
     if (action && step.polls === 0) {
       const project = await this.projects.load(execution.organizationId, execution.projectId);
@@ -489,7 +494,7 @@ export class EngineRunner implements OnModuleInit {
           await this.failStep(execution, step, { kind: 'cancelled', message: `Approval ${approval.status.toLowerCase()}${approval.decisionComment ? `: ${approval.decisionComment}` : ''}`, final: true });
           return;
         }
-        logger.info(`Approved by gate "${approval.title}"`);
+        logger.info(`Approved by gate "${approval.title}"${approval.decidedById && approval.decidedById !== execution.triggeredById ? ' — executing with the approver\'s authority' : ''}`);
       }
     }
 
@@ -510,7 +515,7 @@ export class EngineRunner implements OnModuleInit {
         tool: tool.name,
         input,
         organizationId: execution.organizationId,
-        userId: execution.triggeredById,
+        userId: principal,
         projectId: execution.projectId,
         executionId: execution.id,
         stepId: step.id,
