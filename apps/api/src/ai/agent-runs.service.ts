@@ -25,7 +25,7 @@ export const SYSTEM_AGENTS: SystemAgentDefinition[] = [
     kind: 'ORCHESTRATOR',
     description: 'Understands requests, gathers context and proposes Flows.',
     modelRole: 'orchestrator',
-    tools: ['search_knowledge', 'list_projects', 'propose_flow'],
+    tools: ['list_projects', 'search_knowledge', 'list_runs', 'get_ticket', 'list_pull_requests', 'list_deployments', 'propose_flow'],
   },
   {
     key: 'planning',
@@ -65,7 +65,7 @@ export const SYSTEM_AGENTS: SystemAgentDefinition[] = [
     kind: 'QA',
     description: 'Derives test cases, runs suites, analyses failures and reports honestly.',
     modelRole: 'coder',
-    tools: ['qa.run', 'qa.analyzeFailures'],
+    tools: ['qa.run'],
   },
   {
     key: 'docs',

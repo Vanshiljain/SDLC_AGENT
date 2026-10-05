@@ -31,5 +31,6 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...prod, COOKIE_SECURE: 'false' })).toThrow(/COOKIE_SECURE/);
     expect(() => loadConfig({ ...prod, JWT_REFRESH_SECRET: base.JWT_SECRET })).toThrow(/must differ/);
     expect(() => loadConfig({ ...prod, SANDBOX_DRIVER: 'local' })).toThrow(/SANDBOX_DRIVER=local/);
+    expect(() => loadConfig({ ...prod, JWT_SECRET: 'change-me-to-a-long-random-string-of-at-least-32-chars' })).toThrow(/placeholder/);
   });
 });

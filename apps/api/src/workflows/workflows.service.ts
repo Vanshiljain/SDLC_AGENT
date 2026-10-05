@@ -61,6 +61,14 @@ export class WorkflowsService {
   /** Auto-layout positions for steps that have none (visual builder / run graph). */
   withLayout(definition: WorkflowDefinition): WorkflowDefinition {
     const depth = layers(definition.steps);
+    // Repair steps usually have no dependencies of their own (they only run when
+    // their target fails), so place them just after the step they repair rather
+    // than in the root column.
+    for (const s of definition.steps) {
+      const repairKey = s.repair?.step;
+      const repair = repairKey ? definition.steps.find((r) => r.key === repairKey) : undefined;
+      if (repair && repair.dependsOn.length === 0) depth.set(repair.key, Math.max(depth.get(repair.key) ?? 0, (depth.get(s.key) ?? 0) + 1));
+    }
     const perLayer = new Map<number, number>();
     return {
       ...definition,

@@ -143,12 +143,15 @@ export class ConversationsService implements OnModuleInit {
   ) {
     try {
       const conversation = await this.prisma.conversation.findUniqueOrThrow({ where: { id: conversationId } });
-      const history = await this.prisma.message.findMany({
-        where: { conversationId, status: 'complete', id: { not: messageId } },
-        orderBy: { createdAt: 'asc' },
-        take: 40,
-        select: { role: true, content: true },
-      });
+      // The most recent 40 turns (older ones live in the rolling summary), oldest first.
+      const history = (
+        await this.prisma.message.findMany({
+          where: { conversationId, status: 'complete', id: { not: messageId } },
+          orderBy: { createdAt: 'desc' },
+          take: 40,
+          select: { role: true, content: true },
+        })
+      ).reverse();
       const result = await this.orchestrator.respond({
         organizationId: auth.organizationId,
         userId: auth.userId,

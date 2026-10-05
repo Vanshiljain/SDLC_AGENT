@@ -10,16 +10,7 @@
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Forgeline</title>
-    <script>
-      // Apply the theme before first paint to avoid a flash.
-      try {
-        var t = localStorage.getItem('fl-theme');
-        var dark = t ? t === 'dark' : true;
-        document.documentElement.classList.toggle('dark', dark);
-      } catch (e) {
-        document.documentElement.classList.add('dark');
-      }
-    </script>
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

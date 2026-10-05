@@ -175,6 +175,8 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
   const e = parsed.data;
   if (e.NODE_ENV === 'production') {
     if (e.JWT_SECRET === e.JWT_REFRESH_SECRET) throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must differ in production');
+    for (const name of ['JWT_SECRET', 'JWT_REFRESH_SECRET'] as const)
+      if (/^change-me/i.test(e[name])) throw new Error(`${name} still has the placeholder value from .env.example`);
     if (!e.COOKIE_SECURE) throw new Error('COOKIE_SECURE must be true in production');
     if (e.SANDBOX_DRIVER === 'local') throw new Error('SANDBOX_DRIVER=local is not allowed in production (use docker)');
   }

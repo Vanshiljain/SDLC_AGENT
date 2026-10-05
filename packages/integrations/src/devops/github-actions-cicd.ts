@@ -19,7 +19,8 @@ import type {
  * workflow (default `deploy.yml`) that accept the documented inputs:
  *   ci.yml:     stages, forgeline_ref
  *   deploy.yml: environment, version, ref, forgeline_ref, rollback
- * Provider ids are "<workflowRunId>" (resolved after dispatch).
+ * Provider ids are "<workflowRunId>" (resolved after dispatch). Setting
+ * `run-name: ... ${{ inputs.forgeline_ref }}` lets dispatches be matched exactly.
  */
 export interface GitHubActionsCiCdOptions {
   owner: string;
@@ -73,7 +74,10 @@ export class GitHubActionsCiCdProvider implements CiCdProvider {
         event: 'workflow_dispatch',
         createdAfter: since.slice(0, 19) + 'Z',
       });
-      const match = workflow_runs.find((r) => r.created_at >= since);
+      const recent = workflow_runs.filter((r) => r.created_at >= since);
+      // Workflows that set `run-name` to include inputs.forgeline_ref are matched exactly, so
+      // concurrent dispatches of the same workflow cannot be confused; otherwise the newest run wins.
+      const match = recent.find((r) => Boolean(inputs.forgeline_ref) && r.display_title?.includes(inputs.forgeline_ref!)) ?? recent[0];
       if (match) return match;
     }
     throw new ToolError('external', `Dispatched ${workflow} but no run appeared within 60s`, { provider: 'github_actions' });

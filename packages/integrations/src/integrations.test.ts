@@ -13,6 +13,7 @@ import { markdownToBlocks, blocksToMarkdown } from './notion/blocks';
 import { verifyGitHubSignature, verifyTimestampedSignature, verifyTrelloSignature } from './webhooks/signatures';
 import { isPrivateAddress, safeFetch } from './http/ssrf';
 import { HttpDevOpsProvider, signDevOpsRequest } from './devops/http-devops';
+import { GitHubActionsCiCdProvider } from './devops/github-actions-cicd';
 import { buildAuthorizeUrl } from './oauth/providers';
 import { idempotencyMarker } from './core/tool';
 import { mockFetch, toolContext } from './test-utils';
@@ -265,6 +266,40 @@ describe('GitHub Actions awaitRuns', () => {
     expect(second.continuation).toBeUndefined();
     expect(second.output.conclusion).toBe('failure');
     expect(second.output.failedJobs[0]!.logExcerpt).toContain('FAIL src/auth.spec.ts');
+  });
+});
+
+describe('GitHub Actions CI/CD provider', () => {
+  it('matches the dispatched run by forgeline_ref when the workflow sets run-name', async () => {
+    const now = new Date().toISOString();
+    const run = (id: number, title: string) => ({
+      id,
+      name: 'CI',
+      display_title: title,
+      status: 'queued',
+      conclusion: null,
+      html_url: `https://gh/run/${id}`,
+      head_branch: 'main',
+      head_sha: 'a'.repeat(40),
+      event: 'workflow_dispatch',
+      created_at: now,
+      updated_at: now,
+      workflow_id: 1,
+    });
+    const { fetch, calls } = mockFetch([
+      { method: 'POST', path: /\/actions\/workflows\/ci\.yml\/dispatches$/, handler: () => ({ status: 204 }) },
+      {
+        method: 'GET',
+        path: /\/actions\/workflows\/ci\.yml\/runs$/,
+        // A concurrent dispatch's run is newer and listed first.
+        handler: () => ({ body: { total_count: 2, workflow_runs: [run(11, 'CI · run-b'), run(10, 'CI · run-a')] } }),
+      },
+      { method: 'GET', path: /\/actions\/runs\/10\/jobs$/, handler: () => ({ body: { total_count: 0, jobs: [] } }) },
+    ]);
+    const provider = new GitHubActionsCiCdProvider(new GitHubClient({ token: 't', fetchImpl: fetch }), { owner: 'acme', repo: 'auth' });
+    const pipeline = await provider.startPipeline({ project: 'AUTH', ref: 'main', stages: ['test'], idempotencyKey: 'run-a' });
+    expect(pipeline.id).toBe('10');
+    expect(calls[0]!.body).toMatchObject({ ref: 'main', inputs: { forgeline_ref: 'run-a', stages: 'test' } });
   });
 });
 

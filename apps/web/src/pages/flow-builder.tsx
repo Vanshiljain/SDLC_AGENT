@@ -11,6 +11,7 @@ import {
   type EdgeChange,
   type Node,
   type NodeChange,
+  type ReactFlowInstance,
 } from '@xyflow/react';
 import {
   ArrowLeft,
@@ -46,7 +47,7 @@ import { Badge, Mono, Skeleton } from '@/components/ui/primitives';
 import { Tooltip } from '@/components/ui/menu';
 import { Segmented } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { AGENTS, agentOf, layout, NODE_H, NODE_W, nodeTypes, type StepNodeData } from '@/features/flow-graph';
+import { AGENTS, agentOf, FlowMiniMap, layout, NODE_H, NODE_W, nodeTypes, type StepNodeData } from '@/features/flow-graph';
 import { ancestors, uniqueKey, wouldCycle } from '@/features/flow-utils';
 
 // ─────────────── Draft hand-off (from "Describe a flow" / template preview) ───────────────
@@ -90,6 +91,8 @@ export function FlowBuilderPage() {
   const [pendingTrigger, setPendingTrigger] = useState<Record<string, unknown> | null>(null);
   const [dialog, setDialog] = useState<null | 'inputs' | 'trigger' | 'run'>(null);
   const loaded = useRef(false);
+  const [ready, setReady] = useState(false);
+  const canvasRef = useRef<HTMLDivElement>(null);
 
   useDocumentTitle(name);
   usePageContext(id ? { title: name, entity: { kind: 'workflow', id, label: name } } : { title: 'Flow builder' }, [id, name]);
@@ -106,6 +109,7 @@ export function FlowBuilderPage() {
       setDef(withPositions(wf.definition));
       setReadOnly(wf.isBuiltIn || !can('workflow:manage'));
       loaded.current = true;
+      setReady(true);
       return;
     }
     const draft = params.get('draft') || params.get('preview') ? pendingDraft : null;
@@ -121,6 +125,7 @@ export function FlowBuilderPage() {
       setDirty(!draft.readOnly);
     }
     loaded.current = true;
+    setReady(true);
   }, [id, existing.data, params, can]);
 
   const update = useCallback((fn: (d: WorkflowDefinition) => WorkflowDefinition) => {
@@ -404,27 +409,49 @@ export function FlowBuilderPage() {
       <div className="flex min-h-0 flex-1">
         {!readOnly && <Palette tools={tools.data ?? []} loading={tools.isLoading} onAdd={addStep} steps={steps} />}
         <div className="relative min-w-0 flex-1">
-          <div className="grid-dots h-full">
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onNodeClick={(_, n) => setSelected(n.id)}
-              onPaneClick={() => setSelected(null)}
-              nodesConnectable={!readOnly}
-              deleteKeyCode={readOnly ? null : ['Backspace', 'Delete']}
-              fitView
-              fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
-              minZoom={0.15}
-              proOptions={{ hideAttribution: true }}
-              defaultEdgeOptions={{ style: { strokeWidth: 1.3 } }}
-            >
-              <Background variant={BackgroundVariant.Dots} gap={18} size={1} color="transparent" />
-              <Controls position="bottom-right" showInteractive={false} />
-            </ReactFlow>
+          <div ref={canvasRef} className="grid-dots h-full">
+            {ready && (
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                nodeTypes={nodeTypes}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onNodeClick={(_, n) => setSelected(n.id)}
+                onPaneClick={() => setSelected(null)}
+                onInit={(instance: ReactFlowInstance<Node<StepNodeData>>) => {
+                  // Large flows open at a readable zoom on their first few columns; small ones fit the view.
+                  // Computed from layout positions so it doesn't depend on node measurement.
+                  const box = canvasRef.current?.getBoundingClientRect();
+                  if (nodes.length <= 10 || !box) return;
+                  const columns = [...new Set(nodes.map((n) => Math.round(n.position.x)))].sort((a, b) => a - b);
+                  const limit = columns[Math.min(4, columns.length - 1)]!;
+                  const opening = nodes.filter((n) => n.position.x <= limit);
+                  const minX = Math.min(...opening.map((n) => n.position.x));
+                  const minY = Math.min(...opening.map((n) => n.position.y));
+                  const width = Math.max(...opening.map((n) => n.position.x)) + NODE_W - minX;
+                  const height = Math.max(...opening.map((n) => n.position.y)) + NODE_H - minY;
+                  const zoom = Math.min(0.9, (box.width * 0.85) / width, (box.height * 0.85) / height);
+                  void instance.setViewport({
+                    x: (box.width - width * zoom) / 2 - minX * zoom,
+                    y: (box.height - height * zoom) / 2 - minY * zoom,
+                    zoom,
+                  });
+                }}
+                nodesConnectable={!readOnly}
+                deleteKeyCode={readOnly ? null : ['Backspace', 'Delete']}
+                fitView={nodes.length <= 10}
+                fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
+                minZoom={0.15}
+                proOptions={{ hideAttribution: true }}
+                defaultEdgeOptions={{ style: { strokeWidth: 1.3 } }}
+              >
+                <Background variant={BackgroundVariant.Dots} gap={18} size={1} color="transparent" />
+                <Controls position="bottom-right" showInteractive={false} />
+                {nodes.length > 10 && <FlowMiniMap />}
+              </ReactFlow>
+            )}
           </div>
           {!steps.length && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
