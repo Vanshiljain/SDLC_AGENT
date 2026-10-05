@@ -30,10 +30,20 @@ async function org(slug: string, name: string, isDemo: boolean) {
   });
 }
 
-async function project(organizationId: string, p: { name: string; key: string; slug: string; description: string; url: (env: string) => string; repo?: { owner: string; name: string } }) {
+async function project(
+  organizationId: string,
+  p: { name: string; key: string; slug: string; description: string; url: (env: string) => string; repo?: { owner: string; name: string } },
+) {
   const row = await prisma.project.upsert({
     where: { organizationId_slug: { organizationId, slug: p.slug } },
-    create: { organizationId, name: p.name, key: p.key, slug: p.slug, description: p.description, settings: { jiraProjectKey: p.key, ticketProvider: 'JIRA', notionParentPageId: 'demo-parent-page' } as Prisma.InputJsonValue },
+    create: {
+      organizationId,
+      name: p.name,
+      key: p.key,
+      slug: p.slug,
+      description: p.description,
+      settings: { jiraProjectKey: p.key, ticketProvider: 'JIRA', notionParentPageId: 'demo-parent-page' } as Prisma.InputJsonValue,
+    },
     update: { description: p.description },
   });
   for (const [name, type, requiresApproval] of [
@@ -70,7 +80,13 @@ async function project(organizationId: string, p: { name: string; key: string; s
         defaultBranch: 'main',
         url: `https://github.com/${p.repo.owner}/${p.repo.name}`,
         language: 'TypeScript',
-        settings: { installCommand: 'npm ci', lintCommand: 'npm run lint', testCommand: 'npm test', ciWorkflow: 'ci.yml', deployWorkflow: 'deploy.yml' } as Prisma.InputJsonValue,
+        settings: {
+          installCommand: 'npm ci',
+          lintCommand: 'npm run lint',
+          testCommand: 'npm test',
+          ciWorkflow: 'ci.yml',
+          deployWorkflow: 'deploy.yml',
+        } as Prisma.InputJsonValue,
       },
       update: {},
     });
@@ -94,32 +110,74 @@ async function main() {
     [acme, engineer, 'MEMBER'],
     [acme, lead, 'ADMIN'],
   ] as const) {
-    await prisma.membership.upsert({ where: { organizationId_userId: { organizationId: o.id, userId: u.id } }, create: { organizationId: o.id, userId: u.id, role }, update: { role } });
+    await prisma.membership.upsert({
+      where: { organizationId_userId: { organizationId: o.id, userId: u.id } },
+      create: { organizationId: o.id, userId: u.id, role },
+      update: { role },
+    });
   }
 
-  const platform = await prisma.team.upsert({ where: { organizationId_slug: { organizationId: demo.id, slug: 'platform' } }, create: { organizationId: demo.id, name: 'Platform', slug: 'platform', description: 'Identity, payments and core services' }, update: {} });
-  for (const u of [admin, engineer, lead]) await prisma.teamMember.upsert({ where: { teamId_userId: { teamId: platform.id, userId: u.id } }, create: { teamId: platform.id, userId: u.id }, update: {} });
+  const platform = await prisma.team.upsert({
+    where: { organizationId_slug: { organizationId: demo.id, slug: 'platform' } },
+    create: { organizationId: demo.id, name: 'Platform', slug: 'platform', description: 'Identity, payments and core services' },
+    update: {},
+  });
+  for (const u of [admin, engineer, lead])
+    await prisma.teamMember.upsert({
+      where: { teamId_userId: { teamId: platform.id, userId: u.id } },
+      create: { teamId: platform.id, userId: u.id },
+      update: {},
+    });
 
   const demoUrl = (svc: string) => (env: string) => `https://${env === 'production' ? '' : `${env}.`}${svc}.demo.forgeline.invalid`;
-  const auth = await project(demo.id, { name: 'Authentication Service', key: 'AUTH', slug: 'authentication-service', description: 'Identity, sessions, OAuth and password management.', url: demoUrl('auth'), repo: { owner: 'forgeline-demo', name: 'auth-service' } });
-  const pay = await project(demo.id, { name: 'Payments API', key: 'PAY', slug: 'payments-api', description: 'Checkout, invoicing and payment provider integrations.', url: demoUrl('payments'), repo: { owner: 'forgeline-demo', name: 'payments-api' } });
+  const auth = await project(demo.id, {
+    name: 'Authentication Service',
+    key: 'AUTH',
+    slug: 'authentication-service',
+    description: 'Identity, sessions, OAuth and password management.',
+    url: demoUrl('auth'),
+    repo: { owner: 'forgeline-demo', name: 'auth-service' },
+  });
+  const pay = await project(demo.id, {
+    name: 'Payments API',
+    key: 'PAY',
+    slug: 'payments-api',
+    description: 'Checkout, invoicing and payment provider integrations.',
+    url: demoUrl('payments'),
+    repo: { owner: 'forgeline-demo', name: 'payments-api' },
+  });
   for (const p of [auth, pay]) {
     for (const [u, role] of [
       [admin, 'MAINTAINER'],
       [engineer, 'DEVELOPER'],
       [lead, 'MAINTAINER'],
     ] as const) {
-      await prisma.projectMember.upsert({ where: { projectId_userId: { projectId: p.id, userId: u.id } }, create: { projectId: p.id, userId: u.id, role }, update: { role } });
+      await prisma.projectMember.upsert({
+        where: { projectId_userId: { projectId: p.id, userId: u.id } },
+        create: { projectId: p.id, userId: u.id, role },
+        update: { role },
+      });
     }
     await prisma.project.update({ where: { id: p.id }, data: { teamId: platform.id } });
   }
 
   const acmeProject = await prisma.project.upsert({
     where: { organizationId_slug: { organizationId: acme.id, slug: 'core-platform' } },
-    create: { organizationId: acme.id, name: 'Core Platform', key: 'CORE', slug: 'core-platform', description: 'Connect GitHub, Jira and your CI/CD to start delivering with Forgeline.', settings: { jiraProjectKey: 'CORE' } as Prisma.InputJsonValue },
+    create: {
+      organizationId: acme.id,
+      name: 'Core Platform',
+      key: 'CORE',
+      slug: 'core-platform',
+      description: 'Connect GitHub, Jira and your CI/CD to start delivering with Forgeline.',
+      settings: { jiraProjectKey: 'CORE' } as Prisma.InputJsonValue,
+    },
     update: {},
   });
-  await prisma.projectMember.upsert({ where: { projectId_userId: { projectId: acmeProject.id, userId: admin.id } }, create: { projectId: acmeProject.id, userId: admin.id, role: 'MAINTAINER' }, update: {} });
+  await prisma.projectMember.upsert({
+    where: { projectId_userId: { projectId: acmeProject.id, userId: admin.id } },
+    create: { projectId: acmeProject.id, userId: admin.id, role: 'MAINTAINER' },
+    update: {},
+  });
 
   // A saved custom flow in the demo workspace (definition is validated by the API when run).
   await prisma.workflow.upsert({
@@ -129,7 +187,8 @@ async function main() {
       projectId: auth.id,
       slug: 'ready-for-dev-kickoff',
       name: 'Ready-for-Dev kickoff',
-      description: 'When a Jira ticket moves to "Ready for Development": analyse it, create a branch, plan the implementation and notify the team.',
+      description:
+        'When a Jira ticket moves to "Ready for Development": analyse it, create a branch, plan the implementation and notify the team.',
       category: 'plan',
       status: 'ACTIVE',
       createdById: admin.id,
@@ -140,10 +199,50 @@ async function main() {
         onFailure: 'fail',
         concurrency: 4,
         steps: [
-          { key: 'analyze_ticket', name: 'Analyze ticket', type: 'tool', tool: 'ai.draftTicket', input: { requirement: '{{ inputs.requirement }}' }, dependsOn: [], runIf: 'all_success', continueOnError: false, ui: { x: 0, y: 0 } },
-          { key: 'create_branch', name: 'Create branch', type: 'tool', tool: 'github.createBranch', input: { branch: "feature/{{ slugify(steps.analyze_ticket.output.summary) }}" }, dependsOn: ['analyze_ticket'], runIf: 'all_success', continueOnError: false, ui: { x: 280, y: 0 } },
-          { key: 'plan', name: 'Implementation plan', type: 'tool', tool: 'ai.generatePlan', input: { requirement: '{{ inputs.requirement }}' }, dependsOn: ['analyze_ticket'], runIf: 'all_success', continueOnError: false, ui: { x: 280, y: 130 } },
-          { key: 'notify', name: 'Notify developer', type: 'tool', tool: 'notify.team', input: { title: 'Ready for development', message: 'Branch {{ steps.create_branch.output.branch }} and plan are ready.' }, dependsOn: ['create_branch', 'plan'], runIf: 'all_success', continueOnError: false, ui: { x: 560, y: 60 } },
+          {
+            key: 'analyze_ticket',
+            name: 'Analyze ticket',
+            type: 'tool',
+            tool: 'ai.draftTicket',
+            input: { requirement: '{{ inputs.requirement }}' },
+            dependsOn: [],
+            runIf: 'all_success',
+            continueOnError: false,
+            ui: { x: 0, y: 0 },
+          },
+          {
+            key: 'create_branch',
+            name: 'Create branch',
+            type: 'tool',
+            tool: 'github.createBranch',
+            input: { branch: 'feature/{{ slugify(steps.analyze_ticket.output.summary) }}' },
+            dependsOn: ['analyze_ticket'],
+            runIf: 'all_success',
+            continueOnError: false,
+            ui: { x: 280, y: 0 },
+          },
+          {
+            key: 'plan',
+            name: 'Implementation plan',
+            type: 'tool',
+            tool: 'ai.generatePlan',
+            input: { requirement: '{{ inputs.requirement }}' },
+            dependsOn: ['analyze_ticket'],
+            runIf: 'all_success',
+            continueOnError: false,
+            ui: { x: 280, y: 130 },
+          },
+          {
+            key: 'notify',
+            name: 'Notify developer',
+            type: 'tool',
+            tool: 'notify.team',
+            input: { title: 'Ready for development', message: 'Branch {{ steps.create_branch.output.branch }} and plan are ready.' },
+            dependsOn: ['create_branch', 'plan'],
+            runIf: 'all_success',
+            continueOnError: false,
+            ui: { x: 560, y: 60 },
+          },
         ],
       } as Prisma.InputJsonValue,
     },

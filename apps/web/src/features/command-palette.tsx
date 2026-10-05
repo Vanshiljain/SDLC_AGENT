@@ -64,9 +64,16 @@ export function CommandPalette() {
     <D.Root open={open} onOpenChange={(o) => ui.set({ paletteOpen: o })}>
       <D.Portal>
         <D.Overlay className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px] data-[state=open]:animate-fade-in" />
-        <D.Content className="fixed top-[14vh] left-1/2 z-50 w-[calc(100vw-32px)] max-w-[640px] -translate-x-1/2 overflow-hidden rounded-xl border border-line bg-raised shadow-pop data-[state=open]:animate-fade-in" aria-describedby={undefined}>
+        <D.Content
+          className="fixed top-[14vh] left-1/2 z-50 w-[calc(100vw-32px)] max-w-[640px] -translate-x-1/2 overflow-hidden rounded-xl border border-line bg-raised shadow-pop data-[state=open]:animate-fade-in"
+          aria-describedby={undefined}
+        >
           <D.Title className="sr-only">Command palette</D.Title>
-          <Command label="Command palette" loop className="[&_[cmdk-group-heading]]:label-caps [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:pb-1.5">
+          <Command
+            label="Command palette"
+            loop
+            className="[&_[cmdk-group-heading]]:label-caps [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:pb-1.5"
+          >
             <div className="flex items-center gap-2.5 border-b border-line px-4">
               <Sparkles className="size-4 text-ai" />
               <Command.Input
@@ -85,7 +92,9 @@ export function CommandPalette() {
               {routing ? <Spinner className="size-3.5 text-fg-subtle" /> : <Kbd>esc</Kbd>}
             </div>
             <Command.List className="max-h-[min(440px,60vh)] overflow-y-auto pb-2">
-              <Command.Empty className="px-4 py-8 text-center text-[12.5px] text-fg-subtle">No matches. Press Enter on “Ask Forge” to hand it to the assistant.</Command.Empty>
+              <Command.Empty className="px-4 py-8 text-center text-[12.5px] text-fg-subtle">
+                No matches. Press Enter on “Ask Forge” to hand it to the assistant.
+              </Command.Empty>
 
               {q.length > 1 && (
                 <Command.Group heading="Forge">
@@ -100,7 +109,13 @@ export function CommandPalette() {
 
               <Command.Group heading="Commands">
                 {commands.data?.commands.map((c) => (
-                  <Item key={c.id} value={`${c.title} ${c.keywords.join(' ')} ${c.category}`} icon={<Play />} onSelect={() => (close(), commandLauncher.open(c.id))} hint={<span className="text-[11px] text-fg-subtle">{c.category}</span>}>
+                  <Item
+                    key={c.id}
+                    value={`${c.title} ${c.keywords.join(' ')} ${c.category}`}
+                    icon={<Play />}
+                    onSelect={() => (close(), commandLauncher.open(c.id))}
+                    hint={<span className="text-[11px] text-fg-subtle">{c.category}</span>}
+                  >
                     {c.title}
                   </Item>
                 ))}
@@ -109,7 +124,13 @@ export function CommandPalette() {
               {!!runs.data?.items.length && (
                 <Command.Group heading="Recent runs">
                   {runs.data.items.map((r) => (
-                    <Item key={r.id} value={`run ${r.title} ${r.id}`} icon={<Zap />} onSelect={() => go(`/executions/${r.id}`)} hint={<StatusDot status={r.status} />}>
+                    <Item
+                      key={r.id}
+                      value={`run ${r.title} ${r.id}`}
+                      icon={<Zap />}
+                      onSelect={() => go(`/executions/${r.id}`)}
+                      hint={<StatusDot status={r.status} />}
+                    >
                       <span className="truncate">{r.title}</span>
                     </Item>
                   ))}
@@ -119,7 +140,13 @@ export function CommandPalette() {
               {!!projects.data?.length && (
                 <Command.Group heading="Projects">
                   {projects.data.map((p) => (
-                    <Item key={p.id} value={`project ${p.name} ${p.key}`} icon={<FolderKanban />} onSelect={() => go(`/projects/${p.id}`)} hint={<span className="font-mono text-[11px] text-fg-subtle">{p.key}</span>}>
+                    <Item
+                      key={p.id}
+                      value={`project ${p.name} ${p.key}`}
+                      icon={<FolderKanban />}
+                      onSelect={() => go(`/projects/${p.id}`)}
+                      hint={<span className="font-mono text-[11px] text-fg-subtle">{p.key}</span>}
+                    >
                       {p.name}
                     </Item>
                   ))}
@@ -128,7 +155,13 @@ export function CommandPalette() {
 
               <Command.Group heading="Go to">
                 {pages.map((p) => (
-                  <Item key={p.to} value={`go ${p.label}`} icon={<p.icon />} onSelect={() => go(p.to)} hint={<ArrowRight className="size-3 text-fg-subtle" />}>
+                  <Item
+                    key={p.to}
+                    value={`go ${p.label}`}
+                    icon={<p.icon />}
+                    onSelect={() => go(p.to)}
+                    hint={<ArrowRight className="size-3 text-fg-subtle" />}
+                  >
                     {p.label}
                   </Item>
                 ))}
@@ -164,12 +197,27 @@ export function CommandPalette() {
   );
 }
 
-function Item({ children, icon, onSelect, value, hint }: { children: React.ReactNode; icon: React.ReactNode; onSelect: () => void; value: string; hint?: React.ReactNode }) {
+function Item({
+  children,
+  icon,
+  onSelect,
+  value,
+  hint,
+}: {
+  children: React.ReactNode;
+  icon: React.ReactNode;
+  onSelect: () => void;
+  value: string;
+  hint?: React.ReactNode;
+}) {
   return (
     <Command.Item
       value={value}
       onSelect={onSelect}
-      className={cn('mx-1.5 flex h-9 cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-[13px] text-fg-muted outline-none', 'data-[selected=true]:bg-sunken data-[selected=true]:text-fg')}
+      className={cn(
+        'mx-1.5 flex h-9 cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-[13px] text-fg-muted outline-none',
+        'data-[selected=true]:bg-sunken data-[selected=true]:text-fg',
+      )}
     >
       <span className="text-fg-subtle [&>svg]:size-4">{icon}</span>
       <span className="flex min-w-0 flex-1 items-center gap-1 truncate">{children}</span>

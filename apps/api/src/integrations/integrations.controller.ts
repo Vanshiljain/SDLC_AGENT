@@ -83,7 +83,13 @@ export class IntegrationsController {
   @Public()
   @Get('oauth/:provider/callback')
   @ApiOperation({ summary: 'OAuth redirect target (state-validated)' })
-  async oauthCallback(@Param('provider') provider: string, @Query('code') code: string, @Query('state') state: string, @Query('error') error: string | undefined, @Res() res: Response) {
+  async oauthCallback(
+    @Param('provider') provider: string,
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Query('error') error: string | undefined,
+    @Res() res: Response,
+  ) {
     const p = parseProvider(provider);
     if (error || !code || !state) {
       const target = await this.integrations.oauthCallback(p, '', state ?? '').catch(() => null);

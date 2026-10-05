@@ -1,13 +1,4 @@
-import {
-  type ArgumentsHost,
-  Catch,
-  type ExceptionFilter,
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Prisma } from '@forgeline/database';
 import { ToolError, type ApiErrorBody, type ToolErrorKind } from '@forgeline/shared';
@@ -57,7 +48,10 @@ export class LoggingErrorReporter implements ErrorReporter {
   private readonly logger = new Logger('ErrorReporter');
   captureException(error: unknown, context?: Record<string, unknown>): void {
     const err = error instanceof Error ? error : new Error(String(error));
-    this.logger.error({ err: { message: err.message, stack: err.stack, name: err.name }, ...redact(context ?? {}), ...RequestContext.get() }, err.message);
+    this.logger.error(
+      { err: { message: err.message, stack: err.stack, name: err.name }, ...redact(context ?? {}), ...RequestContext.get() },
+      err.message,
+    );
   }
 }
 
@@ -105,12 +99,23 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       if (status >= 500) this.reporter.captureException(exception, { path: req.path });
     } else if (ToolError.is(exception)) {
       const status = TOOL_ERROR_STATUS[exception.kind] ?? 500;
-      body = { statusCode: status, error: HttpStatus[status] ?? 'Error', message: exception.message, code: `TOOL_${exception.kind.toUpperCase()}` };
+      body = {
+        statusCode: status,
+        error: HttpStatus[status] ?? 'Error',
+        message: exception.message,
+        code: `TOOL_${exception.kind.toUpperCase()}`,
+      };
       if (status >= 500) this.reporter.captureException(exception, { path: req.path });
     } else if (exception instanceof WorkflowValidationError) {
       body = { statusCode: 400, error: 'Bad Request', message: exception.message, code: 'INVALID_WORKFLOW', details: exception.issues };
     } else if (exception instanceof Prisma.PrismaClientKnownRequestError && exception.code === 'P2002') {
-      body = { statusCode: 409, error: 'Conflict', message: 'A resource with these unique values already exists', code: 'UNIQUE_VIOLATION', details: exception.meta?.target };
+      body = {
+        statusCode: 409,
+        error: 'Conflict',
+        message: 'A resource with these unique values already exists',
+        code: 'UNIQUE_VIOLATION',
+        details: exception.meta?.target,
+      };
     } else if (exception instanceof Prisma.PrismaClientKnownRequestError && exception.code === 'P2025') {
       body = { statusCode: 404, error: 'Not Found', message: 'Resource not found', code: 'NOT_FOUND' };
     } else {

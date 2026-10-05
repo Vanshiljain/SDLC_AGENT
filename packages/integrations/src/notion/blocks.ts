@@ -14,10 +14,47 @@ export type NotionBlock = { object?: 'block'; type: string; id?: string; has_chi
 
 const MAX_TEXT = 1900;
 const NOTION_LANGUAGES = new Set([
-  'bash', 'c', 'c#', 'c++', 'css', 'diff', 'docker', 'go', 'graphql', 'html', 'java', 'javascript', 'json', 'kotlin',
-  'makefile', 'markdown', 'mermaid', 'php', 'plain text', 'python', 'ruby', 'rust', 'scala', 'shell', 'sql', 'swift', 'typescript', 'yaml',
+  'bash',
+  'c',
+  'c#',
+  'c++',
+  'css',
+  'diff',
+  'docker',
+  'go',
+  'graphql',
+  'html',
+  'java',
+  'javascript',
+  'json',
+  'kotlin',
+  'makefile',
+  'markdown',
+  'mermaid',
+  'php',
+  'plain text',
+  'python',
+  'ruby',
+  'rust',
+  'scala',
+  'shell',
+  'sql',
+  'swift',
+  'typescript',
+  'yaml',
 ]);
-const LANG_ALIASES: Record<string, string> = { ts: 'typescript', js: 'javascript', sh: 'shell', yml: 'yaml', py: 'python', tsx: 'typescript', jsx: 'javascript', md: 'markdown', text: 'plain text', '': 'plain text' };
+const LANG_ALIASES: Record<string, string> = {
+  ts: 'typescript',
+  js: 'javascript',
+  sh: 'shell',
+  yml: 'yaml',
+  py: 'python',
+  tsx: 'typescript',
+  jsx: 'javascript',
+  md: 'markdown',
+  text: 'plain text',
+  '': 'plain text',
+};
 
 function chunk(text: string): string[] {
   const out: string[] = [];
@@ -32,7 +69,11 @@ export function richText(text: string): NotionRichText[] {
   const push = (content: string, annotations: NotionRichText['annotations'] = {}, link?: string) => {
     for (const c of chunk(content)) {
       if (!c) continue;
-      parts.push({ type: 'text', text: { content: c, ...(link && /^https?:\/\//.test(link) ? { link: { url: link } } : {}) }, annotations });
+      parts.push({
+        type: 'text',
+        text: { content: c, ...(link && /^https?:\/\//.test(link) ? { link: { url: link } } : {}) },
+        annotations,
+      });
     }
   };
   let last = 0;

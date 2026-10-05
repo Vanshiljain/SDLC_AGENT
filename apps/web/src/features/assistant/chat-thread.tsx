@@ -95,10 +95,17 @@ export function ChatThread({
               <Sparkles className="size-5" />
             </div>
             <h2 className="text-[17px] font-semibold tracking-tight">What should we ship?</h2>
-            <p className="mt-1 text-[13px] text-fg-muted">Describe a feature, fix or release. Forge plans it as a flow, shows the approvals it needs, and runs it with you in the loop.</p>
+            <p className="mt-1 text-[13px] text-fg-muted">
+              Describe a feature, fix or release. Forge plans it as a flow, shows the approvals it needs, and runs it with you in the loop.
+            </p>
             <div className="mt-5 grid gap-2">
               {SUGGESTIONS.map((s) => (
-                <button key={s} type="button" onClick={() => void submit(s)} className="rounded-md border border-line bg-raised px-3 py-2 text-left text-[12.5px] text-fg-muted transition-colors hover:border-ai/40 hover:text-fg">
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => void submit(s)}
+                  className="rounded-md border border-line bg-raised px-3 py-2 text-left text-[12.5px] text-fg-muted transition-colors hover:border-ai/40 hover:text-fg"
+                >
                   {s}
                 </button>
               ))}
@@ -115,7 +122,9 @@ export function ChatThread({
               if (m.role === 'USER') {
                 return (
                   <div key={m.id} className="flex justify-end gap-2.5">
-                    <div className="max-w-[85%] rounded-xl rounded-tr-sm bg-sunken px-3.5 py-2 text-[13.5px] leading-6 whitespace-pre-wrap">{m.content}</div>
+                    <div className="max-w-[85%] rounded-xl rounded-tr-sm bg-sunken px-3.5 py-2 text-[13.5px] leading-6 whitespace-pre-wrap">
+                      {m.content}
+                    </div>
                     {!compact && <Avatar name={user?.name} size={26} />}
                   </div>
                 );
@@ -179,9 +188,23 @@ export function ChatThread({
               className="max-h-[200px] min-h-8 flex-1 resize-none bg-transparent py-1.5 text-[13.5px] leading-5 outline-none placeholder:text-fg-subtle"
             />
             {responding ? (
-              <Button size="icon-sm" variant="secondary" aria-label="Stop response" onClick={() => void cancel()} icon={<Square className="size-3 fill-current" />} />
+              <Button
+                size="icon-sm"
+                variant="secondary"
+                aria-label="Stop response"
+                onClick={() => void cancel()}
+                icon={<Square className="size-3 fill-current" />}
+              />
             ) : (
-              <Button type="submit" size="icon-sm" variant="primary" aria-label="Send" loading={sending} disabled={!text.trim()} icon={<ArrowUp className="size-4" />} />
+              <Button
+                type="submit"
+                size="icon-sm"
+                variant="primary"
+                aria-label="Send"
+                loading={sending}
+                disabled={!text.trim()}
+                icon={<ArrowUp className="size-4" />}
+              />
             )}
           </div>
           {pageContext?.entity && (

@@ -5,7 +5,12 @@ import type { IntegrationClients, ToolExecutionContext } from './core/tool';
 export interface MockRoute {
   method: string;
   path: RegExp;
-  handler: (req: { url: URL; body: unknown; headers: Headers; calls: number }) => { status?: number; body?: unknown; headers?: Record<string, string>; text?: string };
+  handler: (req: { url: URL; body: unknown; headers: Headers; calls: number }) => {
+    status?: number;
+    body?: unknown;
+    headers?: Record<string, string>;
+    text?: string;
+  };
 }
 
 export function mockFetch(routes: MockRoute[]) {
@@ -36,7 +41,9 @@ export function mockFetch(routes: MockRoute[]) {
   return { fetch: fn, calls };
 }
 
-export function toolContext(overrides: Partial<Omit<ToolExecutionContext, 'clients'>> & { clients?: Partial<IntegrationClients> } = {}): ToolExecutionContext {
+export function toolContext(
+  overrides: Partial<Omit<ToolExecutionContext, 'clients'>> & { clients?: Partial<IntegrationClients> } = {},
+): ToolExecutionContext {
   const notConnected = async () => {
     throw new Error('not connected in test');
   };

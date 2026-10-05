@@ -60,13 +60,20 @@ function Workspace() {
       setSettings(org.settings);
     }
   }, [org]);
-  const save = useAction(() => api.patch('/organizations/current', { name, settings }), { success: 'Workspace saved', invalidate: [qk.org, qk.me] });
+  const save = useAction(() => api.patch('/organizations/current', { name, settings }), {
+    success: 'Workspace saved',
+    invalidate: [qk.org, qk.me],
+  });
   if (isLoading || !org) return <Skeleton className="h-64" />;
   const manage = can('org:manage');
   return (
     <Card>
       <fieldset disabled={!manage} className="space-y-5 p-5">
-        {org.isDemo && <div className="demo-stripes rounded-md border border-warn/30 px-3 py-2 text-[12.5px] text-warn">This is a demo workspace — every run is simulated. Create or switch to a real workspace to connect your tools.</div>}
+        {org.isDemo && (
+          <div className="demo-stripes rounded-md border border-warn/30 px-3 py-2 text-[12.5px] text-warn">
+            This is a demo workspace — every run is simulated. Create or switch to a real workspace to connect your tools.
+          </div>
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Workspace name">
             <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -80,19 +87,37 @@ function Workspace() {
             <span className="flex items-center gap-1.5 text-[13px] font-medium">
               <Lock className="size-3.5 text-accent" /> Four-eyes for production
             </span>
-            <span className="mt-0.5 block text-[12px] text-fg-muted">The person who started a run can’t approve its production deployment — someone else with deploy permission must.</span>
+            <span className="mt-0.5 block text-[12px] text-fg-muted">
+              The person who started a run can’t approve its production deployment — someone else with deploy permission must.
+            </span>
           </span>
-          <Switch checked={settings.fourEyesProduction} onCheckedChange={(v) => setSettings((s) => ({ ...s, fourEyesProduction: v }))} label="Four-eyes for production" />
+          <Switch
+            checked={settings.fourEyesProduction}
+            onCheckedChange={(v) => setSettings((s) => ({ ...s, fourEyesProduction: v }))}
+            label="Four-eyes for production"
+          />
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Default ticket system">
-            <Select value={settings.defaultTicketProvider} onChange={(e) => setSettings((s) => ({ ...s, defaultTicketProvider: e.target.value }))}>
+            <Select
+              value={settings.defaultTicketProvider}
+              onChange={(e) => setSettings((s) => ({ ...s, defaultTicketProvider: e.target.value }))}
+            >
               <option value="JIRA">Jira</option>
               <option value="TRELLO">Trello</option>
             </Select>
           </Field>
-          <Field label="Log retention (days)" hint="Execution logs older than this are purged. Audit entries follow your compliance policy.">
-            <Input type="number" min={7} max={3650} value={settings.logRetentionDays} onChange={(e) => setSettings((s) => ({ ...s, logRetentionDays: Number(e.target.value) }))} />
+          <Field
+            label="Log retention (days)"
+            hint="Execution logs older than this are purged. Audit entries follow your compliance policy."
+          >
+            <Input
+              type="number"
+              min={7}
+              max={3650}
+              value={settings.logRetentionDays}
+              onChange={(e) => setSettings((s) => ({ ...s, logRetentionDays: Number(e.target.value) }))}
+            />
           </Field>
         </div>
       </fieldset>
@@ -112,14 +137,32 @@ function MembersTab() {
   const { data, isLoading } = useMembers();
   const manage = can('members:manage');
   const [inviting, setInviting] = useState(false);
-  const changeRole = useAction((v: { id: string; role: OrgRole }) => api.patch(`/organizations/current/members/${v.id}`, { role: v.role }), { success: 'Role updated', invalidate: [qk.members] });
-  const remove = useAction((id: string) => api.del(`/organizations/current/members/${id}`), { success: 'Member removed', invalidate: [qk.members] });
-  const revoke = useAction((id: string) => api.del(`/organizations/current/invitations/${id}`), { success: 'Invitation revoked', invalidate: [qk.members] });
+  const changeRole = useAction(
+    (v: { id: string; role: OrgRole }) => api.patch(`/organizations/current/members/${v.id}`, { role: v.role }),
+    { success: 'Role updated', invalidate: [qk.members] },
+  );
+  const remove = useAction((id: string) => api.del(`/organizations/current/members/${id}`), {
+    success: 'Member removed',
+    invalidate: [qk.members],
+  });
+  const revoke = useAction((id: string) => api.del(`/organizations/current/invitations/${id}`), {
+    success: 'Invitation revoked',
+    invalidate: [qk.members],
+  });
   if (isLoading || !data) return <Skeleton className="h-64" />;
   return (
     <div className="space-y-5">
       <Card>
-        <CardHeader title={`${data.members.length} members`} actions={manage && <Button size="sm" variant="primary" icon={<Mail className="size-3.5" />} onClick={() => setInviting(true)}>Invite</Button>} />
+        <CardHeader
+          title={`${data.members.length} members`}
+          actions={
+            manage && (
+              <Button size="sm" variant="primary" icon={<Mail className="size-3.5" />} onClick={() => setInviting(true)}>
+                Invite
+              </Button>
+            )
+          }
+        />
         <ul className="divide-y divide-line border-t border-line">
           {data.members.map((m) => (
             <li key={m.id} className="flex items-center gap-3 px-4 py-2.5">
@@ -132,14 +175,28 @@ function MembersTab() {
                   {m.user.email} · joined {timeAgo(m.joinedAt)}
                 </div>
               </div>
-              <Select value={m.role} disabled={!manage || m.user.id === user?.id} onChange={(e) => changeRole.mutate({ id: m.id, role: e.target.value as OrgRole })} className="h-7 w-32 text-[12px]" aria-label="Role">
+              <Select
+                value={m.role}
+                disabled={!manage || m.user.id === user?.id}
+                onChange={(e) => changeRole.mutate({ id: m.id, role: e.target.value as OrgRole })}
+                className="h-7 w-32 text-[12px]"
+                aria-label="Role"
+              >
                 {ORG_ROLES.map((r) => (
                   <option key={r} value={r}>
                     {titleCase(r)}
                   </option>
                 ))}
               </Select>
-              {manage && m.user.id !== user?.id && <Button size="icon-sm" variant="ghost" aria-label={`Remove ${m.user.name}`} onClick={() => remove.mutate(m.id)} icon={<Trash2 className="size-3.5" />} />}
+              {manage && m.user.id !== user?.id && (
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label={`Remove ${m.user.name}`}
+                  onClick={() => remove.mutate(m.id)}
+                  icon={<Trash2 className="size-3.5" />}
+                />
+              )}
             </li>
           ))}
         </ul>
@@ -154,7 +211,11 @@ function MembersTab() {
                 <span className="flex-1">{i.email}</span>
                 <Badge>{titleCase(i.role)}</Badge>
                 <span className="text-[11.5px] text-fg-subtle">expires {formatDateTime(i.expiresAt)}</span>
-                {manage && <Button size="xs" variant="danger-ghost" onClick={() => revoke.mutate(i.id)}>Revoke</Button>}
+                {manage && (
+                  <Button size="xs" variant="danger-ghost" onClick={() => revoke.mutate(i.id)}>
+                    Revoke
+                  </Button>
+                )}
               </li>
             ))}
           </ul>
@@ -163,10 +224,18 @@ function MembersTab() {
       <Card className="p-4 text-[12px] text-fg-muted">
         <div className="mb-2 font-medium text-fg">Roles</div>
         <ul className="grid gap-1 sm:grid-cols-2">
-          <li><span className="font-medium text-fg">Owner</span> — everything, including billing and deleting the workspace.</li>
-          <li><span className="font-medium text-fg">Admin</span> — manage members, integrations, flows and production deploys.</li>
-          <li><span className="font-medium text-fg">Member</span> — run flows and deploy to non-production per project role.</li>
-          <li><span className="font-medium text-fg">Viewer</span> — read-only access to runs, projects and reports.</li>
+          <li>
+            <span className="font-medium text-fg">Owner</span> — everything, including billing and deleting the workspace.
+          </li>
+          <li>
+            <span className="font-medium text-fg">Admin</span> — manage members, integrations, flows and production deploys.
+          </li>
+          <li>
+            <span className="font-medium text-fg">Member</span> — run flows and deploy to non-production per project role.
+          </li>
+          <li>
+            <span className="font-medium text-fg">Viewer</span> — read-only access to runs, projects and reports.
+          </li>
         </ul>
       </Card>
       {inviting && <InviteDialog onClose={() => setInviting(false)} />}
@@ -177,7 +246,9 @@ function MembersTab() {
 function InviteDialog({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<OrgRole>('MEMBER');
-  const invite = useAction(() => api.post<{ inviteUrl: string; email: string }>('/organizations/current/invitations', { email, role }), { invalidate: [qk.members] });
+  const invite = useAction(() => api.post<{ inviteUrl: string; email: string }>('/organizations/current/invitations', { email, role }), {
+    invalidate: [qk.members],
+  });
   return (
     <Dialog
       open
@@ -190,7 +261,12 @@ function InviteDialog({ onClose }: { onClose: () => void }) {
             Done
           </Button>
         ) : (
-          <Button variant="primary" loading={invite.isPending} disabled={!/^\S+@\S+\.\S+$/.test(email)} onClick={() => invite.mutate(undefined)}>
+          <Button
+            variant="primary"
+            loading={invite.isPending}
+            disabled={!/^\S+@\S+\.\S+$/.test(email)}
+            onClick={() => invite.mutate(undefined)}
+          >
             Create invitation
           </Button>
         )
@@ -231,18 +307,51 @@ function TeamsTab() {
   const manage = can('members:manage');
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
-  const create = useAction(() => api.post('/organizations/current/teams', { name }), { success: 'Team created', invalidate: [qk.teams], onSuccess: () => (setCreating(false), setName('')) });
-  const setMembers = useAction((v: { id: string; userIds: string[] }) => api.put(`/organizations/current/teams/${v.id}/members`, { userIds: v.userIds }), { invalidate: [qk.teams] });
-  const remove = useAction((id: string) => api.del(`/organizations/current/teams/${id}`), { success: 'Team deleted', invalidate: [qk.teams] });
+  const create = useAction(() => api.post('/organizations/current/teams', { name }), {
+    success: 'Team created',
+    invalidate: [qk.teams],
+    onSuccess: () => (setCreating(false), setName('')),
+  });
+  const setMembers = useAction(
+    (v: { id: string; userIds: string[] }) => api.put(`/organizations/current/teams/${v.id}/members`, { userIds: v.userIds }),
+    { invalidate: [qk.teams] },
+  );
+  const remove = useAction((id: string) => api.del(`/organizations/current/teams/${id}`), {
+    success: 'Team deleted',
+    invalidate: [qk.teams],
+  });
   if (teams.isLoading) return <Skeleton className="h-48" />;
   return (
     <div className="space-y-4">
-      {!teams.data?.length && <Card><EmptyState compact icon={<Users />} title="No teams yet" description="Teams group people and projects, e.g. Platform or Payments." /></Card>}
+      {!teams.data?.length && (
+        <Card>
+          <EmptyState
+            compact
+            icon={<Users />}
+            title="No teams yet"
+            description="Teams group people and projects, e.g. Platform or Payments."
+          />
+        </Card>
+      )}
       {teams.data?.map((t) => {
         const ids = t.members.map((m) => m.userId);
         return (
           <Card key={t.id}>
-            <CardHeader title={t.name} description={`${t.members.length} members · ${t._count.projects} projects${t.description ? ` · ${t.description}` : ''}`} actions={manage && <Button size="icon-sm" variant="ghost" aria-label={`Delete ${t.name}`} onClick={() => remove.mutate(t.id)} icon={<Trash2 className="size-3.5" />} />} />
+            <CardHeader
+              title={t.name}
+              description={`${t.members.length} members · ${t._count.projects} projects${t.description ? ` · ${t.description}` : ''}`}
+              actions={
+                manage && (
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label={`Delete ${t.name}`}
+                    onClick={() => remove.mutate(t.id)}
+                    icon={<Trash2 className="size-3.5" />}
+                  />
+                )
+              }
+            />
             <div className="flex flex-wrap gap-1.5 border-t border-line px-4 py-3">
               {members.data?.members.map((m) => {
                 const on = ids.includes(m.user.id);
@@ -290,7 +399,10 @@ function Profile() {
   const [pw, setPw] = useState({ currentPassword: '', newPassword: '' });
   const saveName = useAction(() => api.patch('/users/me', { name }), { success: 'Profile updated', invalidate: [qk.me] });
   // The server revokes every session for this user (including this one), so sign in again.
-  const change = useAction(() => api.post('/auth/change-password', pw), { success: 'Password changed — all sessions were signed out. Please sign in again.', onSuccess: () => void logout() });
+  const change = useAction(() => api.post('/auth/change-password', pw), {
+    success: 'Password changed — all sessions were signed out. Please sign in again.',
+    onSuccess: () => void logout(),
+  });
   return (
     <div className="grid gap-5 md:grid-cols-2">
       <Card>
@@ -320,10 +432,20 @@ function Profile() {
           }}
         >
           <Field label="Current password">
-            <Input type="password" autoComplete="current-password" value={pw.currentPassword} onChange={(e) => setPw({ ...pw, currentPassword: e.target.value })} />
+            <Input
+              type="password"
+              autoComplete="current-password"
+              value={pw.currentPassword}
+              onChange={(e) => setPw({ ...pw, currentPassword: e.target.value })}
+            />
           </Field>
           <Field label="New password" hint="At least 10 characters with upper-case, lower-case and a digit.">
-            <Input type="password" autoComplete="new-password" value={pw.newPassword} onChange={(e) => setPw({ ...pw, newPassword: e.target.value })} />
+            <Input
+              type="password"
+              autoComplete="new-password"
+              value={pw.newPassword}
+              onChange={(e) => setPw({ ...pw, newPassword: e.target.value })}
+            />
           </Field>
           <div className="flex justify-end">
             <Button type="submit" variant="primary" loading={change.isPending} disabled={!pw.currentPassword || pw.newPassword.length < 10}>

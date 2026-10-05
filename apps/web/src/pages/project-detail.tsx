@@ -24,8 +24,18 @@ export function ProjectDetailPage() {
   const { can } = useAuth();
   useDocumentTitle(p?.name ?? 'Project');
   usePageContext(p ? { title: p.name, entity: { kind: 'project', id: p.id, label: p.name }, projectId: p.id } : null, [p?.id]);
-  if (error) return <Page><ErrorState error={error} onRetry={() => void refetch()} /></Page>;
-  if (isLoading || !p) return <Page><Skeleton className="h-64" /></Page>;
+  if (error)
+    return (
+      <Page>
+        <ErrorState error={error} onRetry={() => void refetch()} />
+      </Page>
+    );
+  if (isLoading || !p)
+    return (
+      <Page>
+        <Skeleton className="h-64" />
+      </Page>
+    );
   const manage = can('project:manage');
   return (
     <Page wide>
@@ -44,7 +54,11 @@ export function ProjectDetailPage() {
           <Button icon={<Rocket className="size-3.5" />} onClick={() => commandLauncher.open('deploy.environment', { projectId: p.id })}>
             Deploy
           </Button>
-          <Button variant="primary" icon={<Zap className="size-3.5" />} onClick={() => commandLauncher.open('feature.deliver', { projectId: p.id })}>
+          <Button
+            variant="primary"
+            icon={<Zap className="size-3.5" />}
+            onClick={() => commandLauncher.open('feature.deliver', { projectId: p.id })}
+          >
             Deliver a feature
           </Button>
         </div>
@@ -84,9 +98,21 @@ function Overview({ project: p }: { project: ProjectDetail }) {
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
       <Card>
-        <CardHeader title="Recent runs" actions={<Link to="/executions" className="text-[12px] text-fg-muted hover:text-fg">All →</Link>} />
+        <CardHeader
+          title="Recent runs"
+          actions={
+            <Link to="/executions" className="text-[12px] text-fg-muted hover:text-fg">
+              All →
+            </Link>
+          }
+        />
         {runs.data && !runs.data.items.length ? (
-          <EmptyState compact icon={<Zap />} title="No runs yet" description="Deliver a feature, review a PR or deploy — runs for this project show up here." />
+          <EmptyState
+            compact
+            icon={<Zap />}
+            title="No runs yet"
+            description="Deliver a feature, review a PR or deploy — runs for this project show up here."
+          />
         ) : (
           <ul className="divide-y divide-line border-t border-line">
             {runs.data?.items.map((r) => (
@@ -95,7 +121,9 @@ function Overview({ project: p }: { project: ProjectDetail }) {
                   <StatusDot status={r.status} />
                   <span className="min-w-0 flex-1 truncate">{r.title}</span>
                   <ModeBadge mode={r.mode} />
-                  <span className="font-mono text-[11.5px] text-fg-subtle">{formatDuration(durationBetween(r.startedAt, r.completedAt))}</span>
+                  <span className="font-mono text-[11.5px] text-fg-subtle">
+                    {formatDuration(durationBetween(r.startedAt, r.completedAt))}
+                  </span>
                   <span className="w-24 text-right text-[11.5px] text-fg-subtle">{timeAgo(r.createdAt)}</span>
                 </Link>
               </li>
@@ -113,7 +141,9 @@ function Overview({ project: p }: { project: ProjectDetail }) {
                 <div className="flex items-center gap-2">
                   <span className="text-[13px] font-medium">{e.name}</span>
                   {e.requiresApproval && <Badge tone="accent">gated</Badge>}
-                  <span className="ml-auto">{d ? <StatusBadge status={d.status} /> : <span className="text-[11.5px] text-fg-subtle">never deployed</span>}</span>
+                  <span className="ml-auto">
+                    {d ? <StatusBadge status={d.status} /> : <span className="text-[11.5px] text-fg-subtle">never deployed</span>}
+                  </span>
                 </div>
                 {d && (
                   <div className="mt-1 flex items-center gap-2 text-[11.5px] text-fg-subtle">
@@ -133,7 +163,10 @@ function Overview({ project: p }: { project: ProjectDetail }) {
 // ─────────────── Repository ───────────────
 function Repositories({ project: p, manage }: { project: ProjectDetail; manage: boolean }) {
   const [linking, setLinking] = useState(false);
-  const unlink = useAction((r: Repository) => api.del(`/projects/${p.id}/repositories/${r.id}`), { success: 'Repository unlinked', invalidate: [qk.project(p.id), qk.projects] });
+  const unlink = useAction((r: Repository) => api.del(`/projects/${p.id}/repositories/${r.id}`), {
+    success: 'Repository unlinked',
+    invalidate: [qk.project(p.id), qk.projects],
+  });
   return (
     <div className="space-y-4">
       {p.repositories.map((r) => (
@@ -146,7 +179,13 @@ function Repositories({ project: p, manage }: { project: ProjectDetail; manage: 
             icon={<GitBranch />}
             title="Link a repository"
             description="Agents read, branch, commit and open pull requests here. Requires a connected GitHub integration."
-            action={manage && <Button variant="primary" onClick={() => setLinking(true)}>Link repository</Button>}
+            action={
+              manage && (
+                <Button variant="primary" onClick={() => setLinking(true)}>
+                  Link repository
+                </Button>
+              )
+            }
           />
         </Card>
       )}
@@ -171,21 +210,45 @@ const REPO_FIELDS: { key: keyof RepositorySettings; label: string; placeholder: 
   { key: 'deployWorkflow', label: 'Deploy workflow', placeholder: 'deploy.yml' },
 ];
 
-function RepoCard({ project: p, repo: r, manage, onUnlink }: { project: ProjectDetail; repo: Repository; manage: boolean; onUnlink: () => void }) {
+function RepoCard({
+  project: p,
+  repo: r,
+  manage,
+  onUnlink,
+}: {
+  project: ProjectDetail;
+  repo: Repository;
+  manage: boolean;
+  onUnlink: () => void;
+}) {
   const [settings, setSettings] = useState<RepositorySettings>(r.settings ?? {});
   const [branch, setBranch] = useState(r.defaultBranch);
-  const save = useAction(() => api.patch(`/projects/${p.id}/repositories/${r.id}`, { defaultBranch: branch, settings }), { success: 'Repository settings saved', invalidate: [qk.project(p.id)] });
+  const save = useAction(() => api.patch(`/projects/${p.id}/repositories/${r.id}`, { defaultBranch: branch, settings }), {
+    success: 'Repository settings saved',
+    invalidate: [qk.project(p.id)],
+  });
   return (
     <Card>
       <CardHeader
         icon={<GitBranch className="size-4" />}
         title={
-          <a href={r.url ?? undefined} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 font-mono hover:text-accent">
+          <a
+            href={r.url ?? undefined}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 font-mono hover:text-accent"
+          >
             {r.fullName} <ExternalLink className="size-3" />
           </a>
         }
         description={`${r.language ?? 'Unknown language'} · ${r.lastIndexedAt ? `indexed ${timeAgo(r.lastIndexedAt)}` : 'not indexed into Knowledge yet'}`}
-        actions={manage && <Button size="sm" variant="danger-ghost" icon={<Trash2 className="size-3.5" />} onClick={onUnlink}>Unlink</Button>}
+        actions={
+          manage && (
+            <Button size="sm" variant="danger-ghost" icon={<Trash2 className="size-3.5" />} onClick={onUnlink}>
+              Unlink
+            </Button>
+          )
+        }
       />
       <fieldset disabled={!manage} className="grid gap-3 border-t border-line p-4 sm:grid-cols-2 lg:grid-cols-3">
         <Field label="Default branch">
@@ -193,13 +256,20 @@ function RepoCard({ project: p, repo: r, manage, onUnlink }: { project: ProjectD
         </Field>
         {REPO_FIELDS.map((f) => (
           <Field key={f.key} label={f.label}>
-            <Input value={settings[f.key] ?? ''} placeholder={f.placeholder} className="font-mono text-[12px]" onChange={(e) => setSettings((s) => ({ ...s, [f.key]: e.target.value || undefined }))} />
+            <Input
+              value={settings[f.key] ?? ''}
+              placeholder={f.placeholder}
+              className="font-mono text-[12px]"
+              onChange={(e) => setSettings((s) => ({ ...s, [f.key]: e.target.value || undefined }))}
+            />
           </Field>
         ))}
       </fieldset>
       {manage && (
         <div className="flex items-center justify-between border-t border-line px-4 py-2.5">
-          <span className="text-[11.5px] text-fg-subtle">Commands run in an isolated sandbox to validate generated code before it is committed.</span>
+          <span className="text-[11.5px] text-fg-subtle">
+            Commands run in an isolated sandbox to validate generated code before it is committed.
+          </span>
           <Button size="sm" variant="primary" loading={save.isPending} onClick={() => save.mutate(undefined)}>
             Save
           </Button>
@@ -210,9 +280,21 @@ function RepoCard({ project: p, repo: r, manage, onUnlink }: { project: ProjectD
 }
 
 function LinkRepoDialog({ project: p, open, onClose }: { project: ProjectDetail; open: boolean; onClose: () => void }) {
-  const repos = useQuery({ queryKey: ['github-repos'], queryFn: () => api.get<{ fullName: string; private: boolean; defaultBranch: string; language: string | null; description: string | null }[]>('/integrations/github/repositories'), enabled: open, retry: false });
+  const repos = useQuery({
+    queryKey: ['github-repos'],
+    queryFn: () =>
+      api.get<{ fullName: string; private: boolean; defaultBranch: string; language: string | null; description: string | null }[]>(
+        '/integrations/github/repositories',
+      ),
+    enabled: open,
+    retry: false,
+  });
   const [fullName, setFullName] = useState('');
-  const link = useAction(() => api.post(`/projects/${p.id}/repositories`, { fullName }), { success: 'Repository linked', invalidate: [qk.project(p.id), qk.projects], onSuccess: onClose });
+  const link = useAction(() => api.post(`/projects/${p.id}/repositories`, { fullName }), {
+    success: 'Repository linked',
+    invalidate: [qk.project(p.id), qk.projects],
+    onSuccess: onClose,
+  });
   return (
     <Dialog
       open={open}
@@ -223,7 +305,12 @@ function LinkRepoDialog({ project: p, open, onClose }: { project: ProjectDetail;
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" loading={link.isPending} disabled={!/^[\w.-]+\/[\w.-]+$/.test(fullName)} onClick={() => link.mutate(undefined)}>
+          <Button
+            variant="primary"
+            loading={link.isPending}
+            disabled={!/^[\w.-]+\/[\w.-]+$/.test(fullName)}
+            onClick={() => link.mutate(undefined)}
+          >
             Link
           </Button>
         </>
@@ -231,7 +318,9 @@ function LinkRepoDialog({ project: p, open, onClose }: { project: ProjectDetail;
     >
       {repos.error ? (
         <div className="space-y-3">
-          <p className="rounded-md bg-warn-soft px-3 py-2 text-[12.5px] text-warn">Couldn’t list repositories — connect GitHub under Integrations first, or type the repository name.</p>
+          <p className="rounded-md bg-warn-soft px-3 py-2 text-[12.5px] text-warn">
+            Couldn’t list repositories — connect GitHub under Integrations first, or type the repository name.
+          </p>
           <Field label="Repository (owner/name)">
             <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="acme/auth-service" className="font-mono" />
           </Field>
@@ -241,7 +330,12 @@ function LinkRepoDialog({ project: p, open, onClose }: { project: ProjectDetail;
       ) : (
         <div className="max-h-[50vh] space-y-1 overflow-y-auto">
           {repos.data?.map((r) => (
-            <button key={r.fullName} type="button" onClick={() => setFullName(r.fullName)} className={`flex w-full items-start gap-2 rounded-md border px-3 py-2 text-left ${fullName === r.fullName ? 'border-accent bg-accent-soft' : 'border-line hover:border-line-strong'}`}>
+            <button
+              key={r.fullName}
+              type="button"
+              onClick={() => setFullName(r.fullName)}
+              className={`flex w-full items-start gap-2 rounded-md border px-3 py-2 text-left ${fullName === r.fullName ? 'border-accent bg-accent-soft' : 'border-line hover:border-line-strong'}`}
+            >
               <GitBranch className="mt-0.5 size-3.5 text-fg-subtle" />
               <span className="min-w-0 flex-1">
                 <span className="block font-mono text-[12.5px]">{r.fullName}</span>
@@ -279,10 +373,29 @@ function EnvCard({ project: p, env, manage }: { project: ProjectDetail; env: Env
   const [health, setHealth] = useState(env.healthCheckPath ?? '/health');
   const [gated, setGated] = useState(env.requiresApproval);
   const [smoke, setSmoke] = useState<SmokeTest[]>(env.smokeTests ?? []);
-  const save = useAction(() => api.patch(`/projects/${p.id}/environments/${env.id}`, { url: url || undefined, healthCheckPath: health || undefined, requiresApproval: gated, smokeTests: smoke }), { success: `${env.name} saved`, invalidate: [qk.project(p.id)] });
+  const save = useAction(
+    () =>
+      api.patch(`/projects/${p.id}/environments/${env.id}`, {
+        url: url || undefined,
+        healthCheckPath: health || undefined,
+        requiresApproval: gated,
+        smokeTests: smoke,
+      }),
+    { success: `${env.name} saved`, invalidate: [qk.project(p.id)] },
+  );
   return (
     <Card>
-      <CardHeader title={env.name} description={titleCase(env.type)} actions={env.type === 'PRODUCTION' && <Badge tone="accent" icon={<Lock className="size-3" />}>always gated</Badge>} />
+      <CardHeader
+        title={env.name}
+        description={titleCase(env.type)}
+        actions={
+          env.type === 'PRODUCTION' && (
+            <Badge tone="accent" icon={<Lock className="size-3" />}>
+              always gated
+            </Badge>
+          )
+        }
+      />
       <fieldset disabled={!manage} className="space-y-4 border-t border-line p-4">
         <div className="grid gap-3 sm:grid-cols-[1fr_200px_auto]">
           <Field label="URL">
@@ -292,7 +405,12 @@ function EnvCard({ project: p, env, manage }: { project: ProjectDetail; env: Env
             <Input value={health} className="font-mono text-[12px]" onChange={(e) => setHealth(e.target.value)} />
           </Field>
           <div className="flex items-end gap-2 pb-1.5">
-            <Switch checked={gated || env.type === 'PRODUCTION'} disabled={env.type === 'PRODUCTION'} onCheckedChange={setGated} label="Requires approval" />
+            <Switch
+              checked={gated || env.type === 'PRODUCTION'}
+              disabled={env.type === 'PRODUCTION'}
+              onCheckedChange={setGated}
+              label="Requires approval"
+            />
             <span className="text-[12px] text-fg-muted">Requires approval</span>
           </div>
         </div>
@@ -301,13 +419,40 @@ function EnvCard({ project: p, env, manage }: { project: ProjectDetail; env: Env
           <div className="space-y-2">
             {smoke.map((t, i) => (
               <div key={i} className="grid grid-cols-[1fr_1fr_90px_auto] gap-2">
-                <Input value={t.name} placeholder="Name" onChange={(e) => setSmoke((s) => s.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} aria-label="Smoke test name" />
-                <Input value={t.path} placeholder="/login" className="font-mono text-[12px]" onChange={(e) => setSmoke((s) => s.map((x, j) => (j === i ? { ...x, path: e.target.value } : x)))} aria-label="Path" />
-                <Input type="number" value={t.expectStatus ?? 200} onChange={(e) => setSmoke((s) => s.map((x, j) => (j === i ? { ...x, expectStatus: Number(e.target.value) } : x)))} aria-label="Expected status" />
-                <Button size="icon" variant="ghost" aria-label="Remove smoke test" onClick={() => setSmoke((s) => s.filter((_, j) => j !== i))} icon={<Trash2 className="size-3.5" />} />
+                <Input
+                  value={t.name}
+                  placeholder="Name"
+                  onChange={(e) => setSmoke((s) => s.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
+                  aria-label="Smoke test name"
+                />
+                <Input
+                  value={t.path}
+                  placeholder="/login"
+                  className="font-mono text-[12px]"
+                  onChange={(e) => setSmoke((s) => s.map((x, j) => (j === i ? { ...x, path: e.target.value } : x)))}
+                  aria-label="Path"
+                />
+                <Input
+                  type="number"
+                  value={t.expectStatus ?? 200}
+                  onChange={(e) => setSmoke((s) => s.map((x, j) => (j === i ? { ...x, expectStatus: Number(e.target.value) } : x)))}
+                  aria-label="Expected status"
+                />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label="Remove smoke test"
+                  onClick={() => setSmoke((s) => s.filter((_, j) => j !== i))}
+                  icon={<Trash2 className="size-3.5" />}
+                />
               </div>
             ))}
-            <Button size="sm" variant="ghost" icon={<Plus className="size-3.5" />} onClick={() => setSmoke((s) => [...s, { name: 'New check', path: '/', expectStatus: 200 }])}>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={<Plus className="size-3.5" />}
+              onClick={() => setSmoke((s) => [...s, { name: 'New check', path: '/', expectStatus: 200 }])}
+            >
               Add smoke test
             </Button>
           </div>
@@ -328,7 +473,10 @@ function AddEnvDialog({ project: p, open, onClose }: { project: ProjectDetail; o
   const [name, setName] = useState('');
   const [type, setType] = useState<EnvironmentType>('STAGING');
   const [url, setUrl] = useState('');
-  const add = useAction(() => api.post(`/projects/${p.id}/environments`, { name, type, url: url || undefined, requiresApproval: type === 'PRODUCTION' }), { success: 'Environment added', invalidate: [qk.project(p.id), qk.projects], onSuccess: onClose });
+  const add = useAction(
+    () => api.post(`/projects/${p.id}/environments`, { name, type, url: url || undefined, requiresApproval: type === 'PRODUCTION' }),
+    { success: 'Environment added', invalidate: [qk.project(p.id), qk.projects], onSuccess: onClose },
+  );
   return (
     <Dialog
       open={open}
@@ -339,7 +487,12 @@ function AddEnvDialog({ project: p, open, onClose }: { project: ProjectDetail; o
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" loading={add.isPending} disabled={!/^[a-z][a-z0-9-]{1,30}$/.test(name)} onClick={() => add.mutate(undefined)}>
+          <Button
+            variant="primary"
+            loading={add.isPending}
+            disabled={!/^[a-z][a-z0-9-]{1,30}$/.test(name)}
+            onClick={() => add.mutate(undefined)}
+          >
             Add
           </Button>
         </>
@@ -374,7 +527,11 @@ function Members({ project: p, manage }: { project: ProjectDetail; manage: boole
   const [userId, setUserId] = useState('');
   const [role, setRole] = useState<ProjectRole>('DEVELOPER');
   const inv = [qk.project(p.id)];
-  const upsert = useAction((v: { userId: string; role: ProjectRole }) => api.put(`/projects/${p.id}/members`, v), { success: 'Member updated', invalidate: inv, onSuccess: () => setUserId('') });
+  const upsert = useAction((v: { userId: string; role: ProjectRole }) => api.put(`/projects/${p.id}/members`, v), {
+    success: 'Member updated',
+    invalidate: inv,
+    onSuccess: () => setUserId(''),
+  });
   const remove = useAction((uid: string) => api.del(`/projects/${p.id}/members/${uid}`), { success: 'Member removed', invalidate: inv });
   const candidates = (org.data?.members ?? []).filter((m) => !p.members.some((x) => x.userId === m.user.id));
   return (
@@ -387,14 +544,28 @@ function Members({ project: p, manage }: { project: ProjectDetail; manage: boole
               <div className="text-[13px] font-medium">{m.user.name}</div>
               <div className="text-[11.5px] text-fg-subtle">{m.user.email}</div>
             </div>
-            <Select value={m.role} disabled={!manage} onChange={(e) => upsert.mutate({ userId: m.userId, role: e.target.value as ProjectRole })} className="h-7 w-36 text-[12px]" aria-label="Project role">
+            <Select
+              value={m.role}
+              disabled={!manage}
+              onChange={(e) => upsert.mutate({ userId: m.userId, role: e.target.value as ProjectRole })}
+              className="h-7 w-36 text-[12px]"
+              aria-label="Project role"
+            >
               {PROJECT_ROLES.map((r) => (
                 <option key={r} value={r}>
                   {titleCase(r)}
                 </option>
               ))}
             </Select>
-            {manage && <Button size="icon-sm" variant="ghost" aria-label={`Remove ${m.user.name}`} onClick={() => remove.mutate(m.userId)} icon={<Trash2 className="size-3.5" />} />}
+            {manage && (
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                aria-label={`Remove ${m.user.name}`}
+                onClick={() => remove.mutate(m.userId)}
+                icon={<Trash2 className="size-3.5" />}
+              />
+            )}
           </li>
         ))}
       </ul>
@@ -415,10 +586,17 @@ function Members({ project: p, manage }: { project: ProjectDetail; manage: boole
               </option>
             ))}
           </Select>
-          <Button icon={<UserPlus className="size-3.5" />} disabled={!userId} loading={upsert.isPending} onClick={() => upsert.mutate({ userId, role })}>
+          <Button
+            icon={<UserPlus className="size-3.5" />}
+            disabled={!userId}
+            loading={upsert.isPending}
+            onClick={() => upsert.mutate({ userId, role })}
+          >
             Add
           </Button>
-          <span className="ml-auto text-[11.5px] text-fg-subtle">Maintainers can merge and deploy to production; developers can deploy to staging.</span>
+          <span className="ml-auto text-[11.5px] text-fg-subtle">
+            Maintainers can merge and deploy to production; developers can deploy to staging.
+          </span>
         </div>
       )}
     </Card>
@@ -430,9 +608,15 @@ function Settings({ project: p, manage }: { project: ProjectDetail; manage: bool
   const [s, setS] = useState<ProjectSettings>(p.settings ?? {});
   const [name, setName] = useState(p.name);
   const [description, setDescription] = useState(p.description ?? '');
-  const policy = useQuery({ queryKey: ['approvals', 'policy', p.id], queryFn: () => api.get<{ action: string; setting: 'auto' | 'required'; locked: boolean }[]>('/approvals/policy', { projectId: p.id }) });
+  const policy = useQuery({
+    queryKey: ['approvals', 'policy', p.id],
+    queryFn: () => api.get<{ action: string; setting: 'auto' | 'required'; locked: boolean }[]>('/approvals/policy', { projectId: p.id }),
+  });
   useEffect(() => setS(p.settings ?? {}), [p.settings]);
-  const save = useAction(() => api.patch(`/projects/${p.id}`, { name, description, settings: s }), { success: 'Project settings saved', invalidate: [qk.project(p.id), qk.projects, ['approvals', 'policy', p.id]] });
+  const save = useAction(() => api.patch(`/projects/${p.id}`, { name, description, settings: s }), {
+    success: 'Project settings saved',
+    invalidate: [qk.project(p.id), qk.projects, ['approvals', 'policy', p.id]],
+  });
   const set = <K extends keyof ProjectSettings>(k: K, v: ProjectSettings[K]) => setS((x) => ({ ...x, [k]: v }));
   return (
     <div className="grid gap-5 lg:grid-cols-2">
@@ -453,7 +637,10 @@ function Settings({ project: p, manage }: { project: ProjectDetail; manage: bool
               </Select>
             </Field>
             <Field label="CI/CD">
-              <Select value={s.cicdProvider ?? 'GITHUB_ACTIONS'} onChange={(e) => set('cicdProvider', e.target.value as 'CUSTOM_DEVOPS' | 'GITHUB_ACTIONS')}>
+              <Select
+                value={s.cicdProvider ?? 'GITHUB_ACTIONS'}
+                onChange={(e) => set('cicdProvider', e.target.value as 'CUSTOM_DEVOPS' | 'GITHUB_ACTIONS')}
+              >
                 <option value="GITHUB_ACTIONS">GitHub Actions</option>
                 <option value="CUSTOM_DEVOPS">Custom DevOps platform</option>
               </Select>
@@ -462,39 +649,74 @@ function Settings({ project: p, manage }: { project: ProjectDetail; manage: bool
           {(s.ticketProvider ?? 'JIRA') === 'JIRA' ? (
             <div className="grid grid-cols-2 gap-3">
               <Field label="Jira project key">
-                <Input value={s.jiraProjectKey ?? ''} className="font-mono" onChange={(e) => set('jiraProjectKey', e.target.value.toUpperCase() || undefined)} />
+                <Input
+                  value={s.jiraProjectKey ?? ''}
+                  className="font-mono"
+                  onChange={(e) => set('jiraProjectKey', e.target.value.toUpperCase() || undefined)}
+                />
               </Field>
               <Field label="Issue type">
-                <Input value={s.jiraIssueType ?? ''} placeholder="Story" onChange={(e) => set('jiraIssueType', e.target.value || undefined)} />
+                <Input
+                  value={s.jiraIssueType ?? ''}
+                  placeholder="Story"
+                  onChange={(e) => set('jiraIssueType', e.target.value || undefined)}
+                />
               </Field>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-3">
               <Field label="Board ID">
-                <Input value={s.trelloBoardId ?? ''} className="font-mono text-[12px]" onChange={(e) => set('trelloBoardId', e.target.value || undefined)} />
+                <Input
+                  value={s.trelloBoardId ?? ''}
+                  className="font-mono text-[12px]"
+                  onChange={(e) => set('trelloBoardId', e.target.value || undefined)}
+                />
               </Field>
               <Field label="To-do list ID">
-                <Input value={s.trelloListId ?? ''} className="font-mono text-[12px]" onChange={(e) => set('trelloListId', e.target.value || undefined)} />
+                <Input
+                  value={s.trelloListId ?? ''}
+                  className="font-mono text-[12px]"
+                  onChange={(e) => set('trelloListId', e.target.value || undefined)}
+                />
               </Field>
               <Field label="Done list ID">
-                <Input value={s.trelloDoneListId ?? ''} className="font-mono text-[12px]" onChange={(e) => set('trelloDoneListId', e.target.value || undefined)} />
+                <Input
+                  value={s.trelloDoneListId ?? ''}
+                  className="font-mono text-[12px]"
+                  onChange={(e) => set('trelloDoneListId', e.target.value || undefined)}
+                />
               </Field>
             </div>
           )}
           <div className="grid grid-cols-2 gap-3">
             <Field label="Notion parent page" hint="Docs are published under this page">
-              <Input value={s.notionParentPageId ?? ''} className="font-mono text-[12px]" onChange={(e) => set('notionParentPageId', e.target.value || undefined)} />
+              <Input
+                value={s.notionParentPageId ?? ''}
+                className="font-mono text-[12px]"
+                onChange={(e) => set('notionParentPageId', e.target.value || undefined)}
+              />
             </Field>
             <Field label="Slack channel">
-              <Input value={s.slackChannel ?? ''} placeholder="#releases" onChange={(e) => set('slackChannel', e.target.value || undefined)} />
+              <Input
+                value={s.slackChannel ?? ''}
+                placeholder="#releases"
+                onChange={(e) => set('slackChannel', e.target.value || undefined)}
+              />
             </Field>
           </div>
         </fieldset>
       </Card>
       <Card>
-        <CardHeader title="Approval policy" description="Which actions pause for a human. Locked actions always require approval — no flow or project setting can remove them." />
+        <CardHeader
+          title="Approval policy"
+          description="Which actions pause for a human. Locked actions always require approval — no flow or project setting can remove them."
+        />
         <ul className="divide-y divide-line border-t border-line">
-          {policy.isLoading && <li className="p-4"><Skeleton className="h-32" /></li>}
+          {policy.isLoading && (
+            <li className="p-4">
+              <Skeleton className="h-32" />
+            </li>
+          )}
           {policy.data?.map((row) => {
             const value = row.locked ? 'required' : (s.approvalPolicy?.[row.action] ?? row.setting);
             return (
@@ -507,7 +729,12 @@ function Settings({ project: p, manage }: { project: ProjectDetail; manage: bool
                 ) : (
                   <label className="flex items-center gap-2 text-[12px] text-fg-muted">
                     {value === 'required' ? 'Requires approval' : 'Automatic'}
-                    <Switch checked={value === 'required'} disabled={!manage} onCheckedChange={(v) => set('approvalPolicy', { ...(s.approvalPolicy ?? {}), [row.action]: v ? 'required' : 'auto' })} label={`Require approval for ${row.action}`} />
+                    <Switch
+                      checked={value === 'required'}
+                      disabled={!manage}
+                      onCheckedChange={(v) => set('approvalPolicy', { ...(s.approvalPolicy ?? {}), [row.action]: v ? 'required' : 'auto' })}
+                      label={`Require approval for ${row.action}`}
+                    />
                   </label>
                 )}
               </li>

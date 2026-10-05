@@ -16,7 +16,12 @@ export function probeUrl(baseUrl: string, path: string): string {
   return new URL(path.replace(/^\/+/, ''), baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`).toString();
 }
 
-export async function runProbe(baseUrl: string, test: SmokeTestDefinition, options: SafeFetchOptions, signal?: AbortSignal): Promise<ProbeResult> {
+export async function runProbe(
+  baseUrl: string,
+  test: SmokeTestDefinition,
+  options: SafeFetchOptions,
+  signal?: AbortSignal,
+): Promise<ProbeResult> {
   const url = probeUrl(baseUrl, test.path);
   const expectStatus = test.expectStatus ?? 200;
   try {
@@ -24,7 +29,10 @@ export async function runProbe(baseUrl: string, test: SmokeTestDefinition, optio
       url,
       {
         method: test.method ?? 'GET',
-        headers: test.body !== undefined ? { 'Content-Type': 'application/json', 'User-Agent': 'Forgeline-Probe/1.0' } : { 'User-Agent': 'Forgeline-Probe/1.0' },
+        headers:
+          test.body !== undefined
+            ? { 'Content-Type': 'application/json', 'User-Agent': 'Forgeline-Probe/1.0' }
+            : { 'User-Agent': 'Forgeline-Probe/1.0' },
         body: test.body !== undefined ? JSON.stringify(test.body) : undefined,
         timeoutMs: 10_000,
         signal,

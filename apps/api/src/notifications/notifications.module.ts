@@ -9,7 +9,12 @@ class ListQuery {
   @ApiPropertyOptional() @IsOptional() @Transform(({ value }) => value === 'true' || value === true) @IsBoolean() unread?: boolean;
 }
 class MarkReadDto {
-  @ApiPropertyOptional({ type: [String], description: 'Omit to mark all as read' }) @IsOptional() @IsArray() @ArrayMaxSize(500) @IsUUID('4', { each: true }) ids?: string[];
+  @ApiPropertyOptional({ type: [String], description: 'Omit to mark all as read' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(500)
+  @IsUUID('4', { each: true })
+  ids?: string[];
 }
 
 @ApiTags('notifications')

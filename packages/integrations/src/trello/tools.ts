@@ -5,7 +5,8 @@ import { demoNumber } from '../core/helpers';
 
 function listId(input: string | undefined, ctx: ToolExecutionContext, which: 'default' | 'done' = 'default'): string {
   const id = input ?? (which === 'done' ? ctx.project?.settings.trelloDoneListId : ctx.project?.settings.trelloListId);
-  if (!id) throw new ToolError('not_configured', 'No Trello list configured for this project (settings.trelloListId)', { retryable: false });
+  if (!id)
+    throw new ToolError('not_configured', 'No Trello list configured for this project (settings.trelloListId)', { retryable: false });
   return id;
 }
 
@@ -25,7 +26,10 @@ export const trelloCreateBoard = defineTool({
     const existing = boards.find((b) => b.name === input.name);
     const board = existing ?? (await trello.createBoard(input.name));
     const lists = await trello.listLists(board.id);
-    return { output: { id: board.id, url: board.url, lists: lists.map((l) => ({ id: l.id, name: l.name })), created: !existing }, summary: existing ? `Board "${input.name}" exists` : `Created board "${input.name}"` };
+    return {
+      output: { id: board.id, url: board.url, lists: lists.map((l) => ({ id: l.id, name: l.name })), created: !existing },
+      summary: existing ? `Board "${input.name}" exists` : `Created board "${input.name}"`,
+    };
   },
 });
 
@@ -36,7 +40,11 @@ export const trelloCreateCard = defineTool({
   category: 'trello',
   provider: 'TRELLO',
   agent: 'planning',
-  inputSchema: z.object({ listId: z.string().optional(), name: z.string().min(1).max(500), description: z.string().max(16_000).default('') }),
+  inputSchema: z.object({
+    listId: z.string().optional(),
+    name: z.string().min(1).max(500),
+    description: z.string().max(16_000).default(''),
+  }),
   permission: 'ticket:write',
   risk: 'write',
   sideEffects: true,
@@ -45,11 +53,22 @@ export const trelloCreateCard = defineTool({
     const target = listId(input.listId, ctx);
     const marker = idempotencyMarker(ctx);
     const existing = (await trello.listCards(target)).find((c) => c.desc.includes(marker));
-    const card = existing ?? (await trello.createCard({ idList: target, name: input.name, desc: `${input.description}\n\n---\nForgeline-Ref: ${marker}` }));
+    const card =
+      existing ??
+      (await trello.createCard({ idList: target, name: input.name, desc: `${input.description}\n\n---\nForgeline-Ref: ${marker}` }));
     return {
       output: { id: card.id, url: card.shortUrl ?? card.url, name: card.name, created: !existing },
       summary: existing ? `Card "${card.name}" already exists` : `Created card "${card.name}"`,
-      externalResources: [{ provider: 'TRELLO', type: 'TRELLO_CARD', externalId: card.id, key: card.name.slice(0, 40), title: card.name, url: card.shortUrl ?? card.url }],
+      externalResources: [
+        {
+          provider: 'TRELLO',
+          type: 'TRELLO_CARD',
+          externalId: card.id,
+          key: card.name.slice(0, 40),
+          title: card.name,
+          url: card.shortUrl ?? card.url,
+        },
+      ],
     };
   },
   async simulate(input, ctx) {
@@ -69,7 +88,11 @@ export const trelloUpdateCard = defineTool({
   description: 'Update a card name or description.',
   category: 'trello',
   provider: 'TRELLO',
-  inputSchema: z.object({ cardId: z.string().min(1), name: z.string().max(500).optional(), description: z.string().max(16_000).optional() }),
+  inputSchema: z.object({
+    cardId: z.string().min(1),
+    name: z.string().max(500).optional(),
+    description: z.string().max(16_000).optional(),
+  }),
   permission: 'ticket:write',
   risk: 'write',
   sideEffects: true,
@@ -97,7 +120,10 @@ export const trelloMoveCard = defineTool({
       const card = await trello.getCard(input.cardId);
       const lists = await trello.listLists(card.idBoard);
       target = lists.find((l) => l.name.toLowerCase() === input.listName!.toLowerCase())?.id;
-      if (!target) throw new ToolError('validation', `List "${input.listName}" not found. Available: ${lists.map((l) => l.name).join(', ')}`, { retryable: false });
+      if (!target)
+        throw new ToolError('validation', `List "${input.listName}" not found. Available: ${lists.map((l) => l.name).join(', ')}`, {
+          retryable: false,
+        });
     }
     target ??= listId(undefined, ctx, 'done');
     const card = await trello.updateCard(input.cardId, { idList: target });
@@ -143,4 +169,11 @@ export const trelloAttachArtifact = defineTool({
   },
 });
 
-export const trelloTools: AnySdlcTool[] = [trelloCreateBoard, trelloCreateCard, trelloUpdateCard, trelloMoveCard, trelloAddComment, trelloAttachArtifact];
+export const trelloTools: AnySdlcTool[] = [
+  trelloCreateBoard,
+  trelloCreateCard,
+  trelloUpdateCard,
+  trelloMoveCard,
+  trelloAddComment,
+  trelloAttachArtifact,
+];

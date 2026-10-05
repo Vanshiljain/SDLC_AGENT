@@ -57,7 +57,17 @@ export const jiraCreateIssue = defineTool({
     return {
       output: { key: issue.key, id: issue.id, url: issue.url, summary: input.summary, created: issue.created },
       summary: issue.created ? `Created ${issue.key}: ${input.summary}` : `Found existing ${issue.key} (idempotent retry)`,
-      externalResources: [{ provider: 'JIRA', type: 'JIRA_ISSUE', externalId: issue.id, key: issue.key, title: input.summary, url: issue.url, status: 'To Do' }],
+      externalResources: [
+        {
+          provider: 'JIRA',
+          type: 'JIRA_ISSUE',
+          externalId: issue.id,
+          key: issue.key,
+          title: input.summary,
+          url: issue.url,
+          status: 'To Do',
+        },
+      ],
     };
   },
   async simulate(input, ctx) {
@@ -66,7 +76,16 @@ export const jiraCreateIssue = defineTool({
       simulated: true,
       output: { key, id: `demo-${key}`, url: null, summary: input.summary, created: true },
       summary: `[Simulated] Created ${key}: ${input.summary}`,
-      externalResources: [{ provider: 'JIRA', type: 'JIRA_ISSUE', externalId: `demo-${key}-${ctx.idempotencyKey}`, key, title: input.summary, status: 'To Do' }],
+      externalResources: [
+        {
+          provider: 'JIRA',
+          type: 'JIRA_ISSUE',
+          externalId: `demo-${key}-${ctx.idempotencyKey}`,
+          key,
+          title: input.summary,
+          status: 'To Do',
+        },
+      ],
     };
   },
 });
@@ -101,7 +120,13 @@ export const jiraSearchIssues = defineTool({
   async execute(input, ctx) {
     const jira = await ctx.clients.jira();
     const issues = await jira.searchIssues(input.jql, input.maxResults);
-    const items = issues.map((i) => ({ key: i.key, summary: i.fields.summary, status: i.fields.status?.name ?? null, type: i.fields.issuetype?.name ?? null, url: jira.browseUrl(i.key) }));
+    const items = issues.map((i) => ({
+      key: i.key,
+      summary: i.fields.summary,
+      status: i.fields.status?.name ?? null,
+      type: i.fields.issuetype?.name ?? null,
+      url: jira.browseUrl(i.key),
+    }));
     return { output: { items }, summary: `${items.length} issue(s) match` };
   },
 });
@@ -112,7 +137,12 @@ export const jiraUpdateIssue = defineTool({
   description: 'Update summary, description or labels of a Jira issue.',
   category: 'jira',
   provider: 'JIRA',
-  inputSchema: z.object({ key: issueKey, summary: z.string().max(255).optional(), description: z.string().max(30_000).optional(), addLabels: z.array(z.string()).default([]) }),
+  inputSchema: z.object({
+    key: issueKey,
+    summary: z.string().max(255).optional(),
+    description: z.string().max(30_000).optional(),
+    addLabels: z.array(z.string()).default([]),
+  }),
   permission: 'ticket:write',
   risk: 'write',
   sideEffects: true,
@@ -175,7 +205,11 @@ export const jiraTransitionIssue = defineTool({
     };
   },
   async simulate(input) {
-    return { simulated: true, output: { key: input.key, status: input.status, transitioned: true }, summary: `[Simulated] Moved ${input.key} → ${input.status}` };
+    return {
+      simulated: true,
+      output: { key: input.key, status: input.status, transitioned: true },
+      summary: `[Simulated] Moved ${input.key} → ${input.status}`,
+    };
   },
 });
 
@@ -200,10 +234,15 @@ export const jiraAttachArtifact = defineTool({
     const jira = await ctx.clients.jira();
     if (input.url) {
       await jira.addRemoteLink(input.key, { globalId: `forgeline:${idempotencyMarker(ctx)}`, url: input.url, title: input.title });
-      return { output: { key: input.key, linked: input.url as string | null, attached: null as string | null }, summary: `Linked "${input.title}" to ${input.key}` };
+      return {
+        output: { key: input.key, linked: input.url as string | null, attached: null as string | null },
+        summary: `Linked "${input.title}" to ${input.key}`,
+      };
     }
     const filename = input.filename ?? `${input.title.replace(/[^\w.-]+/g, '-').toLowerCase()}.md`;
-    const issue = await jira.http.get<{ fields: { attachment?: { filename: string }[] } }>(`/issue/${input.key}`, { query: { fields: 'attachment' } });
+    const issue = await jira.http.get<{ fields: { attachment?: { filename: string }[] } }>(`/issue/${input.key}`, {
+      query: { fields: 'attachment' },
+    });
     if (issue.fields.attachment?.some((a) => a.filename === filename)) {
       return { output: { key: input.key, linked: null, attached: filename }, summary: `${filename} already attached to ${input.key}` };
     }
@@ -211,8 +250,20 @@ export const jiraAttachArtifact = defineTool({
     return { output: { key: input.key, linked: null, attached: filename }, summary: `Attached ${filename} to ${input.key}` };
   },
   async simulate(input) {
-    return { simulated: true, output: { key: input.key, linked: input.url ?? null, attached: input.filename ?? input.title }, summary: `[Simulated] Attached "${input.title}" to ${input.key}` };
+    return {
+      simulated: true,
+      output: { key: input.key, linked: input.url ?? null, attached: input.filename ?? input.title },
+      summary: `[Simulated] Attached "${input.title}" to ${input.key}`,
+    };
   },
 });
 
-export const jiraTools: AnySdlcTool[] = [jiraCreateIssue, jiraGetIssue, jiraSearchIssues, jiraUpdateIssue, jiraAddComment, jiraTransitionIssue, jiraAttachArtifact];
+export const jiraTools: AnySdlcTool[] = [
+  jiraCreateIssue,
+  jiraGetIssue,
+  jiraSearchIssues,
+  jiraUpdateIssue,
+  jiraAddComment,
+  jiraTransitionIssue,
+  jiraAttachArtifact,
+];

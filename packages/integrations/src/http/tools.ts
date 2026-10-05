@@ -41,7 +41,11 @@ export function createHttpTools(options: { allowPrivateNetworks: boolean; allowe
       }
       const ok = input.expectStatus ? res.status === input.expectStatus : res.status < 400;
       if (!ok) {
-        throw new ToolError(res.status >= 500 ? 'external' : 'validation', `HTTP ${input.method} ${new URL(input.url).host} returned ${res.status}`, { status: res.status });
+        throw new ToolError(
+          res.status >= 500 ? 'external' : 'validation',
+          `HTTP ${input.method} ${new URL(input.url).host} returned ${res.status}`,
+          { status: res.status },
+        );
       }
       return {
         output: { status: res.status, body: json ?? res.body.slice(0, 10_000), latencyMs: res.latencyMs },

@@ -19,7 +19,26 @@ const STATUS_TONE = { SUCCESS: 'ok', FAILURE: 'bad', DENIED: 'accent' } as const
 function toCsv(rows: AuditEntry[]): string {
   const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const header = ['time', 'actor', 'actorType', 'action', 'resourceType', 'resourceId', 'status', 'executionId', 'tool', 'ip', 'requestId'];
-  return [header.join(','), ...rows.map((r) => [r.createdAt, r.actor?.email ?? r.actorLabel ?? '', r.actorType, r.action, r.resourceType, r.resourceId, r.status, r.executionId, r.tool, r.ip, r.requestId].map(esc).join(','))].join('\n');
+  return [
+    header.join(','),
+    ...rows.map((r) =>
+      [
+        r.createdAt,
+        r.actor?.email ?? r.actorLabel ?? '',
+        r.actorType,
+        r.action,
+        r.resourceType,
+        r.resourceId,
+        r.status,
+        r.executionId,
+        r.tool,
+        r.ip,
+        r.requestId,
+      ]
+        .map(esc)
+        .join(','),
+    ),
+  ].join('\n');
 }
 
 export function AuditPage() {
@@ -35,7 +54,17 @@ export function AuditPage() {
   const [to, setTo] = useState('');
   const [page, setPage] = useState(1);
   const executionId = params.get('executionId') ?? undefined;
-  const { data, isLoading, error } = useAudit({ search: search || undefined, status: status || undefined, actorId: actorId || undefined, resourceType: resourceType || undefined, executionId, from: from || undefined, to: to ? `${to}T23:59:59Z` : undefined, page, pageSize: 50 });
+  const { data, isLoading, error } = useAudit({
+    search: search || undefined,
+    status: status || undefined,
+    actorId: actorId || undefined,
+    resourceType: resourceType || undefined,
+    executionId,
+    from: from || undefined,
+    to: to ? `${to}T23:59:59Z` : undefined,
+    page,
+    pageSize: 50,
+  });
   const [open, setOpen] = useState<AuditEntry | null>(null);
   const reset = () => setPage(1);
 
@@ -70,7 +99,12 @@ export function AuditPage() {
       )}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="w-64">
-          <Input icon={<Search className="size-3.5" />} placeholder="Search actions, resources…" value={search} onChange={(e) => (setSearch(e.target.value), reset())} />
+          <Input
+            icon={<Search className="size-3.5" />}
+            placeholder="Search actions, resources…"
+            value={search}
+            onChange={(e) => (setSearch(e.target.value), reset())}
+          />
         </div>
         <Select value={actorId} onChange={(e) => (setActorId(e.target.value), reset())} className="w-44" aria-label="Actor">
           <option value="">Anyone</option>
@@ -90,7 +124,18 @@ export function AuditPage() {
         </Select>
         <Select value={resourceType} onChange={(e) => (setResourceType(e.target.value), reset())} className="w-40" aria-label="Resource">
           <option value="">Any resource</option>
-          {['execution', 'workflow_execution', 'approval', 'integration', 'project', 'workflow', 'tool', 'user', 'organization', 'knowledge_document'].map((r) => (
+          {[
+            'execution',
+            'workflow_execution',
+            'approval',
+            'integration',
+            'project',
+            'workflow',
+            'tool',
+            'user',
+            'organization',
+            'knowledge_document',
+          ].map((r) => (
             <option key={r} value={r}>
               {titleCase(r)}
             </option>
@@ -122,7 +167,9 @@ export function AuditPage() {
                     <span className="flex items-center gap-1.5 whitespace-nowrap">
                       {e.actor ? <Avatar name={e.actor.name} size={18} /> : null}
                       {e.actor?.name ?? e.actorLabel ?? titleCase(e.actorType)}
-                      {e.actorType !== 'USER' && <Badge tone={e.actorType === 'AGENT' ? 'ai' : 'neutral'}>{e.actorType.toLowerCase()}</Badge>}
+                      {e.actorType !== 'USER' && (
+                        <Badge tone={e.actorType === 'AGENT' ? 'ai' : 'neutral'}>{e.actorType.toLowerCase()}</Badge>
+                      )}
                     </span>
                   </Td>
                   <Td>
@@ -130,7 +177,8 @@ export function AuditPage() {
                     {e.tool && <div className="text-[11px] text-fg-subtle">{e.tool}</div>}
                   </Td>
                   <Td className="hidden md:table-cell">
-                    <span className="text-fg-muted">{titleCase(e.resourceType)}</span> {e.resourceId && <Mono>{e.resourceId.slice(0, 8)}</Mono>}
+                    <span className="text-fg-muted">{titleCase(e.resourceType)}</span>{' '}
+                    {e.resourceId && <Mono>{e.resourceId.slice(0, 8)}</Mono>}
                   </Td>
                   <Td>
                     <Badge tone={STATUS_TONE[e.status] ?? 'neutral'}>{titleCase(e.status)}</Badge>
@@ -143,7 +191,12 @@ export function AuditPage() {
           {data && <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onPage={setPage} />}
         </Card>
       )}
-      <Sheet open={Boolean(open)} onOpenChange={(o) => !o && setOpen(null)} title={open?.action ?? ''} subtitle={open ? formatDateTime(open.createdAt) : undefined}>
+      <Sheet
+        open={Boolean(open)}
+        onOpenChange={(o) => !o && setOpen(null)}
+        title={open?.action ?? ''}
+        subtitle={open ? formatDateTime(open.createdAt) : undefined}
+      >
         {open && (
           <div className="space-y-4 p-5">
             <dl className="grid grid-cols-[120px_1fr] gap-y-2 text-[12.5px]">

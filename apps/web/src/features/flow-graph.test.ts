@@ -3,7 +3,30 @@ import type { ExecutionStep } from '@/api/types';
 import { agentOf, buildFlowGraph, latestSteps } from './flow-graph';
 
 const run = (stepKey: string, iteration: number, status: ExecutionStep['status'], position = 0): ExecutionStep =>
-  ({ id: `${stepKey}-${iteration}`, executionId: 'e', stepKey, name: stepKey, type: 'tool', tool: 't', agent: 'code', status, attempt: 1, maxAttempts: 3, iteration, position, input: null, output: null, error: null, summary: null, startedAt: null, completedAt: null, durationMs: null, nextAttemptAt: null, polls: 0, createdAt: '' }) as ExecutionStep;
+  ({
+    id: `${stepKey}-${iteration}`,
+    executionId: 'e',
+    stepKey,
+    name: stepKey,
+    type: 'tool',
+    tool: 't',
+    agent: 'code',
+    status,
+    attempt: 1,
+    maxAttempts: 3,
+    iteration,
+    position,
+    input: null,
+    output: null,
+    error: null,
+    summary: null,
+    startedAt: null,
+    completedAt: null,
+    durationMs: null,
+    nextAttemptAt: null,
+    polls: 0,
+    createdAt: '',
+  }) as ExecutionStep;
 
 const def: WorkflowDefinition = {
   version: 1,
@@ -12,8 +35,27 @@ const def: WorkflowDefinition = {
   onFailure: 'fail',
   concurrency: 8,
   steps: [
-    { key: 'generate', name: 'Generate', type: 'tool', tool: 'code.generate', input: {}, dependsOn: [], runIf: 'all_success', continueOnError: false },
-    { key: 'validate', name: 'Validate', type: 'tool', tool: 'code.validate', input: {}, dependsOn: ['generate'], runIf: 'all_success', continueOnError: false, repair: { step: 'fix', maxIterations: 2 } },
+    {
+      key: 'generate',
+      name: 'Generate',
+      type: 'tool',
+      tool: 'code.generate',
+      input: {},
+      dependsOn: [],
+      runIf: 'all_success',
+      continueOnError: false,
+    },
+    {
+      key: 'validate',
+      name: 'Validate',
+      type: 'tool',
+      tool: 'code.validate',
+      input: {},
+      dependsOn: ['generate'],
+      runIf: 'all_success',
+      continueOnError: false,
+      repair: { step: 'fix', maxIterations: 2 },
+    },
     { key: 'fix', name: 'Fix', type: 'tool', tool: 'code.fix', input: {}, dependsOn: [], runIf: 'all_success', continueOnError: false },
   ],
 };

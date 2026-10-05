@@ -111,7 +111,16 @@ export class EngineRunner implements OnModuleInit {
 
   private toRuntime(step: WorkflowExecutionStep): StepRuntimeState {
     const err = step.error as StepError | null;
-    return { key: step.stepKey, status: step.status as StepStatus, attempt: step.attempt, iteration: step.iteration, output: step.output, summary: step.summary, errorKind: err?.kind ?? null, final: err?.final };
+    return {
+      key: step.stepKey,
+      status: step.status as StepStatus,
+      attempt: step.attempt,
+      iteration: step.iteration,
+      output: step.output,
+      summary: step.summary,
+      errorKind: err?.kind ?? null,
+      final: err?.final,
+    };
   }
 
   async scopeFor(execution: WorkflowExecution, steps: WorkflowExecutionStep[]): Promise<Omit<TemplateScope, 'steps'>> {
@@ -126,11 +135,23 @@ export class EngineRunner implements OnModuleInit {
             name: project.name,
             key: project.key,
             slug: project.slug,
-            repository: project.repository ? { fullName: project.repository.fullName, defaultBranch: project.repository.defaultBranch, url: project.repository.url ?? null } : null,
+            repository: project.repository
+              ? {
+                  fullName: project.repository.fullName,
+                  defaultBranch: project.repository.defaultBranch,
+                  url: project.repository.url ?? null,
+                }
+              : null,
             environments: project.environments.map((e) => e.name),
           }
         : null,
-      execution: { id: execution.id, title: execution.title, mode: execution.mode, url: `${this.config.webAppUrl}/executions/${execution.id}`, stepCount: steps.length },
+      execution: {
+        id: execution.id,
+        title: execution.title,
+        mode: execution.mode,
+        url: `${this.config.webAppUrl}/executions/${execution.id}`,
+        stepCount: steps.length,
+      },
     };
   }
 
@@ -152,8 +173,19 @@ export class EngineRunner implements OnModuleInit {
     };
   }
 
-  private async publishStep(execution: Pick<WorkflowExecution, 'id' | 'organizationId' | 'projectId'>, type: DomainEvent['type'], step: WorkflowExecutionStep, extra: Record<string, unknown> = {}) {
-    await this.events.publish({ type, organizationId: execution.organizationId, projectId: execution.projectId, executionId: execution.id, data: this.stepEventData(step, extra) });
+  private async publishStep(
+    execution: Pick<WorkflowExecution, 'id' | 'organizationId' | 'projectId'>,
+    type: DomainEvent['type'],
+    step: WorkflowExecutionStep,
+    extra: Record<string, unknown> = {},
+  ) {
+    await this.events.publish({
+      type,
+      organizationId: execution.organizationId,
+      projectId: execution.projectId,
+      executionId: execution.id,
+      data: this.stepEventData(step, extra),
+    });
   }
 
   private enqueueStep(step: Pick<WorkflowExecutionStep, 'id' | 'iteration' | 'attempt' | 'polls'>, delayMs = 0): Promise<void> {
@@ -200,7 +232,10 @@ export class EngineRunner implements OnModuleInit {
             break;
           case 'failed':
             status = 'FAILED';
-            error = { message: `Failed at ${result.blockingFailures.map((k) => byKey.get(k)?.name ?? k).join(', ')}`, steps: result.blockingFailures };
+            error = {
+              message: `Failed at ${result.blockingFailures.map((k) => byKey.get(k)?.name ?? k).join(', ')}`,
+              steps: result.blockingFailures,
+            };
             break;
           case 'compensate':
             status = 'COMPENSATING';
@@ -218,18 +253,35 @@ export class EngineRunner implements OnModuleInit {
         if (status !== execution.status || result.decisions.length) {
           await tx.workflowExecution.update({
             where: { id: executionId },
-            data: { status, revision: { increment: 1 }, ...(error && { error }), ...(terminal && { completedAt: new Date() }), ...(execution.status === 'PENDING' && { startedAt: new Date() }) },
+            data: {
+              status,
+              revision: { increment: 1 },
+              ...(error && { error }),
+              ...(terminal && { completedAt: new Date() }),
+              ...(execution.status === 'PENDING' && { startedAt: new Date() }),
+            },
           });
         }
         if (status !== execution.status || result.decisions.length) {
           after.push(() =>
-            this.events.publish({
-              type: status === 'COMPLETED' ? 'workflow.completed' : status === 'FAILED' ? 'workflow.failed' : 'workflow.status',
-              organizationId: execution.organizationId,
-              projectId: execution.projectId,
-              executionId,
-              data: { status, title: execution.title, progress: result.progress, error: error ?? null, mode: execution.mode, template: execution.template, triggeredById: execution.triggeredById, conversationId: execution.conversationId },
-            }).then(() => undefined),
+            this.events
+              .publish({
+                type: status === 'COMPLETED' ? 'workflow.completed' : status === 'FAILED' ? 'workflow.failed' : 'workflow.status',
+                organizationId: execution.organizationId,
+                projectId: execution.projectId,
+                executionId,
+                data: {
+                  status,
+                  title: execution.title,
+                  progress: result.progress,
+                  error: error ?? null,
+                  mode: execution.mode,
+                  template: execution.template,
+                  triggeredById: execution.triggeredById,
+                  conversationId: execution.conversationId,
+                },
+              })
+              .then(() => undefined),
           );
         }
         if (terminal && execution.status !== status) {
@@ -270,7 +322,18 @@ export class EngineRunner implements OnModuleInit {
       case 'start': {
         const updated = await tx.workflowExecutionStep.update({
           where: { id: step.id },
-          data: { status: 'QUEUED', attempt: Math.max(1, step.attempt), leaseOwner: null, leaseExpiresAt: null, nextAttemptAt: null, error: Prisma.DbNull, output: Prisma.DbNull, checkpoint: Prisma.DbNull, polls: 0, pollStartedAt: null },
+          data: {
+            status: 'QUEUED',
+            attempt: Math.max(1, step.attempt),
+            leaseOwner: null,
+            leaseExpiresAt: null,
+            nextAttemptAt: null,
+            error: Prisma.DbNull,
+            output: Prisma.DbNull,
+            checkpoint: Prisma.DbNull,
+            polls: 0,
+            pollStartedAt: null,
+          },
         });
         after.push(async () => {
           await this.enqueueStep(updated);
@@ -279,38 +342,68 @@ export class EngineRunner implements OnModuleInit {
         break;
       }
       case 'skip': {
-        const updated = await tx.workflowExecutionStep.update({ where: { id: step.id }, data: { status: 'SKIPPED', summary: d.reason, completedAt: new Date() } });
+        const updated = await tx.workflowExecutionStep.update({
+          where: { id: step.id },
+          data: { status: 'SKIPPED', summary: d.reason, completedAt: new Date() },
+        });
         after.push(() => this.publishStep(execution, 'workflow.step.skipped', updated));
         break;
       }
       case 'begin_repair': {
         const repairStep = byKey.get(d.repairKey);
         if (!repairStep) return;
-        context.repair = { ...(context.repair ?? {}), [d.repairKey]: { for: d.key, iteration: d.iteration, error: step.error, output: step.output, summary: step.summary } };
+        context.repair = {
+          ...(context.repair ?? {}),
+          [d.repairKey]: { for: d.key, iteration: d.iteration, error: step.error, output: step.output, summary: step.summary },
+        };
         const owner = await tx.workflowExecutionStep.update({ where: { id: step.id }, data: { status: 'REPAIRING' } });
         const repair = await tx.workflowExecutionStep.update({
           where: { id: repairStep.id },
-          data: { status: 'QUEUED', attempt: 1, iteration: d.iteration, error: Prisma.DbNull, leaseOwner: null, nextAttemptAt: null, checkpoint: Prisma.DbNull, polls: 0, pollStartedAt: null },
+          data: {
+            status: 'QUEUED',
+            attempt: 1,
+            iteration: d.iteration,
+            error: Prisma.DbNull,
+            leaseOwner: null,
+            nextAttemptAt: null,
+            checkpoint: Prisma.DbNull,
+            polls: 0,
+            pollStartedAt: null,
+          },
         });
         after.push(async () => {
           await this.enqueueStep(repair);
           await this.publishStep(execution, 'workflow.step.repairing', owner, { repairStep: d.repairKey });
           await this.publishStep(execution, 'workflow.step.queued', repair);
-          await new ExecutionLogger(this.prisma, this.events, { organizationId: execution.organizationId, executionId: execution.id, stepId: step.id, projectId: execution.projectId }).warn(
-            `${step.name} failed (iteration ${d.iteration + 1}); running ${repairStep.name} to repair`,
-          );
+          await new ExecutionLogger(this.prisma, this.events, {
+            organizationId: execution.organizationId,
+            executionId: execution.id,
+            stepId: step.id,
+            projectId: execution.projectId,
+          }).warn(`${step.name} failed (iteration ${d.iteration + 1}); running ${repairStep.name} to repair`);
         });
         break;
       }
       case 'rerun_after_repair': {
-        await tx.workflowExecutionStep.update({ where: { id: step.id }, data: { status: 'PENDING', iteration: d.iteration, attempt: 0, leaseOwner: null } });
+        await tx.workflowExecutionStep.update({
+          where: { id: step.id },
+          data: { status: 'PENDING', iteration: d.iteration, attempt: 0, leaseOwner: null },
+        });
         break;
       }
       case 'fail_step': {
         const prev = (step.error as StepError | null) ?? { kind: 'internal', message: d.reason };
         const updated = await tx.workflowExecutionStep.update({
           where: { id: step.id },
-          data: { status: 'FAILED', error: { ...prev, message: prev.message === d.reason ? d.reason : `${prev.message} — ${d.reason}`, final: true } as Prisma.InputJsonValue, completedAt: new Date() },
+          data: {
+            status: 'FAILED',
+            error: {
+              ...prev,
+              message: prev.message === d.reason ? d.reason : `${prev.message} — ${d.reason}`,
+              final: true,
+            } as Prisma.InputJsonValue,
+            completedAt: new Date(),
+          },
         });
         after.push(() => this.publishStep(execution, 'workflow.step.failed', updated));
         break;
@@ -323,7 +416,14 @@ export class EngineRunner implements OnModuleInit {
   async executeStep(job: StepJob): Promise<void> {
     const now = new Date();
     const claim = await this.prisma.workflowExecutionStep.updateMany({
-      where: { id: job.stepId, status: { in: ['QUEUED', 'RETRY_SCHEDULED', 'RUNNING'] }, leaseOwner: null, iteration: job.iteration, attempt: job.attempt, polls: job.polls },
+      where: {
+        id: job.stepId,
+        status: { in: ['QUEUED', 'RETRY_SCHEDULED', 'RUNNING'] },
+        leaseOwner: null,
+        iteration: job.iteration,
+        attempt: job.attempt,
+        polls: job.polls,
+      },
       data: { status: 'RUNNING', leaseOwner: this.workerId, leaseExpiresAt: new Date(now.getTime() + LEASE_MS) },
     });
     if (claim.count !== 1) return; // stale or duplicate job
@@ -332,16 +432,25 @@ export class EngineRunner implements OnModuleInit {
     const execution = await this.prisma.workflowExecution.findUniqueOrThrow({ where: { id: step.executionId } });
     return RequestContext.run({ executionId: execution.id, stepId: step.id, organizationId: execution.organizationId }, async () => {
       if (execution.status === 'PAUSED') {
-        await this.prisma.workflowExecutionStep.update({ where: { id: step.id }, data: { status: 'QUEUED', leaseOwner: null, leaseExpiresAt: null } });
+        await this.prisma.workflowExecutionStep.update({
+          where: { id: step.id },
+          data: { status: 'QUEUED', leaseOwner: null, leaseExpiresAt: null },
+        });
         return;
       }
       if (!['RUNNING', 'WAITING_APPROVAL'].includes(execution.status)) {
-        const updated = await this.prisma.workflowExecutionStep.update({ where: { id: step.id }, data: { status: 'CANCELLED', leaseOwner: null, completedAt: new Date() } });
+        const updated = await this.prisma.workflowExecutionStep.update({
+          where: { id: step.id },
+          data: { status: 'CANCELLED', leaseOwner: null, completedAt: new Date() },
+        });
         await this.publishStep(execution, 'workflow.step.failed', updated);
         return;
       }
       if (!step.startedAt || job.polls === 0) {
-        step = await this.prisma.workflowExecutionStep.update({ where: { id: step.id }, data: { startedAt: step.startedAt && step.polls > 0 ? step.startedAt : new Date() } });
+        step = await this.prisma.workflowExecutionStep.update({
+          where: { id: step.id },
+          data: { startedAt: step.startedAt && step.polls > 0 ? step.startedAt : new Date() },
+        });
         if (job.polls === 0) await this.publishStep(execution, 'workflow.step.started', step);
       }
       const definition = this.definitionOf(execution);
@@ -350,7 +459,12 @@ export class EngineRunner implements OnModuleInit {
         await this.failStep(execution, step, { kind: 'internal', message: `Step ${step.stepKey} missing from definition`, final: true });
         return this.advance(execution.id);
       }
-      const logger = new ExecutionLogger(this.prisma, this.events, { organizationId: execution.organizationId, executionId: execution.id, stepId: step.id, projectId: execution.projectId });
+      const logger = new ExecutionLogger(this.prisma, this.events, {
+        organizationId: execution.organizationId,
+        executionId: execution.id,
+        stepId: step.id,
+        projectId: execution.projectId,
+      });
       try {
         switch (def.type) {
           case 'approval':
@@ -396,15 +510,32 @@ export class EngineRunner implements OnModuleInit {
     }
     const updated = await this.prisma.workflowExecutionStep.update({
       where: { id: step.id },
-      data: { leaseOwner: null, leaseExpiresAt: null, checkpoint: { until: until.toISOString() }, polls: { increment: 1 }, nextAttemptAt: until, summary: `Waiting until ${until.toISOString()}` },
+      data: {
+        leaseOwner: null,
+        leaseExpiresAt: null,
+        checkpoint: { until: until.toISOString() },
+        polls: { increment: 1 },
+        nextAttemptAt: until,
+        summary: `Waiting until ${until.toISOString()}`,
+      },
     });
     await this.enqueueStep(updated, until.getTime() - Date.now());
   }
 
-  private async runApprovalStep(execution: WorkflowExecution, step: WorkflowExecutionStep, def: StepDefinition, logger: ExecutionLogger): Promise<void> {
+  private async runApprovalStep(
+    execution: WorkflowExecution,
+    step: WorkflowExecutionStep,
+    def: StepDefinition,
+    logger: ExecutionLogger,
+  ): Promise<void> {
     const existing = await this.prisma.approval.findUnique({ where: { executionStepId: step.id } });
     if (existing?.status === 'APPROVED') {
-      await this.completeStep(execution, step, { approved: true, approvalId: existing.id, comment: existing.decisionComment }, `Approved${existing.decisionComment ? `: ${existing.decisionComment}` : ''}`);
+      await this.completeStep(
+        execution,
+        step,
+        { approved: true, approvalId: existing.id, comment: existing.decisionComment },
+        `Approved${existing.decisionComment ? `: ${existing.decisionComment}` : ''}`,
+      );
       return;
     }
     if (existing && existing.status !== 'PENDING') {
@@ -415,7 +546,11 @@ export class EngineRunner implements OnModuleInit {
     const cfg = resolveTemplates(def.approval!, scope);
     const steps = await this.prisma.workflowExecutionStep.findMany({ where: { executionId: execution.id } });
     const action = cfg.action ?? 'workflow.gate';
-    const decision = await this.policy.evaluate(execution.organizationId, await this.projects.load(execution.organizationId, execution.projectId), action);
+    const decision = await this.policy.evaluate(
+      execution.organizationId,
+      await this.projects.load(execution.organizationId, execution.projectId),
+      action,
+    );
     const ctx = await this.approvalContext.build(execution, steps, { action, userId: execution.triggeredById });
     await this.requestApproval(execution, step, {
       title: cfg.title,
@@ -433,7 +568,16 @@ export class EngineRunner implements OnModuleInit {
   private async requestApproval(
     execution: WorkflowExecution,
     step: WorkflowExecutionStep,
-    p: { title: string; description: string | null; action: string; risk: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'; requiredPermission: string; allowSelfApproval: boolean; context: Record<string, unknown>; expiresInMinutes?: number },
+    p: {
+      title: string;
+      description: string | null;
+      action: string;
+      risk: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+      requiredPermission: string;
+      allowSelfApproval: boolean;
+      context: Record<string, unknown>;
+      expiresInMinutes?: number;
+    },
   ): Promise<void> {
     const approval = await this.approvals.request({
       organizationId: execution.organizationId,
@@ -452,12 +596,23 @@ export class EngineRunner implements OnModuleInit {
     });
     const updated = await this.prisma.workflowExecutionStep.update({
       where: { id: step.id },
-      data: { status: 'WAITING_APPROVAL', leaseOwner: null, leaseExpiresAt: null, summary: `Waiting for approval: ${p.title}`, output: { approvalId: approval.id } },
+      data: {
+        status: 'WAITING_APPROVAL',
+        leaseOwner: null,
+        leaseExpiresAt: null,
+        summary: `Waiting for approval: ${p.title}`,
+        output: { approvalId: approval.id },
+      },
     });
     await this.publishStep(execution, 'workflow.step.waiting_approval', updated, { approvalId: approval.id });
   }
 
-  private async runToolStep(execution: WorkflowExecution, step: WorkflowExecutionStep, def: StepDefinition, logger: ExecutionLogger): Promise<void> {
+  private async runToolStep(
+    execution: WorkflowExecution,
+    step: WorkflowExecutionStep,
+    def: StepDefinition,
+    logger: ExecutionLogger,
+  ): Promise<void> {
     const tool = this.registry.get(def.tool!);
     if (!tool) {
       await this.failStep(execution, step, { kind: 'validation', message: `Unknown tool ${def.tool}`, final: true });
@@ -490,7 +645,12 @@ export class EngineRunner implements OnModuleInit {
         const approval = await this.prisma.approval.findUnique({ where: { executionStepId: step.id } });
         if (!approval) {
           const steps = await this.prisma.workflowExecutionStep.findMany({ where: { executionId: execution.id } });
-          const ctx = await this.approvalContext.build(execution, steps, { action: decision.action, environment, version: typeof input.version === 'string' ? input.version : null, userId: execution.triggeredById });
+          const ctx = await this.approvalContext.build(execution, steps, {
+            action: decision.action,
+            environment,
+            version: typeof input.version === 'string' ? input.version : null,
+            userId: execution.triggeredById,
+          });
           await this.requestApproval(execution, step, {
             title: `${tool.title}${environment ? ` → ${environment}` : ''}`,
             description: `${decision.reason}. ${execution.title}`,
@@ -504,14 +664,23 @@ export class EngineRunner implements OnModuleInit {
           return;
         }
         if (approval.status === 'PENDING') {
-          await this.prisma.workflowExecutionStep.update({ where: { id: step.id }, data: { status: 'WAITING_APPROVAL', leaseOwner: null } });
+          await this.prisma.workflowExecutionStep.update({
+            where: { id: step.id },
+            data: { status: 'WAITING_APPROVAL', leaseOwner: null },
+          });
           return;
         }
         if (approval.status !== 'APPROVED') {
-          await this.failStep(execution, step, { kind: 'cancelled', message: `Approval ${approval.status.toLowerCase()}${approval.decisionComment ? `: ${approval.decisionComment}` : ''}`, final: true });
+          await this.failStep(execution, step, {
+            kind: 'cancelled',
+            message: `Approval ${approval.status.toLowerCase()}${approval.decisionComment ? `: ${approval.decisionComment}` : ''}`,
+            final: true,
+          });
           return;
         }
-        logger.info(`Approved by gate "${approval.title}"${approval.decidedById && approval.decidedById !== execution.triggeredById ? ' — executing with the approver\'s authority' : ''}`);
+        logger.info(
+          `Approved by gate "${approval.title}"${approval.decidedById && approval.decidedById !== execution.triggeredById ? " — executing with the approver's authority" : ''}`,
+        );
       }
     }
 
@@ -520,7 +689,10 @@ export class EngineRunner implements OnModuleInit {
     const heartbeat = setInterval(() => {
       void (async () => {
         const [, exec] = await Promise.all([
-          this.prisma.workflowExecutionStep.updateMany({ where: { id: step.id, leaseOwner: this.workerId }, data: { leaseExpiresAt: new Date(Date.now() + LEASE_MS) } }),
+          this.prisma.workflowExecutionStep.updateMany({
+            where: { id: step.id, leaseOwner: this.workerId },
+            data: { leaseExpiresAt: new Date(Date.now() + LEASE_MS) },
+          }),
           this.prisma.workflowExecution.findUnique({ where: { id: execution.id }, select: { status: true } }),
         ]);
         if (exec?.status === 'CANCELLED') abort.abort(new Error('cancelled'));
@@ -554,7 +726,10 @@ export class EngineRunner implements OnModuleInit {
         const pollStartedAt = step.pollStartedAt ?? new Date(started);
         const maxPoll = tool.maxPollDurationMs ?? 60 * 60_000;
         if (Date.now() - pollStartedAt.getTime() > maxPoll) {
-          await this.failStep(execution, step, { kind: 'timeout', message: `${tool.title} did not finish within ${Math.round(maxPoll / 60_000)} minutes` });
+          await this.failStep(execution, step, {
+            kind: 'timeout',
+            message: `${tool.title} did not finish within ${Math.round(maxPoll / 60_000)} minutes`,
+          });
           return;
         }
         const nextAt = new Date(Date.now() + result.continuation.pollAfterMs);
@@ -572,7 +747,9 @@ export class EngineRunner implements OnModuleInit {
             output: nullableJson(result.output),
           },
         });
-        await this.publishStep(execution, 'workflow.step.progress', updated, { progress: { message: result.continuation.message ?? result.summary } });
+        await this.publishStep(execution, 'workflow.step.progress', updated, {
+          progress: { message: result.continuation.message ?? result.summary },
+        });
         await this.enqueueStep(updated, result.continuation.pollAfterMs);
         return;
       }
@@ -580,8 +757,16 @@ export class EngineRunner implements OnModuleInit {
       if (def.successCondition) {
         const ok = evaluateCondition(def.successCondition, { ...scope, output: result.output });
         if (!ok) {
-          await this.prisma.workflowExecutionStep.update({ where: { id: step.id }, data: { output: nullableJson(result.output), summary: result.summary } });
-          await this.failStep(execution, { ...step, summary: result.summary }, { kind: 'assertion', message: `${result.summary} — success condition not met (${def.successCondition})`, retryable: false }, result.output);
+          await this.prisma.workflowExecutionStep.update({
+            where: { id: step.id },
+            data: { output: nullableJson(result.output), summary: result.summary },
+          });
+          await this.failStep(
+            execution,
+            { ...step, summary: result.summary },
+            { kind: 'assertion', message: `${result.summary} — success condition not met (${def.successCondition})`, retryable: false },
+            result.output,
+          );
           return;
         }
       }
@@ -591,13 +776,24 @@ export class EngineRunner implements OnModuleInit {
       const policy = resolveRetryPolicy(def.retry, tool.defaultRetry);
       const maxAttempts = Math.max(step.maxAttempts, policy.maxAttempts);
       if (e.kind === 'cancelled') {
-        const updated = await this.prisma.workflowExecutionStep.update({ where: { id: step.id }, data: { status: 'CANCELLED', leaseOwner: null, error: e.toJSON() as unknown as Prisma.InputJsonValue, completedAt: new Date() } });
+        const updated = await this.prisma.workflowExecutionStep.update({
+          where: { id: step.id },
+          data: { status: 'CANCELLED', leaseOwner: null, error: e.toJSON() as unknown as Prisma.InputJsonValue, completedAt: new Date() },
+        });
         await this.publishStep(execution, 'workflow.step.failed', updated);
       } else if (e.retryable && step.attempt < maxAttempts) {
         const delay = computeBackoffDelay(policy, step.attempt, e.retryAfterMs);
         const updated = await this.prisma.workflowExecutionStep.update({
           where: { id: step.id },
-          data: { status: 'RETRY_SCHEDULED', attempt: step.attempt + 1, leaseOwner: null, leaseExpiresAt: null, nextAttemptAt: new Date(Date.now() + delay), error: e.toJSON() as unknown as Prisma.InputJsonValue, summary: `Retrying in ${Math.round(delay / 1000)}s: ${e.message}` },
+          data: {
+            status: 'RETRY_SCHEDULED',
+            attempt: step.attempt + 1,
+            leaseOwner: null,
+            leaseExpiresAt: null,
+            nextAttemptAt: new Date(Date.now() + delay),
+            error: e.toJSON() as unknown as Prisma.InputJsonValue,
+            summary: `Retrying in ${Math.round(delay / 1000)}s: ${e.message}`,
+          },
         });
         logger.warn(`Attempt ${step.attempt}/${maxAttempts} failed (${e.kind}): ${e.message}. Retrying in ${Math.round(delay / 1000)}s`);
         await this.publishStep(execution, 'workflow.step.retrying', updated, { delayMs: delay });
@@ -612,17 +808,38 @@ export class EngineRunner implements OnModuleInit {
     }
   }
 
-  private async completeStep(execution: WorkflowExecution, step: WorkflowExecutionStep, output: unknown, summary: string, durationMs?: number): Promise<void> {
+  private async completeStep(
+    execution: WorkflowExecution,
+    step: WorkflowExecutionStep,
+    output: unknown,
+    summary: string,
+    durationMs?: number,
+  ): Promise<void> {
     const total = durationMs ?? (step.startedAt ? Date.now() - step.startedAt.getTime() : null);
     const updated = await this.prisma.workflowExecutionStep.update({
       where: { id: step.id },
-      data: { status: 'COMPLETED', output: nullableJson(output), summary: summary.slice(0, 2000), error: Prisma.DbNull, leaseOwner: null, leaseExpiresAt: null, checkpoint: Prisma.DbNull, completedAt: new Date(), durationMs: total ?? undefined },
+      data: {
+        status: 'COMPLETED',
+        output: nullableJson(output),
+        summary: summary.slice(0, 2000),
+        error: Prisma.DbNull,
+        leaseOwner: null,
+        leaseExpiresAt: null,
+        checkpoint: Prisma.DbNull,
+        completedAt: new Date(),
+        durationMs: total ?? undefined,
+      },
     });
     if (step.tool) this.metrics.stepDuration.observe({ tool: step.tool, status: 'completed' }, (total ?? 0) / 1000);
     await this.publishStep(execution, 'workflow.step.completed', updated);
   }
 
-  private async failStep(execution: WorkflowExecution, step: WorkflowExecutionStep, error: StepError | ReturnType<ToolError['toJSON']>, output?: unknown): Promise<void> {
+  private async failStep(
+    execution: WorkflowExecution,
+    step: WorkflowExecutionStep,
+    error: StepError | ReturnType<ToolError['toJSON']>,
+    output?: unknown,
+  ): Promise<void> {
     const updated = await this.prisma.workflowExecutionStep.update({
       where: { id: step.id },
       data: {
@@ -653,12 +870,18 @@ export class EngineRunner implements OnModuleInit {
       await this.completeStep(execution, step, { approved: true, approvalId: event.data.approvalId, reason }, reason);
     } else {
       // Tool gate approved: re-queue the step; the gate check will now pass.
-      const updated = await this.prisma.workflowExecutionStep.update({ where: { id: step.id }, data: { status: 'QUEUED', leaseOwner: null, summary: reason } });
+      const updated = await this.prisma.workflowExecutionStep.update({
+        where: { id: step.id },
+        data: { status: 'QUEUED', leaseOwner: null, summary: reason },
+      });
       await this.publishStep(execution, 'workflow.step.queued', updated);
       await this.enqueueStep(updated);
     }
     if (execution.status === 'WAITING_APPROVAL') {
-      await this.prisma.workflowExecution.updateMany({ where: { id: executionId, status: 'WAITING_APPROVAL' }, data: { status: 'RUNNING' } });
+      await this.prisma.workflowExecution.updateMany({
+        where: { id: executionId, status: 'WAITING_APPROVAL' },
+        data: { status: 'RUNNING' },
+      });
     }
     await this.advance(executionId);
   }
@@ -675,11 +898,22 @@ export class EngineRunner implements OnModuleInit {
     if (!next) {
       await this.prisma.workflowExecution.update({ where: { id: executionId }, data: { status: 'COMPENSATED', completedAt: new Date() } });
       this.metrics.workflowRuns.inc({ status: 'COMPENSATED', template: execution.template ?? 'custom', mode: execution.mode });
-      await this.events.publish({ type: 'workflow.status', organizationId: execution.organizationId, projectId: execution.projectId, executionId, data: { status: 'COMPENSATED', title: execution.title, progress: { completed: steps.length, total: steps.length } } });
+      await this.events.publish({
+        type: 'workflow.status',
+        organizationId: execution.organizationId,
+        projectId: execution.projectId,
+        executionId,
+        data: { status: 'COMPENSATED', title: execution.title, progress: { completed: steps.length, total: steps.length } },
+      });
       return;
     }
     const step = steps.find((s) => s.stepKey === next.key)!;
-    const logger = new ExecutionLogger(this.prisma, this.events, { organizationId: execution.organizationId, executionId, stepId: step.id, projectId: execution.projectId });
+    const logger = new ExecutionLogger(this.prisma, this.events, {
+      organizationId: execution.organizationId,
+      executionId,
+      stepId: step.id,
+      projectId: execution.projectId,
+    });
     try {
       const summary = await this.tools.compensate({
         tool: next.tool!,
@@ -694,7 +928,10 @@ export class EngineRunner implements OnModuleInit {
         mode: execution.mode,
         logger,
       });
-      const updated = await this.prisma.workflowExecutionStep.update({ where: { id: step.id }, data: { status: 'COMPENSATED', summary: `Rolled back: ${summary}` } });
+      const updated = await this.prisma.workflowExecutionStep.update({
+        where: { id: step.id },
+        data: { status: 'COMPENSATED', summary: `Rolled back: ${summary}` },
+      });
       logger.info(`Compensated ${step.name}: ${summary}`);
       await this.publishStep(execution, 'workflow.step.completed', updated);
       await this.queue.add('run.compensate', { executionId });
@@ -703,9 +940,22 @@ export class EngineRunner implements OnModuleInit {
       logger.error(`Compensation of ${step.name} failed: ${e.message}`);
       await this.prisma.workflowExecution.update({
         where: { id: executionId },
-        data: { status: 'FAILED', completedAt: new Date(), error: { message: `Rollback failed at ${step.name}: ${e.message}. Manual intervention required.`, compensationFailed: step.stepKey } },
+        data: {
+          status: 'FAILED',
+          completedAt: new Date(),
+          error: {
+            message: `Rollback failed at ${step.name}: ${e.message}. Manual intervention required.`,
+            compensationFailed: step.stepKey,
+          },
+        },
       });
-      await this.events.publish({ type: 'workflow.failed', organizationId: execution.organizationId, projectId: execution.projectId, executionId, data: { status: 'FAILED', title: execution.title, error: { message: `Rollback failed: ${e.message}` } } });
+      await this.events.publish({
+        type: 'workflow.failed',
+        organizationId: execution.organizationId,
+        projectId: execution.projectId,
+        executionId,
+        data: { status: 'FAILED', title: execution.title, error: { message: `Rollback failed: ${e.message}` } },
+      });
     }
   }
 
@@ -718,4 +968,3 @@ export class EngineRunner implements OnModuleInit {
     return ACTIVE_STEP.includes(status as StepStatus);
   }
 }
-

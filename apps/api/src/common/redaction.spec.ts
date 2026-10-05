@@ -3,7 +3,11 @@ import { redact, redactString } from './redaction';
 describe('redaction', () => {
   it('redacts sensitive keys at any depth', () => {
     const out = redact({ token: 'abc', nested: { apiKey: 'k', password: 'p', ok: 'visible' }, list: [{ clientSecret: 's' }] });
-    expect(out).toEqual({ token: '[REDACTED]', nested: { apiKey: '[REDACTED]', password: '[REDACTED]', ok: 'visible' }, list: [{ clientSecret: '[REDACTED]' }] });
+    expect(out).toEqual({
+      token: '[REDACTED]',
+      nested: { apiKey: '[REDACTED]', password: '[REDACTED]', ok: 'visible' },
+      list: [{ clientSecret: '[REDACTED]' }],
+    });
   });
 
   it('redacts well-known token formats inside free text', () => {

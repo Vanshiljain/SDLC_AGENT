@@ -38,7 +38,9 @@ class StatusDto {
   @ApiProperty({ enum: ['ACTIVE', 'DRAFT', 'ARCHIVED'] }) @IsIn(['ACTIVE', 'DRAFT', 'ARCHIVED']) status!: 'ACTIVE' | 'DRAFT' | 'ARCHIVED';
 }
 class TriggerDto {
-  @ApiProperty({ description: '{ type: MANUAL } | { type: SCHEDULE, cron, timezone } | { type: EVENT, event, filter?, inputs? }' }) @IsObject() config!: Record<string, unknown>;
+  @ApiProperty({ description: '{ type: MANUAL } | { type: SCHEDULE, cron, timezone } | { type: EVENT, event, filter?, inputs? }' })
+  @IsObject()
+  config!: Record<string, unknown>;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() enabled?: boolean;
 }
 class GenerateDto {
@@ -137,7 +139,11 @@ export class WorkflowsController {
   @Delete(':id/triggers/:triggerId')
   @HttpCode(204)
   @RequirePermissions('workflow:manage')
-  removeTrigger(@CurrentAuth() auth: AuthContext, @Param('id', ParseUUIDPipe) id: string, @Param('triggerId', ParseUUIDPipe) triggerId: string) {
+  removeTrigger(
+    @CurrentAuth() auth: AuthContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('triggerId', ParseUUIDPipe) triggerId: string,
+  ) {
     return this.workflows.removeTrigger(auth, id, triggerId);
   }
 }

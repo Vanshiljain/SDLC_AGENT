@@ -1,10 +1,4 @@
-import type {
-  ApprovalStatus,
-  DeploymentStatus,
-  ExecutionStatus,
-  LogLevel,
-  StepStatus,
-} from './enums';
+import type { ApprovalStatus, DeploymentStatus, ExecutionStatus, LogLevel, StepStatus } from './enums';
 
 /** Realtime/domain event names. Dot-separated, lower case. */
 export const EVENT_TYPES = [

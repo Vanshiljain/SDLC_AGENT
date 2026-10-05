@@ -46,7 +46,9 @@ export function TasksPage() {
   const [page, setPage] = useState(1);
   const { data, isLoading, error } = useTasks({ projectId: projectId || undefined, status: status || undefined, page, pageSize: 30 });
   const [editing, setEditing] = useState<Task | 'new' | null>(null);
-  const update = useAction((v: { id: string; status: string }) => api.patch(`/tasks/${v.id}`, { status: v.status }), { invalidate: [['tasks']] });
+  const update = useAction((v: { id: string; status: string }) => api.patch(`/tasks/${v.id}`, { status: v.status }), {
+    invalidate: [['tasks']],
+  });
   return (
     <Page wide>
       <PageHeader
@@ -55,7 +57,12 @@ export function TasksPage() {
         actions={
           <>
             <ProjectFilter value={projectId} onChange={(v) => (setProjectId(v), setPage(1))} />
-            <Select value={status} onChange={(e) => (setStatus(e.target.value), setPage(1))} className="h-7 w-36 text-[12px]" aria-label="Status">
+            <Select
+              value={status}
+              onChange={(e) => (setStatus(e.target.value), setPage(1))}
+              className="h-7 w-36 text-[12px]"
+              aria-label="Status"
+            >
               <option value="">All statuses</option>
               {TASK_STATUSES.map((s) => (
                 <option key={s} value={s}>
@@ -94,12 +101,21 @@ export function TasksPage() {
                       {t.externalKey && <Mono className="text-fg">{t.externalKey}</Mono>}
                       <span className="max-w-[460px] truncate font-medium">{t.title}</span>
                       {t.externalUrl && (
-                        <a href={t.externalUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-fg-subtle hover:text-fg" aria-label="Open in provider">
+                        <a
+                          href={t.externalUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-fg-subtle hover:text-fg"
+                          aria-label="Open in provider"
+                        >
                           <ExternalLink className="size-3.5" />
                         </a>
                       )}
                     </div>
-                    <div className="text-[11.5px] text-fg-subtle">{t.externalProvider ? providerName(t.externalProvider) : 'Forgeline'}</div>
+                    <div className="text-[11.5px] text-fg-subtle">
+                      {t.externalProvider ? providerName(t.externalProvider) : 'Forgeline'}
+                    </div>
                   </Td>
                   <Td className="hidden text-fg-muted md:table-cell">{t.project?.name ?? '—'}</Td>
                   <Td>
@@ -126,7 +142,9 @@ export function TasksPage() {
               ))}
             </tbody>
           </Table>
-          {data && !data.items.length && <EmptyState compact icon={<ListChecks />} title="No tasks" description="Tickets created by delivery flows appear here." />}
+          {data && !data.items.length && (
+            <EmptyState compact icon={<ListChecks />} title="No tasks" description="Tickets created by delivery flows appear here." />
+          )}
           {data && <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onPage={setPage} />}
         </Card>
       )}
@@ -137,24 +155,43 @@ export function TasksPage() {
 
 function TaskDialog({ task, onClose }: { task: Task | null; onClose: () => void }) {
   const projects = useProjects();
-  const [form, setForm] = useState({ title: task?.title ?? '', description: task?.description ?? '', priority: task?.priority ?? 'MEDIUM', status: task?.status ?? 'TODO', projectId: task?.projectId ?? '' });
+  const [form, setForm] = useState({
+    title: task?.title ?? '',
+    description: task?.description ?? '',
+    priority: task?.priority ?? 'MEDIUM',
+    status: task?.status ?? 'TODO',
+    projectId: task?.projectId ?? '',
+  });
   useEffect(() => {
     if (!form.projectId && projects.data?.length === 1) setForm((f) => ({ ...f, projectId: projects.data![0]!.id }));
   }, [projects.data, form.projectId]);
-  const save = useAction(() => (task ? api.patch(`/tasks/${task.id}`, form) : api.post('/tasks', form)), { success: task ? 'Task updated' : 'Task created', invalidate: [['tasks']], onSuccess: onClose });
+  const save = useAction(() => (task ? api.patch(`/tasks/${task.id}`, form) : api.post('/tasks', form)), {
+    success: task ? 'Task updated' : 'Task created',
+    invalidate: [['tasks']],
+    onSuccess: onClose,
+  });
   return (
     <Dialog
       open
       onOpenChange={(o) => !o && onClose()}
       title={task ? 'Edit task' : 'New task'}
-      description={task?.externalProvider ? `Mirrors ${providerName(task.externalProvider)} ${task.externalKey ?? ''}. Edit details in ${providerName(task.externalProvider)}; status changes here are local.` : undefined}
+      description={
+        task?.externalProvider
+          ? `Mirrors ${providerName(task.externalProvider)} ${task.externalKey ?? ''}. Edit details in ${providerName(task.externalProvider)}; status changes here are local.`
+          : undefined
+      }
       wide
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" loading={save.isPending} disabled={!form.title.trim() || !form.projectId} onClick={() => save.mutate(undefined)}>
+          <Button
+            variant="primary"
+            loading={save.isPending}
+            disabled={!form.title.trim() || !form.projectId}
+            onClick={() => save.mutate(undefined)}
+          >
             Save
           </Button>
         </>
@@ -218,7 +255,12 @@ export function CodeReviewsPage() {
         actions={
           <>
             <ProjectFilter value={projectId} onChange={(v) => (setProjectId(v), setPage(1))} />
-            <Button size="sm" variant="primary" icon={<GitPullRequestArrow className="size-3.5" />} onClick={() => commandLauncher.open('pr.review')}>
+            <Button
+              size="sm"
+              variant="primary"
+              icon={<GitPullRequestArrow className="size-3.5" />}
+              onClick={() => commandLauncher.open('pr.review')}
+            >
               Review a PR
             </Button>
           </>
@@ -245,7 +287,8 @@ export function CodeReviewsPage() {
                   <Td>
                     <div className="max-w-[420px] truncate font-medium">{r.title}</div>
                     <div className="flex items-center gap-1.5 text-[11.5px] text-fg-subtle">
-                      {r.project.name} {r.prNumber && `· #${r.prNumber}`} {r.postedToProvider && <Badge tone="ok">posted</Badge>} {r.simulated && <Badge tone="warn">simulated</Badge>}
+                      {r.project.name} {r.prNumber && `· #${r.prNumber}`} {r.postedToProvider && <Badge tone="ok">posted</Badge>}{' '}
+                      {r.simulated && <Badge tone="warn">simulated</Badge>}
                     </div>
                   </Td>
                   <Td>
@@ -255,14 +298,23 @@ export function CodeReviewsPage() {
                     <RiskBadge level={r.riskLevel} />
                   </Td>
                   <Td className="hidden font-mono text-[12px] md:table-cell">
-                    <span className={r.criticalCount ? 'text-bad' : 'text-fg-subtle'}>{r.criticalCount}C</span> <span className={r.highCount ? 'text-accent' : 'text-fg-subtle'}>{r.highCount}H</span> <span className="text-warn">{r.mediumCount}M</span> <span className="text-fg-subtle">{r.lowCount}L</span>
+                    <span className={r.criticalCount ? 'text-bad' : 'text-fg-subtle'}>{r.criticalCount}C</span>{' '}
+                    <span className={r.highCount ? 'text-accent' : 'text-fg-subtle'}>{r.highCount}H</span>{' '}
+                    <span className="text-warn">{r.mediumCount}M</span> <span className="text-fg-subtle">{r.lowCount}L</span>
                   </Td>
                   <Td className="text-right text-[12px] text-fg-muted">{timeAgo(r.createdAt)}</Td>
                 </Tr>
               ))}
             </tbody>
           </Table>
-          {data && !data.items.length && <EmptyState compact icon={<GitPullRequestArrow />} title="No reviews yet" description="Run “Review a PR”, or comment “/forgeline review” on a pull request when webhooks are enabled." />}
+          {data && !data.items.length && (
+            <EmptyState
+              compact
+              icon={<GitPullRequestArrow />}
+              title="No reviews yet"
+              description="Run “Review a PR”, or comment “/forgeline review” on a pull request when webhooks are enabled."
+            />
+          )}
           {data && <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onPage={setPage} />}
         </Card>
       )}
@@ -275,16 +327,37 @@ function VerdictBadge({ verdict }: { verdict: string | null }) {
   return <Badge tone={verdict === 'APPROVE' ? 'ok' : verdict === 'REQUEST_CHANGES' ? 'bad' : 'neutral'}>{titleCase(verdict)}</Badge>;
 }
 
-const SEV_TONE: Record<ReviewFinding['severity'], Tone> = { CRITICAL: 'bad', HIGH: 'accent', MEDIUM: 'warn', LOW: 'neutral', INFO: 'neutral' };
+const SEV_TONE: Record<ReviewFinding['severity'], Tone> = {
+  CRITICAL: 'bad',
+  HIGH: 'accent',
+  MEDIUM: 'warn',
+  LOW: 'neutral',
+  INFO: 'neutral',
+};
 
 export function CodeReviewDetailPage() {
   const { id = '' } = useParams();
   const { data: r, isLoading, error } = useReview(id);
   useDocumentTitle(r?.title ?? 'Code review');
-  usePageContext(r ? { title: r.title, entity: { kind: 'code_review', id: r.id, label: r.title }, projectId: r.project.id } : null, [r?.id]);
-  if (error) return <Page><ErrorState error={error} /></Page>;
-  if (isLoading || !r) return <Page><Skeleton className="h-96" /></Page>;
-  const findings = [...r.findings].sort((a, b) => ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].indexOf(a.severity) - ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].indexOf(b.severity));
+  usePageContext(r ? { title: r.title, entity: { kind: 'code_review', id: r.id, label: r.title }, projectId: r.project.id } : null, [
+    r?.id,
+  ]);
+  if (error)
+    return (
+      <Page>
+        <ErrorState error={error} />
+      </Page>
+    );
+  if (isLoading || !r)
+    return (
+      <Page>
+        <Skeleton className="h-96" />
+      </Page>
+    );
+  const findings = [...r.findings].sort(
+    (a, b) =>
+      ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].indexOf(a.severity) - ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].indexOf(b.severity),
+  );
   return (
     <Page>
       <Link to="/code-reviews" className="text-[12px] text-fg-muted hover:text-fg">
@@ -318,7 +391,11 @@ export function CodeReviewDetailPage() {
               <MarkdownView>{r.summary}</MarkdownView>
             </Card>
           )}
-          {findings.length === 0 && <Card><EmptyState compact icon={<CheckCheck />} title="No findings" description="The reviewer found nothing to flag." /></Card>}
+          {findings.length === 0 && (
+            <Card>
+              <EmptyState compact icon={<CheckCheck />} title="No findings" description="The reviewer found nothing to flag." />
+            </Card>
+          )}
           {findings.map((f, i) => (
             <Card key={i} className="p-4">
               <div className="flex flex-wrap items-center gap-2">
@@ -348,11 +425,19 @@ export function CodeReviewDetailPage() {
             {Object.entries(r.dimensions ?? {}).map(([k, v]) => (
               <li key={k} className="flex items-center justify-between">
                 <span>{titleCase(k)}</span>
-                <span className={cn('font-medium capitalize', v === 'passed' ? 'text-ok' : v === 'failed' ? 'text-bad' : 'text-warn')}>{v}</span>
+                <span className={cn('font-medium capitalize', v === 'passed' ? 'text-ok' : v === 'failed' ? 'text-bad' : 'text-warn')}>
+                  {v}
+                </span>
               </li>
             ))}
           </ul>
-          <div className="mt-4 border-t border-line pt-3 text-[11.5px] text-fg-subtle">{r.postedToProvider ? 'Posted to the pull request.' : r.simulated ? 'Simulated review — not posted.' : 'Not posted to the provider.'}</div>
+          <div className="mt-4 border-t border-line pt-3 text-[11.5px] text-fg-subtle">
+            {r.postedToProvider
+              ? 'Posted to the pull request.'
+              : r.simulated
+                ? 'Simulated review — not posted.'
+                : 'Not posted to the provider.'}
+          </div>
         </Card>
       </div>
     </Page>
@@ -376,7 +461,12 @@ export function QaPage() {
         actions={
           <>
             <ProjectFilter value={projectId} onChange={(v) => (setProjectId(v), setPage(1))} />
-            <Select value={status} onChange={(e) => (setStatus(e.target.value), setPage(1))} className="h-7 w-36 text-[12px]" aria-label="Status">
+            <Select
+              value={status}
+              onChange={(e) => (setStatus(e.target.value), setPage(1))}
+              className="h-7 w-36 text-[12px]"
+              aria-label="Status"
+            >
               <option value="">All statuses</option>
               {['PASSED', 'FAILED', 'ERROR', 'SKIPPED', 'RUNNING'].map((s) => (
                 <option key={s} value={s}>
@@ -411,7 +501,8 @@ export function QaPage() {
                   <Td>
                     <div className="max-w-[420px] truncate font-medium">{q.title}</div>
                     <div className="flex items-center gap-1.5 text-[11.5px] text-fg-subtle">
-                      {titleCase(q.type)} · {q.project.name} {q.ref && <Mono>{q.ref}</Mono>} {q.simulated && <Badge tone="warn">simulated</Badge>}
+                      {titleCase(q.type)} · {q.project.name} {q.ref && <Mono>{q.ref}</Mono>}{' '}
+                      {q.simulated && <Badge tone="warn">simulated</Badge>}
                     </div>
                   </Td>
                   <Td>
@@ -454,7 +545,13 @@ function ResultBar({ run: q }: { run: Pick<QaRun, 'total' | 'passed' | 'failed' 
 function QaSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
   const { data: q } = useQuery({ queryKey: ['qa', 'run', id], queryFn: () => api.get<QaRun>(`/qa/runs/${id}`), enabled: Boolean(id) });
   return (
-    <Sheet open={Boolean(id)} onOpenChange={(o) => !o && onClose()} title={q?.title ?? 'Test run'} subtitle={q ? `${titleCase(q.type)} · ${q.project.name}` : undefined} width={640}>
+    <Sheet
+      open={Boolean(id)}
+      onOpenChange={(o) => !o && onClose()}
+      title={q?.title ?? 'Test run'}
+      subtitle={q ? `${titleCase(q.type)} · ${q.project.name}` : undefined}
+      width={640}
+    >
       {q && (
         <div className="space-y-5 p-5">
           <div className="flex items-center gap-2">
@@ -490,7 +587,10 @@ function QaSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
             <section>
               <h4 className="label-caps mb-2">Failures</h4>
               {q.failures.map((f, i) => (
-                <pre key={i} className="mb-2 max-h-48 overflow-auto rounded-md border border-bad/30 bg-bad-soft p-2.5 font-mono text-[11px] whitespace-pre-wrap text-bad">
+                <pre
+                  key={i}
+                  className="mb-2 max-h-48 overflow-auto rounded-md border border-bad/30 bg-bad-soft p-2.5 font-mono text-[11px] whitespace-pre-wrap text-bad"
+                >
                   {f.name ?? f.check}: {f.message ?? f.output}
                 </pre>
               ))}
@@ -499,7 +599,9 @@ function QaSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
           {q.output && (
             <section>
               <h4 className="label-caps mb-2">Output</h4>
-              <pre className="max-h-80 overflow-auto rounded-md border border-line bg-sunken p-2.5 font-mono text-[11px] whitespace-pre-wrap">{q.output}</pre>
+              <pre className="max-h-80 overflow-auto rounded-md border border-line bg-sunken p-2.5 font-mono text-[11px] whitespace-pre-wrap">
+                {q.output}
+              </pre>
             </section>
           )}
         </div>
@@ -526,14 +628,24 @@ export function DocumentsPage() {
         description="Specifications, ADRs, runbooks and guides written by the Docs agent or your team, published to Notion when connected."
         actions={
           <>
-            <Input value={search} onChange={(e) => (setSearch(e.target.value), setPage(1))} placeholder="Search…" className="h-7 w-48 text-[12px]" />
+            <Input
+              value={search}
+              onChange={(e) => (setSearch(e.target.value), setPage(1))}
+              placeholder="Search…"
+              className="h-7 w-48 text-[12px]"
+            />
             <ProjectFilter value={projectId} onChange={(v) => (setProjectId(v), setPage(1))} />
             {can('docs:write') && (
               <Button size="sm" icon={<Plus className="size-3.5" />} onClick={() => setCreating(true)}>
                 New doc
               </Button>
             )}
-            <Button size="sm" variant="primary" icon={<FileText className="size-3.5" />} onClick={() => commandLauncher.open('docs.generate')}>
+            <Button
+              size="sm"
+              variant="primary"
+              icon={<FileText className="size-3.5" />}
+              onClick={() => commandLauncher.open('docs.generate')}
+            >
               Generate docs
             </Button>
           </>
@@ -567,7 +679,13 @@ export function DocumentsPage() {
                   </Td>
                   <Td className="hidden md:table-cell">
                     {d.externalUrl ? (
-                      <a href={d.externalUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-[12px] text-fg-muted hover:text-fg">
+                      <a
+                        href={d.externalUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 text-[12px] text-fg-muted hover:text-fg"
+                      >
                         {providerName(d.externalProvider ?? 'external')} <ExternalLink className="size-3" />
                       </a>
                     ) : (
@@ -592,7 +710,11 @@ function NewDocDialog({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const projects = useProjects();
   const [form, setForm] = useState({ title: '', type: 'GUIDE', projectId: '', content: '# Title\n\n' });
-  const create = useAction(() => api.post<{ id: string }>('/documents', { ...form, projectId: form.projectId || undefined }), { success: 'Document created', invalidate: [['documents']], onSuccess: (d) => (onClose(), navigate(`/documents/${d.id}`)) });
+  const create = useAction(() => api.post<{ id: string }>('/documents', { ...form, projectId: form.projectId || undefined }), {
+    success: 'Document created',
+    invalidate: [['documents']],
+    onSuccess: (d) => (onClose(), navigate(`/documents/${d.id}`)),
+  });
   return (
     <Dialog
       open
@@ -636,7 +758,12 @@ function NewDocDialog({ onClose }: { onClose: () => void }) {
           </Field>
         </div>
         <Field label="Content (Markdown)">
-          <Textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={12} className="font-mono text-[12px]" />
+          <Textarea
+            value={form.content}
+            onChange={(e) => setForm({ ...form, content: e.target.value })}
+            rows={12}
+            className="font-mono text-[12px]"
+          />
         </Field>
       </div>
     </Dialog>
@@ -651,9 +778,23 @@ export function DocumentDetailPage() {
   const [content, setContent] = useState('');
   useDocumentTitle(d?.title ?? 'Document');
   usePageContext(d ? { title: d.title, entity: { kind: 'document', id: d.id, label: d.title }, projectId: d.project?.id } : null, [d?.id]);
-  const save = useAction(() => api.patch(`/documents/${id}`, { title: d!.title, content }), { success: 'Saved as a new version', invalidate: [qk.document(id), ['documents']], onSuccess: () => setEditing(false) });
-  if (error) return <Page><ErrorState error={error} /></Page>;
-  if (isLoading || !d) return <Page><Skeleton className="h-96" /></Page>;
+  const save = useAction(() => api.patch(`/documents/${id}`, { title: d!.title, content }), {
+    success: 'Saved as a new version',
+    invalidate: [qk.document(id), ['documents']],
+    onSuccess: () => setEditing(false),
+  });
+  if (error)
+    return (
+      <Page>
+        <ErrorState error={error} />
+      </Page>
+    );
+  if (isLoading || !d)
+    return (
+      <Page>
+        <Skeleton className="h-96" />
+      </Page>
+    );
   return (
     <Page>
       <Link to="/documents" className="text-[12px] text-fg-muted hover:text-fg">
@@ -684,7 +825,12 @@ export function DocumentDetailPage() {
               <Button variant="ghost" onClick={() => setEditing(false)}>
                 Cancel
               </Button>
-              <Button variant="primary" icon={<Save className="size-3.5" />} loading={save.isPending} onClick={() => save.mutate(undefined)}>
+              <Button
+                variant="primary"
+                icon={<Save className="size-3.5" />}
+                loading={save.isPending}
+                onClick={() => save.mutate(undefined)}
+              >
                 Save
               </Button>
             </div>
@@ -694,7 +840,13 @@ export function DocumentDetailPage() {
             </Button>
           ))}
       </div>
-      <Card className="p-6">{editing ? <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={28} className="font-mono text-[12.5px]" /> : <MarkdownView className="max-w-3xl">{d.content}</MarkdownView>}</Card>
+      <Card className="p-6">
+        {editing ? (
+          <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={28} className="font-mono text-[12.5px]" />
+        ) : (
+          <MarkdownView className="max-w-3xl">{d.content}</MarkdownView>
+        )}
+      </Card>
     </Page>
   );
 }

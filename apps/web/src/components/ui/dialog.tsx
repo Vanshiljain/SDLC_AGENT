@@ -3,7 +3,25 @@ import * as D from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
-export function Dialog({ open, onOpenChange, title, description, children, footer, className, wide }: { open: boolean; onOpenChange: (o: boolean) => void; title: ReactNode; description?: ReactNode; children: ReactNode; footer?: ReactNode; className?: string; wide?: boolean }) {
+export function Dialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+  footer,
+  className,
+  wide,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  title: ReactNode;
+  description?: ReactNode;
+  children: ReactNode;
+  footer?: ReactNode;
+  className?: string;
+  wide?: boolean;
+}) {
   return (
     <D.Root open={open} onOpenChange={onOpenChange}>
       <D.Portal>
@@ -18,7 +36,11 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
           <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
             <div>
               <D.Title className="text-[15px] font-semibold tracking-tight">{title}</D.Title>
-              {description ? <D.Description className="mt-1 text-[12.5px] text-fg-muted">{description}</D.Description> : <D.Description className="sr-only">{typeof title === 'string' ? title : 'Dialog'}</D.Description>}
+              {description ? (
+                <D.Description className="mt-1 text-[12.5px] text-fg-muted">{description}</D.Description>
+              ) : (
+                <D.Description className="sr-only">{typeof title === 'string' ? title : 'Dialog'}</D.Description>
+              )}
             </div>
             <D.Close className="rounded-sm p-1 text-fg-subtle hover:bg-sunken hover:text-fg" aria-label="Close">
               <X className="size-4" />
@@ -33,12 +55,31 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
 }
 
 /** Right-side panel for details (steps, approvals, findings). */
-export function Sheet({ open, onOpenChange, title, subtitle, children, width = 560, actions }: { open: boolean; onOpenChange: (o: boolean) => void; title: ReactNode; subtitle?: ReactNode; children: ReactNode; width?: number; actions?: ReactNode }) {
+export function Sheet({
+  open,
+  onOpenChange,
+  title,
+  subtitle,
+  children,
+  width = 560,
+  actions,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  title: ReactNode;
+  subtitle?: ReactNode;
+  children: ReactNode;
+  width?: number;
+  actions?: ReactNode;
+}) {
   return (
     <D.Root open={open} onOpenChange={onOpenChange}>
       <D.Portal>
         <D.Overlay className="fixed inset-0 z-40 bg-black/25 data-[state=open]:animate-fade-in" />
-        <D.Content style={{ width: `min(${width}px, 100vw)` }} className="fixed inset-y-0 right-0 z-50 flex flex-col border-l border-line bg-raised shadow-pop data-[state=open]:animate-slide-in">
+        <D.Content
+          style={{ width: `min(${width}px, 100vw)` }}
+          className="fixed inset-y-0 right-0 z-50 flex flex-col border-l border-line bg-raised shadow-pop data-[state=open]:animate-slide-in"
+        >
           <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-3.5">
             <div className="min-w-0">
               <D.Title className="truncate text-[14px] font-semibold tracking-tight">{title}</D.Title>

@@ -47,7 +47,10 @@ export interface PermissionRequirement {
 }
 
 export const RequirePermissions = (permissions: Permission | Permission[], options: { projectFrom?: string } = {}) =>
-  SetMetadata(REQUIRED_PERMISSIONS, { permissions: Array.isArray(permissions) ? permissions : [permissions], projectFrom: options.projectFrom } satisfies PermissionRequirement);
+  SetMetadata(REQUIRED_PERMISSIONS, {
+    permissions: Array.isArray(permissions) ? permissions : [permissions],
+    projectFrom: options.projectFrom,
+  } satisfies PermissionRequirement);
 
 export const CurrentAuth = createParamDecorator((_data: unknown, ctx: ExecutionContext): AuthContext => {
   const req = ctx.switchToHttp().getRequest<{ auth?: AuthContext | AuthUserOnly }>();

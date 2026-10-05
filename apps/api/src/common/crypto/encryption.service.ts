@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { APP_CONFIG, type AppConfig } from '../../config/configuration';
+import type { AppConfig } from '../../config/configuration';
 
 /**
  * Secret management abstraction. The default provider reads versioned data
@@ -19,7 +19,10 @@ export class EnvSecretsProvider implements SecretsProvider {
   private readonly current: number;
 
   constructor(spec: string) {
-    for (const part of spec.split(',').map((s) => s.trim()).filter(Boolean)) {
+    for (const part of spec
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)) {
       const idx = part.indexOf(':');
       if (idx < 1) throw new Error('ENCRYPTION_KEYS entries must be "<version>:<base64 key>"');
       const version = Number(part.slice(0, idx));

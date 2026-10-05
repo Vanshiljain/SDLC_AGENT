@@ -186,7 +186,14 @@
 @layer components {
   /* The signature: a molten line that flows while work is in progress. */
   .forge-line {
-    background-image: linear-gradient(90deg, transparent 0%, var(--color-accent) 25%, #ffc29b 50%, var(--color-accent) 75%, transparent 100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--color-accent) 25%,
+      #ffc29b 50%,
+      var(--color-accent) 75%,
+      transparent 100%
+    );
     background-size: 200% 100%;
     animation: var(--animate-forge);
   }
@@ -198,7 +205,11 @@
     color: var(--color-fg-subtle);
   }
   .demo-stripes {
-    background-image: repeating-linear-gradient(-45deg, color-mix(in oklab, var(--color-warn) 16%, transparent) 0 8px, transparent 8px 16px);
+    background-image: repeating-linear-gradient(
+      -45deg,
+      color-mix(in oklab, var(--color-warn) 16%, transparent) 0 8px,
+      transparent 8px 16px
+    );
   }
   .grid-dots {
     background-image: radial-gradient(color-mix(in oklab, var(--color-fg) 9%, transparent) 1px, transparent 1px);

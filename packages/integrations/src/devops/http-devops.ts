@@ -1,14 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { HttpClient } from '../core/http';
-import type {
-  CiCdEnvironment,
-  CiCdProvider,
-  DeployRequest,
-  DeploymentHandle,
-  PipelineRequest,
-  PipelineRun,
-  RollbackRequest,
-} from './cicd';
+import type { CiCdEnvironment, CiCdProvider, DeployRequest, DeploymentHandle, PipelineRequest, PipelineRun, RollbackRequest } from './cicd';
 
 /**
  * Adapter for Forgeline's own DevOps platform (or any service implementing the

@@ -55,10 +55,7 @@ describe('expression evaluator', () => {
   });
 
   it('collects referenced paths', () => {
-    expect(collectPaths("steps.tests.output.failed == 0 && inputs.env == 'x'")).toEqual([
-      'steps.tests.output.failed',
-      'inputs.env',
-    ]);
+    expect(collectPaths("steps.tests.output.failed == 0 && inputs.env == 'x'")).toEqual(['steps.tests.output.failed', 'inputs.env']);
   });
 });
 

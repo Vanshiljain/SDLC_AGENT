@@ -16,7 +16,10 @@ export function AssistantPanel() {
   const navigate = useNavigate();
 
   return (
-    <aside className="fixed inset-0 z-40 flex flex-col border-l border-line bg-surface sm:static sm:z-auto sm:w-[420px] sm:shrink-0 xl:w-[460px]" aria-label="Forge assistant">
+    <aside
+      className="fixed inset-0 z-40 flex flex-col border-l border-line bg-surface sm:static sm:z-auto sm:w-[420px] sm:shrink-0 xl:w-[460px]"
+      aria-label="Forge assistant"
+    >
       <div className="flex h-11 shrink-0 items-center gap-1 border-b border-line px-3">
         <span className="text-[13px] font-semibold">Forge</span>
         <span className="ml-1 truncate text-[11.5px] text-fg-subtle">{pageContext?.entity?.label ?? ''}</span>
@@ -39,7 +42,13 @@ export function AssistantPanel() {
             </MenuContent>
           </Menu>
           <Tooltip content="New conversation">
-            <Button size="icon-sm" variant="ghost" aria-label="New conversation" onClick={() => ui.set({ assistantConversationId: null })} icon={<Plus className="size-4" />} />
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-label="New conversation"
+              onClick={() => ui.set({ assistantConversationId: null })}
+              icon={<Plus className="size-4" />}
+            />
           </Tooltip>
           <Tooltip content="Open full view">
             <Button
@@ -53,11 +62,24 @@ export function AssistantPanel() {
               icon={<Maximize2 className="size-3.5" />}
             />
           </Tooltip>
-          <Button size="icon-sm" variant="ghost" aria-label="Close assistant" onClick={() => ui.set({ assistantOpen: false })} icon={<X className="size-4" />} />
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label="Close assistant"
+            onClick={() => ui.set({ assistantOpen: false })}
+            icon={<X className="size-4" />}
+          />
         </div>
       </div>
       <div className="min-h-0 flex-1">
-        <ChatThread compact conversationId={conversationId} onConversation={(id) => ui.set({ assistantConversationId: id })} pageContext={pageContext} projectId={pageContext?.projectId} draft={draft} />
+        <ChatThread
+          compact
+          conversationId={conversationId}
+          onConversation={(id) => ui.set({ assistantConversationId: id })}
+          pageContext={pageContext}
+          projectId={pageContext?.projectId}
+          draft={draft}
+        />
       </div>
     </aside>
   );

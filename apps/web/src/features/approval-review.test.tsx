@@ -22,15 +22,30 @@ const approval = (overrides: Partial<Approval> = {}): Approval => ({
   expiresAt: null,
   createdAt: new Date().toISOString(),
   context: {
-    risk: { level: 'LOW', source: 'ai', summary: 'Small, tested change.', factors: [{ factor: 'CI passed', impact: 'positive' }], mitigations: [], recommendation: 'approve' },
-    evidence: { ci: { status: 'passed' }, qa: { status: 'passed', passed: 12, failed: 0 }, review: { status: 'passed', critical: 0, high: 0 }, rollbackReady: true, changes: { files: 2, items: ['create src/reset.ts', 'modify src/auth.ts'] } },
+    risk: {
+      level: 'LOW',
+      source: 'ai',
+      summary: 'Small, tested change.',
+      factors: [{ factor: 'CI passed', impact: 'positive' }],
+      mitigations: [],
+      recommendation: 'approve',
+    },
+    evidence: {
+      ci: { status: 'passed' },
+      qa: { status: 'passed', passed: 12, failed: 0 },
+      review: { status: 'passed', critical: 0, high: 0 },
+      rollbackReady: true,
+      changes: { files: 2, items: ['create src/reset.ts', 'modify src/auth.ts'] },
+    },
   },
   canDecide: true,
   ...overrides,
 });
 
 function mockApproval(a: Approval) {
-  vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify(a), { status: 200, headers: { 'content-type': 'application/json' } }));
+  vi.spyOn(globalThis, 'fetch').mockImplementation(
+    async () => new Response(JSON.stringify(a), { status: 200, headers: { 'content-type': 'application/json' } }),
+  );
 }
 
 describe('ApprovalReview', () => {

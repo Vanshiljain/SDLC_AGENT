@@ -26,7 +26,10 @@ export class ToolRegistry {
   private readonly tools = new Map<string, AnySdlcTool>();
 
   constructor(@Inject(APP_CONFIG) config: AppConfig) {
-    for (const t of [...integrationTools, ...createHttpTools({ allowPrivateNetworks: config.outbound.allowPrivateNetworks, allowedHosts: config.outbound.allowedHosts })]) {
+    for (const t of [
+      ...integrationTools,
+      ...createHttpTools({ allowPrivateNetworks: config.outbound.allowPrivateNetworks, allowedHosts: config.outbound.allowedHosts }),
+    ]) {
       this.register(t);
     }
   }
@@ -73,7 +76,9 @@ export class ToolRegistry {
   }
 
   catalog(): ToolDescriptor[] {
-    return this.all().map((t) => this.describe(t)).sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+    return this.all()
+      .map((t) => this.describe(t))
+      .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
   }
 
   /** Compact catalog text for LLM prompts. */
@@ -81,7 +86,10 @@ export class ToolRegistry {
     return this.all()
       .filter((t) => (filter ? filter(t) : true))
       .map((t) => {
-        const schema = this.describe(t).inputSchema as { properties?: Record<string, { type?: string; description?: string }>; required?: string[] };
+        const schema = this.describe(t).inputSchema as {
+          properties?: Record<string, { type?: string; description?: string }>;
+          required?: string[];
+        };
         const fields = Object.entries(schema.properties ?? {})
           .map(([k, v]) => `${k}${schema.required?.includes(k) ? '' : '?'}:${v.type ?? 'any'}`)
           .join(', ');

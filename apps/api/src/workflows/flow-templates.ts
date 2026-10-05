@@ -20,14 +20,20 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
   {
     key: 'feature_delivery',
     name: 'Feature delivery (end-to-end)',
-    description: 'Requirement → ticket → spec → plan → branch → code → validate/fix → review → PR → CI → QA → staging → docs → production → notify.',
+    description:
+      'Requirement → ticket → spec → plan → branch → code → validate/fix → review → PR → CI → QA → staging → docs → production → notify.',
     category: 'deliver',
     icon: 'rocket',
     definition: {
       inputs: {
         requirement: { type: 'string', required: true, description: 'What should be built' },
         ticketKey: { type: 'string', required: false, description: 'Existing ticket to implement (skips ticket creation)' },
-        requirePlanApproval: { type: 'boolean', required: false, default: false, description: 'Pause for approval of the implementation plan' },
+        requirePlanApproval: {
+          type: 'boolean',
+          required: false,
+          default: false,
+          description: 'Pause for approval of the implementation plan',
+        },
         deployToProduction: { type: 'boolean', required: false, default: true },
         stagingEnvironment: { type: 'string', required: false, default: 'staging' },
         productionEnvironment: { type: 'string', required: false, default: 'production' },
@@ -35,7 +41,13 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
       onFailure: 'fail',
       concurrency: 4,
       steps: [
-        { key: 'retrieve_context', name: 'Retrieve project context', tool: 'knowledge.retrieve', agent: 'architect', input: { query: '{{ inputs.requirement }}', k: 8 } },
+        {
+          key: 'retrieve_context',
+          name: 'Retrieve project context',
+          tool: 'knowledge.retrieve',
+          agent: 'architect',
+          input: { query: '{{ inputs.requirement }}', k: 8 },
+        },
         { key: 'analyze_repo', name: 'Analyze repository', tool: 'github.analyzeRepository', agent: 'architect', input: {} },
         {
           key: 'draft_ticket',
@@ -180,7 +192,11 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
           tool: 'code.fix',
           agent: 'code',
           timeoutMs: 1_800_000,
-          input: { codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}', failures: '{{ repair.output }}', source: 'review' },
+          input: {
+            codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}',
+            failures: '{{ repair.output }}',
+            source: 'review',
+          },
         },
         {
           key: 'commit_changes',
@@ -188,7 +204,10 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
           tool: 'code.commit',
           agent: 'code',
           dependsOn: ['review_code'],
-          input: { codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}', branch: '{{ steps.create_branch.output.branch }}' },
+          input: {
+            codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}',
+            branch: '{{ steps.create_branch.output.branch }}',
+          },
         },
         {
           key: 'describe_pr',
@@ -196,7 +215,11 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
           tool: 'ai.describePullRequest',
           agent: 'code',
           dependsOn: ['commit_changes'],
-          input: { codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}', ticketKey: '{{ steps.load_ticket.output.key }}', ticketUrl: '{{ steps.load_ticket.output.url }}' },
+          input: {
+            codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}',
+            ticketKey: '{{ steps.load_ticket.output.key }}',
+            ticketUrl: '{{ steps.load_ticket.output.url }}',
+          },
         },
         {
           key: 'create_pr',
@@ -204,7 +227,12 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
           tool: 'github.createPullRequest',
           agent: 'code',
           dependsOn: ['describe_pr'],
-          input: { head: '{{ steps.create_branch.output.branch }}', base: '{{ steps.create_branch.output.baseBranch }}', title: '{{ steps.describe_pr.output.title }}', body: '{{ steps.describe_pr.output.body }}' },
+          input: {
+            head: '{{ steps.create_branch.output.branch }}',
+            base: '{{ steps.create_branch.output.baseBranch }}',
+            title: '{{ steps.describe_pr.output.title }}',
+            body: '{{ steps.describe_pr.output.body }}',
+          },
           compensate: { tool: 'github.createPullRequest', input: {} },
         },
         {
@@ -223,7 +251,10 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
           agent: 'planning',
           dependsOn: ['create_pr'],
           continueOnError: true,
-          input: { key: '{{ steps.load_ticket.output.key }}', body: 'Pull request opened: [{{ steps.create_pr.output.url }}]({{ steps.create_pr.output.url }})\n\nRun: {{ execution.url }}' },
+          input: {
+            key: '{{ steps.load_ticket.output.key }}',
+            body: 'Pull request opened: [{{ steps.create_pr.output.url }}]({{ steps.create_pr.output.url }})\n\nRun: {{ execution.url }}',
+          },
         },
         {
           key: 'ci',
@@ -241,7 +272,13 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
           tool: 'code.fix',
           agent: 'code',
           timeoutMs: 1_800_000,
-          input: { codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}', failures: '{{ repair.output }}', source: 'ci', commit: true, branch: '{{ steps.create_branch.output.branch }}' },
+          input: {
+            codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}',
+            failures: '{{ repair.output }}',
+            source: 'ci',
+            commit: true,
+            branch: '{{ steps.create_branch.output.branch }}',
+          },
         },
         {
           key: 'qa',
@@ -251,7 +288,12 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
           dependsOn: ['ci'],
           timeoutMs: 1_800_000,
           successCondition: "output.status != 'FAILED' && output.status != 'ERROR'",
-          input: { ref: '{{ steps.create_branch.output.branch }}', requirement: '{{ inputs.requirement }}', codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}', acceptanceCriteria: '{{ steps.draft_ticket.output.acceptanceCriteria }}' },
+          input: {
+            ref: '{{ steps.create_branch.output.branch }}',
+            requirement: '{{ inputs.requirement }}',
+            codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}',
+            acceptanceCriteria: '{{ steps.draft_ticket.output.acceptanceCriteria }}',
+          },
         },
         {
           key: 'deploy_staging',
@@ -259,7 +301,11 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
           tool: 'deploy.environment',
           agent: 'release',
           dependsOn: ['qa'],
-          input: { environment: '{{ inputs.stagingEnvironment }}', ref: '{{ steps.create_branch.output.branch }}', commitSha: '{{ coalesce(steps.fix_ci.output.commitSha, steps.commit_changes.output.sha) }}' },
+          input: {
+            environment: '{{ inputs.stagingEnvironment }}',
+            ref: '{{ steps.create_branch.output.branch }}',
+            commitSha: '{{ coalesce(steps.fix_ci.output.commitSha, steps.commit_changes.output.sha) }}',
+          },
         },
         {
           key: 'verify_staging',
@@ -289,7 +335,13 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
           agent: 'docs',
           dependsOn: ['verify_staging'],
           continueOnError: true,
-          input: { topic: '{{ steps.load_ticket.output.summary }}', ticketKey: '{{ steps.load_ticket.output.key }}', codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}', specArtifactId: '{{ steps.generate_spec.output.artifactId }}', publish: true },
+          input: {
+            topic: '{{ steps.load_ticket.output.summary }}',
+            ticketKey: '{{ steps.load_ticket.output.key }}',
+            codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}',
+            specArtifactId: '{{ steps.generate_spec.output.artifactId }}',
+            publish: true,
+          },
         },
         {
           key: 'merge_pr',
@@ -306,7 +358,11 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
           tool: 'deploy.environment',
           agent: 'release',
           dependsOn: ['merge_pr'],
-          input: { environment: '{{ inputs.productionEnvironment }}', ref: '{{ steps.create_branch.output.baseBranch }}', commitSha: '{{ steps.merge_pr.output.sha }}' },
+          input: {
+            environment: '{{ inputs.productionEnvironment }}',
+            ref: '{{ steps.create_branch.output.baseBranch }}',
+            commitSha: '{{ steps.merge_pr.output.sha }}',
+          },
         },
         {
           key: 'verify_production',
@@ -335,7 +391,8 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
           runIf: 'always',
           input: {
             title: '{{ execution.title }}',
-            message: '{{ steps.load_ticket.output.key }}: {{ steps.load_ticket.output.summary }}\nPR: {{ steps.create_pr.output.url }}\nStaging: {{ steps.verify_staging.output.summary }}\nProduction: {{ steps.verify_production.output.summary }}',
+            message:
+              '{{ steps.load_ticket.output.key }}: {{ steps.load_ticket.output.summary }}\nPR: {{ steps.create_pr.output.url }}\nStaging: {{ steps.verify_staging.output.summary }}\nProduction: {{ steps.verify_production.output.summary }}',
             link: '{{ execution.url }}',
           },
         },
@@ -351,8 +408,21 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
     definition: {
       inputs: { requirement: { type: 'string', required: true } },
       steps: [
-        { key: 'retrieve_context', name: 'Retrieve project context', tool: 'knowledge.retrieve', agent: 'architect', input: { query: '{{ inputs.requirement }}', k: 6 } },
-        { key: 'draft_ticket', name: 'Draft ticket', tool: 'ai.draftTicket', agent: 'planning', dependsOn: ['retrieve_context'], input: { requirement: '{{ inputs.requirement }}', context: '{{ steps.retrieve_context.output.context }}' } },
+        {
+          key: 'retrieve_context',
+          name: 'Retrieve project context',
+          tool: 'knowledge.retrieve',
+          agent: 'architect',
+          input: { query: '{{ inputs.requirement }}', k: 6 },
+        },
+        {
+          key: 'draft_ticket',
+          name: 'Draft ticket',
+          tool: 'ai.draftTicket',
+          agent: 'planning',
+          dependsOn: ['retrieve_context'],
+          input: { requirement: '{{ inputs.requirement }}', context: '{{ steps.retrieve_context.output.context }}' },
+        },
         {
           key: 'create_ticket',
           name: 'Create ticket',
@@ -380,15 +450,32 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
     definition: {
       inputs: { requirement: { type: 'string', required: true } },
       steps: [
-        { key: 'retrieve_context', name: 'Retrieve project context', tool: 'knowledge.retrieve', agent: 'architect', input: { query: '{{ inputs.requirement }}', k: 8 } },
-        { key: 'analyze_repo', name: 'Analyze repository', tool: 'github.analyzeRepository', agent: 'architect', continueOnError: true, input: {} },
+        {
+          key: 'retrieve_context',
+          name: 'Retrieve project context',
+          tool: 'knowledge.retrieve',
+          agent: 'architect',
+          input: { query: '{{ inputs.requirement }}', k: 8 },
+        },
+        {
+          key: 'analyze_repo',
+          name: 'Analyze repository',
+          tool: 'github.analyzeRepository',
+          agent: 'architect',
+          continueOnError: true,
+          input: {},
+        },
         {
           key: 'generate_spec',
           name: 'Technical specification',
           tool: 'ai.generateSpec',
           agent: 'architect',
           dependsOn: ['retrieve_context', 'analyze_repo'],
-          input: { requirement: '{{ inputs.requirement }}', repository: '{{ steps.analyze_repo.output }}', context: '{{ steps.retrieve_context.output.context }}' },
+          input: {
+            requirement: '{{ inputs.requirement }}',
+            repository: '{{ steps.analyze_repo.output }}',
+            context: '{{ steps.retrieve_context.output.context }}',
+          },
         },
       ],
     },
@@ -402,10 +489,46 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
     definition: {
       inputs: { requirement: { type: 'string', required: true } },
       steps: [
-        { key: 'retrieve_context', name: 'Retrieve project context', tool: 'knowledge.retrieve', agent: 'architect', input: { query: '{{ inputs.requirement }}', k: 8 } },
-        { key: 'analyze_repo', name: 'Analyze repository', tool: 'github.analyzeRepository', agent: 'architect', continueOnError: true, input: {} },
-        { key: 'generate_spec', name: 'Technical specification', tool: 'ai.generateSpec', agent: 'architect', dependsOn: ['retrieve_context', 'analyze_repo'], input: { requirement: '{{ inputs.requirement }}', repository: '{{ steps.analyze_repo.output }}', context: '{{ steps.retrieve_context.output.context }}' } },
-        { key: 'generate_plan', name: 'Implementation plan', tool: 'ai.generatePlan', agent: 'planning', dependsOn: ['generate_spec'], input: { requirement: '{{ inputs.requirement }}', spec: '{{ steps.generate_spec.output.markdown }}', repository: '{{ steps.analyze_repo.output }}', context: '{{ steps.retrieve_context.output.context }}' } },
+        {
+          key: 'retrieve_context',
+          name: 'Retrieve project context',
+          tool: 'knowledge.retrieve',
+          agent: 'architect',
+          input: { query: '{{ inputs.requirement }}', k: 8 },
+        },
+        {
+          key: 'analyze_repo',
+          name: 'Analyze repository',
+          tool: 'github.analyzeRepository',
+          agent: 'architect',
+          continueOnError: true,
+          input: {},
+        },
+        {
+          key: 'generate_spec',
+          name: 'Technical specification',
+          tool: 'ai.generateSpec',
+          agent: 'architect',
+          dependsOn: ['retrieve_context', 'analyze_repo'],
+          input: {
+            requirement: '{{ inputs.requirement }}',
+            repository: '{{ steps.analyze_repo.output }}',
+            context: '{{ steps.retrieve_context.output.context }}',
+          },
+        },
+        {
+          key: 'generate_plan',
+          name: 'Implementation plan',
+          tool: 'ai.generatePlan',
+          agent: 'planning',
+          dependsOn: ['generate_spec'],
+          input: {
+            requirement: '{{ inputs.requirement }}',
+            spec: '{{ steps.generate_spec.output.markdown }}',
+            repository: '{{ steps.analyze_repo.output }}',
+            context: '{{ steps.retrieve_context.output.context }}',
+          },
+        },
       ],
     },
   },
@@ -418,18 +541,118 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
     definition: {
       inputs: { requirement: { type: 'string', required: true }, ticketKey: { type: 'string', required: false } },
       steps: [
-        { key: 'retrieve_context', name: 'Retrieve project context', tool: 'knowledge.retrieve', agent: 'architect', input: { query: '{{ inputs.requirement }}', k: 8 } },
+        {
+          key: 'retrieve_context',
+          name: 'Retrieve project context',
+          tool: 'knowledge.retrieve',
+          agent: 'architect',
+          input: { query: '{{ inputs.requirement }}', k: 8 },
+        },
         { key: 'analyze_repo', name: 'Analyze repository', tool: 'github.analyzeRepository', agent: 'architect', input: {} },
-        { key: 'generate_plan', name: 'Implementation plan', tool: 'ai.generatePlan', agent: 'planning', dependsOn: ['retrieve_context', 'analyze_repo'], input: { requirement: '{{ inputs.requirement }}', ticketKey: '{{ inputs.ticketKey }}', repository: '{{ steps.analyze_repo.output }}', context: '{{ steps.retrieve_context.output.context }}' } },
-        { key: 'create_branch', name: 'Create branch', tool: 'github.createBranch', agent: 'code', dependsOn: ['generate_plan'], input: { branch: '{{ steps.generate_plan.output.branchName }}' } },
-        { key: 'generate_code', name: 'Generate code & tests', tool: 'code.generate', agent: 'code', dependsOn: ['create_branch'], timeoutMs: 1_800_000, input: { requirement: '{{ inputs.requirement }}', ticketKey: '{{ inputs.ticketKey }}', planArtifactId: '{{ steps.generate_plan.output.artifactId }}', branch: '{{ steps.create_branch.output.branch }}', baseBranch: '{{ steps.create_branch.output.baseBranch }}' } },
-        { key: 'validate_code', name: 'Lint, typecheck & tests', tool: 'code.validate', agent: 'qa', dependsOn: ['generate_code'], timeoutMs: 1_800_000, successCondition: 'output.passed != false', repair: { step: 'fix_code', maxIterations: 3 }, input: { codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}' } },
-        { key: 'fix_code', name: 'Fix failures', tool: 'code.fix', agent: 'code', timeoutMs: 1_800_000, input: { codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}', failures: '{{ repair.output }}' } },
-        { key: 'review_code', name: 'AI code review', tool: 'code.review', agent: 'review', dependsOn: ['validate_code'], input: { codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}' } },
-        { key: 'commit_changes', name: 'Commit changes', tool: 'code.commit', agent: 'code', dependsOn: ['review_code'], input: { codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}', branch: '{{ steps.create_branch.output.branch }}' } },
-        { key: 'describe_pr', name: 'Write PR description', tool: 'ai.describePullRequest', agent: 'code', dependsOn: ['commit_changes'], input: { codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}', ticketKey: '{{ inputs.ticketKey }}' } },
-        { key: 'create_pr', name: 'Open pull request', tool: 'github.createPullRequest', agent: 'code', dependsOn: ['describe_pr'], input: { head: '{{ steps.create_branch.output.branch }}', base: '{{ steps.create_branch.output.baseBranch }}', title: '{{ steps.describe_pr.output.title }}', body: '{{ steps.describe_pr.output.body }}' } },
-        { key: 'publish_review', name: 'Post review to PR', tool: 'code.publishReview', agent: 'review', dependsOn: ['create_pr'], continueOnError: true, input: { codeReviewId: '{{ steps.review_code.output.codeReviewId }}', pullNumber: '{{ steps.create_pr.output.number }}' } },
+        {
+          key: 'generate_plan',
+          name: 'Implementation plan',
+          tool: 'ai.generatePlan',
+          agent: 'planning',
+          dependsOn: ['retrieve_context', 'analyze_repo'],
+          input: {
+            requirement: '{{ inputs.requirement }}',
+            ticketKey: '{{ inputs.ticketKey }}',
+            repository: '{{ steps.analyze_repo.output }}',
+            context: '{{ steps.retrieve_context.output.context }}',
+          },
+        },
+        {
+          key: 'create_branch',
+          name: 'Create branch',
+          tool: 'github.createBranch',
+          agent: 'code',
+          dependsOn: ['generate_plan'],
+          input: { branch: '{{ steps.generate_plan.output.branchName }}' },
+        },
+        {
+          key: 'generate_code',
+          name: 'Generate code & tests',
+          tool: 'code.generate',
+          agent: 'code',
+          dependsOn: ['create_branch'],
+          timeoutMs: 1_800_000,
+          input: {
+            requirement: '{{ inputs.requirement }}',
+            ticketKey: '{{ inputs.ticketKey }}',
+            planArtifactId: '{{ steps.generate_plan.output.artifactId }}',
+            branch: '{{ steps.create_branch.output.branch }}',
+            baseBranch: '{{ steps.create_branch.output.baseBranch }}',
+          },
+        },
+        {
+          key: 'validate_code',
+          name: 'Lint, typecheck & tests',
+          tool: 'code.validate',
+          agent: 'qa',
+          dependsOn: ['generate_code'],
+          timeoutMs: 1_800_000,
+          successCondition: 'output.passed != false',
+          repair: { step: 'fix_code', maxIterations: 3 },
+          input: { codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}' },
+        },
+        {
+          key: 'fix_code',
+          name: 'Fix failures',
+          tool: 'code.fix',
+          agent: 'code',
+          timeoutMs: 1_800_000,
+          input: { codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}', failures: '{{ repair.output }}' },
+        },
+        {
+          key: 'review_code',
+          name: 'AI code review',
+          tool: 'code.review',
+          agent: 'review',
+          dependsOn: ['validate_code'],
+          input: { codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}' },
+        },
+        {
+          key: 'commit_changes',
+          name: 'Commit changes',
+          tool: 'code.commit',
+          agent: 'code',
+          dependsOn: ['review_code'],
+          input: {
+            codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}',
+            branch: '{{ steps.create_branch.output.branch }}',
+          },
+        },
+        {
+          key: 'describe_pr',
+          name: 'Write PR description',
+          tool: 'ai.describePullRequest',
+          agent: 'code',
+          dependsOn: ['commit_changes'],
+          input: { codeGenerationId: '{{ steps.generate_code.output.codeGenerationId }}', ticketKey: '{{ inputs.ticketKey }}' },
+        },
+        {
+          key: 'create_pr',
+          name: 'Open pull request',
+          tool: 'github.createPullRequest',
+          agent: 'code',
+          dependsOn: ['describe_pr'],
+          input: {
+            head: '{{ steps.create_branch.output.branch }}',
+            base: '{{ steps.create_branch.output.baseBranch }}',
+            title: '{{ steps.describe_pr.output.title }}',
+            body: '{{ steps.describe_pr.output.body }}',
+          },
+        },
+        {
+          key: 'publish_review',
+          name: 'Post review to PR',
+          tool: 'code.publishReview',
+          agent: 'review',
+          dependsOn: ['create_pr'],
+          continueOnError: true,
+          input: { codeReviewId: '{{ steps.review_code.output.codeReviewId }}', pullNumber: '{{ steps.create_pr.output.number }}' },
+        },
       ],
     },
   },
@@ -442,8 +665,21 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
     definition: {
       inputs: { pullNumber: { type: 'number', required: true } },
       steps: [
-        { key: 'review_code', name: 'AI code review', tool: 'code.review', agent: 'review', input: { pullNumber: '{{ inputs.pullNumber }}' } },
-        { key: 'publish_review', name: 'Post review to PR', tool: 'code.publishReview', agent: 'review', dependsOn: ['review_code'], input: { codeReviewId: '{{ steps.review_code.output.codeReviewId }}', pullNumber: '{{ inputs.pullNumber }}' } },
+        {
+          key: 'review_code',
+          name: 'AI code review',
+          tool: 'code.review',
+          agent: 'review',
+          input: { pullNumber: '{{ inputs.pullNumber }}' },
+        },
+        {
+          key: 'publish_review',
+          name: 'Post review to PR',
+          tool: 'code.publishReview',
+          agent: 'review',
+          dependsOn: ['review_code'],
+          input: { codeReviewId: '{{ steps.review_code.output.codeReviewId }}', pullNumber: '{{ inputs.pullNumber }}' },
+        },
       ],
     },
   },
@@ -455,7 +691,16 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
     icon: 'flask-conical',
     definition: {
       inputs: { ref: { type: 'string', required: false }, requirement: { type: 'string', required: false } },
-      steps: [{ key: 'qa', name: 'QA', tool: 'qa.run', agent: 'qa', timeoutMs: 1_800_000, input: { ref: '{{ inputs.ref }}', requirement: '{{ inputs.requirement }}' } }],
+      steps: [
+        {
+          key: 'qa',
+          name: 'QA',
+          tool: 'qa.run',
+          agent: 'qa',
+          timeoutMs: 1_800_000,
+          input: { ref: '{{ inputs.ref }}', requirement: '{{ inputs.requirement }}' },
+        },
+      ],
     },
   },
   {
@@ -466,7 +711,16 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
     icon: 'workflow',
     definition: {
       inputs: { ref: { type: 'string', required: false, default: 'main' } },
-      steps: [{ key: 'pipeline', name: 'Pipeline', tool: 'devops.runPipeline', agent: 'release', successCondition: "output.status == 'succeeded'", input: { ref: '{{ inputs.ref }}', stages: ['lint', 'build', 'test', 'security_scan', 'artifact'] } }],
+      steps: [
+        {
+          key: 'pipeline',
+          name: 'Pipeline',
+          tool: 'devops.runPipeline',
+          agent: 'release',
+          successCondition: "output.status == 'succeeded'",
+          input: { ref: '{{ inputs.ref }}', stages: ['lint', 'build', 'test', 'security_scan', 'artifact'] },
+        },
+      ],
     },
   },
   {
@@ -478,10 +732,51 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
     definition: {
       inputs: { environment: { type: 'string', required: true }, ref: { type: 'string', required: false, default: 'main' } },
       steps: [
-        { key: 'pipeline', name: 'Build, test & scan', tool: 'devops.runPipeline', agent: 'release', successCondition: "output.status == 'succeeded'", input: { ref: '{{ inputs.ref }}', stages: ['lint', 'build', 'test', 'security_scan', 'artifact', 'container_build', 'image_scan'] } },
-        { key: 'deploy', name: 'Deploy', tool: 'deploy.environment', agent: 'release', dependsOn: ['pipeline'], input: { environment: '{{ inputs.environment }}', ref: '{{ inputs.ref }}', artifactRef: '{{ steps.pipeline.output.artifact.ref }}' } },
-        { key: 'verify', name: 'Health checks & smoke tests', tool: 'deploy.verify', agent: 'qa', dependsOn: ['deploy'], successCondition: 'output.passed == true', input: { deploymentId: '{{ steps.deploy.output.deploymentId }}', rollbackOnFailure: true } },
-        { key: 'notify', name: 'Notify team', tool: 'notify.team', agent: 'release', dependsOn: ['verify'], runIf: 'always', input: { title: 'Deployment to {{ inputs.environment }}', message: '{{ coalesce(steps.verify.output.summary, steps.deploy.output.summary, "Deployment did not complete") }}', link: '{{ execution.url }}' } },
+        {
+          key: 'pipeline',
+          name: 'Build, test & scan',
+          tool: 'devops.runPipeline',
+          agent: 'release',
+          successCondition: "output.status == 'succeeded'",
+          input: {
+            ref: '{{ inputs.ref }}',
+            stages: ['lint', 'build', 'test', 'security_scan', 'artifact', 'container_build', 'image_scan'],
+          },
+        },
+        {
+          key: 'deploy',
+          name: 'Deploy',
+          tool: 'deploy.environment',
+          agent: 'release',
+          dependsOn: ['pipeline'],
+          input: {
+            environment: '{{ inputs.environment }}',
+            ref: '{{ inputs.ref }}',
+            artifactRef: '{{ steps.pipeline.output.artifact.ref }}',
+          },
+        },
+        {
+          key: 'verify',
+          name: 'Health checks & smoke tests',
+          tool: 'deploy.verify',
+          agent: 'qa',
+          dependsOn: ['deploy'],
+          successCondition: 'output.passed == true',
+          input: { deploymentId: '{{ steps.deploy.output.deploymentId }}', rollbackOnFailure: true },
+        },
+        {
+          key: 'notify',
+          name: 'Notify team',
+          tool: 'notify.team',
+          agent: 'release',
+          dependsOn: ['verify'],
+          runIf: 'always',
+          input: {
+            title: 'Deployment to {{ inputs.environment }}',
+            message: '{{ coalesce(steps.verify.output.summary, steps.deploy.output.summary, "Deployment did not complete") }}',
+            link: '{{ execution.url }}',
+          },
+        },
       ],
     },
   },
@@ -494,9 +789,34 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
     definition: {
       inputs: { environment: { type: 'string', required: true } },
       steps: [
-        { key: 'rollback', name: 'Roll back', tool: 'deploy.rollback', agent: 'release', input: { environment: '{{ inputs.environment }}' } },
-        { key: 'verify', name: 'Verify', tool: 'deploy.verify', agent: 'qa', dependsOn: ['rollback'], input: { deploymentId: '{{ steps.rollback.output.deploymentId }}', rollbackOnFailure: false } },
-        { key: 'notify', name: 'Notify team', tool: 'notify.team', agent: 'release', dependsOn: ['verify'], runIf: 'always', input: { title: 'Rollback of {{ inputs.environment }}', message: '{{ coalesce(steps.verify.output.summary, "Rollback did not complete") }}', link: '{{ execution.url }}' } },
+        {
+          key: 'rollback',
+          name: 'Roll back',
+          tool: 'deploy.rollback',
+          agent: 'release',
+          input: { environment: '{{ inputs.environment }}' },
+        },
+        {
+          key: 'verify',
+          name: 'Verify',
+          tool: 'deploy.verify',
+          agent: 'qa',
+          dependsOn: ['rollback'],
+          input: { deploymentId: '{{ steps.rollback.output.deploymentId }}', rollbackOnFailure: false },
+        },
+        {
+          key: 'notify',
+          name: 'Notify team',
+          tool: 'notify.team',
+          agent: 'release',
+          dependsOn: ['verify'],
+          runIf: 'always',
+          input: {
+            title: 'Rollback of {{ inputs.environment }}',
+            message: '{{ coalesce(steps.verify.output.summary, "Rollback did not complete") }}',
+            link: '{{ execution.url }}',
+          },
+        },
       ],
     },
   },
@@ -509,8 +829,21 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
     definition: {
       inputs: { topic: { type: 'string', required: true } },
       steps: [
-        { key: 'retrieve_context', name: 'Retrieve project context', tool: 'knowledge.retrieve', agent: 'docs', input: { query: '{{ inputs.topic }}', k: 12 } },
-        { key: 'documentation', name: 'Write & publish docs', tool: 'docs.generate', agent: 'docs', dependsOn: ['retrieve_context'], input: { topic: '{{ inputs.topic }}', context: '{{ steps.retrieve_context.output.context }}', publish: true } },
+        {
+          key: 'retrieve_context',
+          name: 'Retrieve project context',
+          tool: 'knowledge.retrieve',
+          agent: 'docs',
+          input: { query: '{{ inputs.topic }}', k: 12 },
+        },
+        {
+          key: 'documentation',
+          name: 'Write & publish docs',
+          tool: 'docs.generate',
+          agent: 'docs',
+          dependsOn: ['retrieve_context'],
+          input: { topic: '{{ inputs.topic }}', context: '{{ steps.retrieve_context.output.context }}', publish: true },
+        },
       ],
     },
   },
@@ -522,7 +855,15 @@ export const FLOW_TEMPLATES: FlowTemplate[] = [
     icon: 'megaphone',
     definition: {
       inputs: { message: { type: 'string', required: true }, title: { type: 'string', required: false, default: 'Team update' } },
-      steps: [{ key: 'notify', name: 'Notify team', tool: 'notify.team', agent: 'release', input: { title: '{{ inputs.title }}', message: '{{ inputs.message }}' } }],
+      steps: [
+        {
+          key: 'notify',
+          name: 'Notify team',
+          tool: 'notify.team',
+          agent: 'release',
+          input: { title: '{{ inputs.title }}', message: '{{ inputs.message }}' },
+        },
+      ],
     },
   },
 ];

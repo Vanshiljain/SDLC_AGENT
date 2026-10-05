@@ -20,14 +20,29 @@ export class ExecutionLogger implements ToolLogger {
     const safe = data ? (redact(data, 0, 4000) as Record<string, unknown>) : undefined;
     const text = redact(message).slice(0, 4000);
     void this.prisma.executionLog
-      .create({ data: { executionId: this.ctx.executionId, stepId: this.ctx.stepId ?? null, level, message: text, data: safe as Prisma.InputJsonValue | undefined } })
+      .create({
+        data: {
+          executionId: this.ctx.executionId,
+          stepId: this.ctx.stepId ?? null,
+          level,
+          message: text,
+          data: safe as Prisma.InputJsonValue | undefined,
+        },
+      })
       .then((row) =>
         this.events.publish({
           type: 'workflow.log',
           organizationId: this.ctx.organizationId,
           projectId: this.ctx.projectId,
           executionId: this.ctx.executionId,
-          data: { id: row.id, stepId: this.ctx.stepId ?? null, level, message: text, data: safe ?? null, createdAt: row.createdAt.toISOString() },
+          data: {
+            id: row.id,
+            stepId: this.ctx.stepId ?? null,
+            level,
+            message: text,
+            data: safe ?? null,
+            createdAt: row.createdAt.toISOString(),
+          },
         }),
       )
       .catch(() => undefined);

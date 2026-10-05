@@ -52,7 +52,10 @@ export class JwtAuthGuard implements CanActivate {
     const orgId = typeof requestedOrg === 'string' && UUID_RE.test(requestedOrg) ? requestedOrg : undefined;
     const membership = await this.prisma.membership.findFirst({
       where: { userId: payload.sub, ...(orgId ? { organizationId: orgId } : {}), organization: { deletedAt: null } },
-      include: { organization: { select: { isDemo: true } }, user: { select: { isActive: true, deletedAt: true, name: true, email: true } } },
+      include: {
+        organization: { select: { isDemo: true } },
+        user: { select: { isActive: true, deletedAt: true, name: true, email: true } },
+      },
       orderBy: { createdAt: 'asc' },
     });
 
@@ -97,14 +100,22 @@ export class PermissionsGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     if (context.getType() !== 'http') return true;
     const req = context.switchToHttp().getRequest<Request>();
-    const requirement = this.reflector.getAllAndOverride<PermissionRequirement | undefined>(REQUIRED_PERMISSIONS, [context.getHandler(), context.getClass()]);
+    const requirement = this.reflector.getAllAndOverride<PermissionRequirement | undefined>(REQUIRED_PERMISSIONS, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
     if (!requirement) return true;
     const auth = req.auth;
     if (!auth || auth.organizationId === null) throw AppException.forbidden('An active organization is required', 'NO_ORGANIZATION');
     let projectId: string | undefined;
     if (requirement.projectFrom) {
       const [source, key] = requirement.projectFrom.split(':') as ['param' | 'body' | 'query', string];
-      const bag = source === 'param' ? req.params : source === 'body' ? (req.body as Record<string, unknown>) : (req.query as Record<string, unknown>);
+      const bag =
+        source === 'param'
+          ? req.params
+          : source === 'body'
+            ? (req.body as Record<string, unknown>)
+            : (req.query as Record<string, unknown>);
       const value = bag?.[key];
       projectId = typeof value === 'string' && value ? value : undefined;
       if (projectId && !UUID_RE.test(projectId)) throw AppException.badRequest('Invalid project id');

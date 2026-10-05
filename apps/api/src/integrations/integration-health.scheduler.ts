@@ -22,7 +22,10 @@ export class IntegrationHealthScheduler {
     if (this.config.role === 'api') return;
     const lock = await this.redis.client.set('forgeline:lock:integration-health', '1', 'EX', 600, 'NX');
     if (!lock) return;
-    const rows = await this.prisma.integration.findMany({ where: { deletedAt: null, status: { in: ['CONNECTED', 'ERROR'] } }, select: { id: true, organizationId: true } });
+    const rows = await this.prisma.integration.findMany({
+      where: { deletedAt: null, status: { in: ['CONNECTED', 'ERROR'] } },
+      select: { id: true, organizationId: true },
+    });
     for (const row of rows) {
       try {
         await this.integrations.checkHealth(row.organizationId, row.id);

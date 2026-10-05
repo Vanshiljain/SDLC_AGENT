@@ -49,7 +49,15 @@ interface MessageRow {
   role: string;
   status: string;
   content: string;
-  parts: { type: string; proposalId?: string; executionId?: string; mode?: string; steps?: { key: string }[]; approvalsRequired?: string[]; missingIntegrations?: string[] }[];
+  parts: {
+    type: string;
+    proposalId?: string;
+    executionId?: string;
+    mode?: string;
+    steps?: { key: string }[];
+    approvalsRequired?: string[];
+    missingIntegrations?: string[];
+  }[];
 }
 
 const PASSWORD = 'Acceptance!2026';
@@ -79,7 +87,12 @@ describe('acceptance: password reset delivered end to end', { timeout: 10 * 60_0
     await fetch(`${stack.mockUrl}/__reset`, { method: 'POST' });
 
     const suffix = randomBytes(4).toString('hex');
-    const ownerSession = await anon.post<Session>('/auth/register', { email: `owner-${suffix}@acme.test`, name: 'Olive Owner', password: PASSWORD, organizationName: `Acme ${suffix}` });
+    const ownerSession = await anon.post<Session>('/auth/register', {
+      email: `owner-${suffix}@acme.test`,
+      name: 'Olive Owner',
+      password: PASSWORD,
+      organizationName: `Acme ${suffix}`,
+    });
     orgId = ownerSession.memberships[0]!.organizationId;
     owner = anon.as(ownerSession.accessToken, orgId);
 
@@ -173,12 +186,24 @@ describe('acceptance: password reset delivered end to end', { timeout: 10 * 60_0
     assert.equal(proposal.mode, 'LIVE');
     assert.deepEqual(proposal.missingIntegrations, [], 'all required integrations are connected');
     assert.ok((proposal.steps?.length ?? 0) > 20, 'full delivery flow proposed');
-    assert.ok(proposal.approvalsRequired?.some((a) => a.includes('(deploy.production)')), `production approval disclosed: ${JSON.stringify(proposal.approvalsRequired)}`);
-    assert.ok(proposal.approvalsRequired?.some((a) => a.includes('(deploy.staging)')), `staging gate resolved to its environment type: ${JSON.stringify(proposal.approvalsRequired)}`);
-    assert.ok(realtime.some((e) => e.type === 'agent.message.delta' || e.type === 'agent.message.completed'), 'assistant output should stream over realtime');
+    assert.ok(
+      proposal.approvalsRequired?.some((a) => a.includes('(deploy.production)')),
+      `production approval disclosed: ${JSON.stringify(proposal.approvalsRequired)}`,
+    );
+    assert.ok(
+      proposal.approvalsRequired?.some((a) => a.includes('(deploy.staging)')),
+      `staging gate resolved to its environment type: ${JSON.stringify(proposal.approvalsRequired)}`,
+    );
+    assert.ok(
+      realtime.some((e) => e.type === 'agent.message.delta' || e.type === 'agent.message.completed'),
+      'assistant output should stream over realtime',
+    );
 
     // A viewer-level action would be rejected; the engineer may start it.
-    const started = await engineer.post<{ execution: { id: string; mode: string } }>(`/conversations/${conversation.id}/proposals/${proposal.proposalId}/start`, {});
+    const started = await engineer.post<{ execution: { id: string; mode: string } }>(
+      `/conversations/${conversation.id}/proposals/${proposal.proposalId}/start`,
+      {},
+    );
     executionId = started.execution.id;
     assert.equal(started.execution.mode, 'LIVE');
     assert.ok(executionId);
@@ -196,7 +221,11 @@ describe('acceptance: password reset delivered end to end', { timeout: 10 * 60_0
             await engineer.post(`/approvals/${a.id}/approve`, { comment: 'Staging looks good' });
           } else {
             // The initiator may never approve their own production deploy / merge.
-            await assert.rejects(engineer.post(`/approvals/${a.id}/approve`, {}), (e: ApiError) => e.status === 403, `engineer must not approve ${a.action}`);
+            await assert.rejects(
+              engineer.post(`/approvals/${a.id}/approve`, {}),
+              (e: ApiError) => e.status === 403,
+              `engineer must not approve ${a.action}`,
+            );
             await lead.post(`/approvals/${a.id}/approve`, { comment: 'LGTM' });
           }
         }
@@ -223,9 +252,15 @@ describe('acceptance: password reset delivered end to end', { timeout: 10 * 60_0
     assert.equal(prod.decidedById, leadId);
 
     // Deployments and real (non-simulated) external resources.
-    assert.deepEqual(result.deployments.map((d) => `${d.environment.name}:${d.status}`).sort(), ['production:SUCCEEDED', 'staging:SUCCEEDED']);
+    assert.deepEqual(result.deployments.map((d) => `${d.environment.name}:${d.status}`).sort(), [
+      'production:SUCCEEDED',
+      'staging:SUCCEEDED',
+    ]);
     assert.ok(result.externalResources.length > 0);
-    assert.ok(result.externalResources.every((r) => !r.simulated), 'live runs never produce simulated resources');
+    assert.ok(
+      result.externalResources.every((r) => !r.simulated),
+      'live runs never produce simulated resources',
+    );
   });
 
   it('produced the real side effects in the external systems', async () => {
@@ -249,7 +284,10 @@ describe('acceptance: password reset delivered end to end', { timeout: 10 * 60_0
     assert.ok(state.github.runs >= 1, 'PR checks ran on GitHub Actions');
     assert.deepEqual(state.devops.deployments.map((d) => d.environment).sort(), ['production', 'staging']);
     assert.equal(state.devops.signatureFailures, 0, 'every DevOps request was HMAC signed');
-    assert.ok((state.envHits['staging/health'] ?? 0) > 0 && (state.envHits['production/login'] ?? 0) > 0, 'health and smoke checks hit the environments');
+    assert.ok(
+      (state.envHits['staging/health'] ?? 0) > 0 && (state.envHits['production/login'] ?? 0) > 0,
+      'health and smoke checks hit the environments',
+    );
     assert.ok(state.slack >= 1, 'team notified');
   });
 
@@ -261,14 +299,23 @@ describe('acceptance: password reset delivered end to end', { timeout: 10 * 60_0
 
     const audit: { action: string; status: string }[] = [];
     for (let page = 1; ; page++) {
-      const res = await owner.get<{ items: { action: string; status: string }[]; total: number }>(`/audit?executionId=${executionId}&page=${page}&pageSize=100`);
+      const res = await owner.get<{ items: { action: string; status: string }[]; total: number }>(
+        `/audit?executionId=${executionId}&page=${page}&pageSize=100`,
+      );
       audit.push(...res.items);
       if (audit.length >= res.total || !res.items.length) break;
     }
     const actions = new Set(audit.map((a) => a.action));
-    for (const a of ['workflow.run_started', 'workflow.run_completed', 'approval.requested', 'approval.approved']) assert.ok(actions.has(a), `audit missing ${a}; got ${[...actions].join(', ')}`);
-    assert.ok([...actions].some((a) => a.startsWith('tool.')), 'tool executions are audited');
-    assert.ok(audit.some((a) => a.status === 'DENIED'), 'denied approval attempts are audited');
+    for (const a of ['workflow.run_started', 'workflow.run_completed', 'approval.requested', 'approval.approved'])
+      assert.ok(actions.has(a), `audit missing ${a}; got ${[...actions].join(', ')}`);
+    assert.ok(
+      [...actions].some((a) => a.startsWith('tool.')),
+      'tool executions are audited',
+    );
+    assert.ok(
+      audit.some((a) => a.status === 'DENIED'),
+      'denied approval attempts are audited',
+    );
 
     const logs = await engineer.get<{ items: unknown[] } | unknown[]>(`/workflow-executions/${executionId}/logs`);
     assert.ok((Array.isArray(logs) ? logs : logs.items).length > 0);
@@ -277,7 +324,11 @@ describe('acceptance: password reset delivered end to end', { timeout: 10 * 60_0
   it('runs a pipeline on the custom DevOps platform from a command', async () => {
     const before = (await mock<{ devops: { pipelines: number } }>('/__state')).devops.pipelines;
     const exec = await engineer.post<{ id: string; mode: string }>('/commands/ci.run/execute', { projectId, inputs: { ref: 'main' } });
-    const done = await poll(() => engineer.get<ExecutionDetail>(`/workflow-executions/${exec.id}`), (d) => TERMINAL.has(d.status), { timeoutMs: 60_000, label: 'pipeline run' });
+    const done = await poll(
+      () => engineer.get<ExecutionDetail>(`/workflow-executions/${exec.id}`),
+      (d) => TERMINAL.has(d.status),
+      { timeoutMs: 60_000, label: 'pipeline run' },
+    );
     assert.equal(done.status, 'COMPLETED', JSON.stringify(done.error));
     const after = await mock<{ devops: { pipelines: number; signatureFailures: number } }>('/__state');
     assert.equal(after.devops.pipelines, before + 1);
@@ -285,11 +336,18 @@ describe('acceptance: password reset delivered end to end', { timeout: 10 * 60_0
   });
 
   it('isolates tenants: other organizations cannot see the run', async () => {
-    const outsider = await anon.post<Session>('/auth/register', { email: `outsider-${randomBytes(4).toString('hex')}@other.test`, name: 'Oscar Outsider', password: PASSWORD });
+    const outsider = await anon.post<Session>('/auth/register', {
+      email: `outsider-${randomBytes(4).toString('hex')}@other.test`,
+      name: 'Oscar Outsider',
+      password: PASSWORD,
+    });
     const other = anon.as(outsider.accessToken, outsider.memberships[0]!.organizationId);
     await assert.rejects(other.get(`/workflow-executions/${executionId}`), (e: ApiError) => e.status === 404);
     await assert.rejects(other.get(`/projects/${projectId}`), (e: ApiError) => e.status === 404);
     // Forging the org header does not grant access.
-    await assert.rejects(anon.as(outsider.accessToken, orgId).get(`/workflow-executions/${executionId}`), (e: ApiError) => e.status === 403 || e.status === 401);
+    await assert.rejects(
+      anon.as(outsider.accessToken, orgId).get(`/workflow-executions/${executionId}`),
+      (e: ApiError) => e.status === 403 || e.status === 401,
+    );
   });
 });

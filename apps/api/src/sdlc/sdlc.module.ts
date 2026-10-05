@@ -40,8 +40,12 @@ class TaskDto {
 @Controller('code-generation')
 export class CodeGenerationController {
   constructor(private readonly q: SdlcQueriesService) {}
-  @Get() @RequirePermissions('project:read') list(@CurrentAuth() a: AuthContext, @Query() q: ProjectQuery) { return this.q.codeGenerations(a, q); }
-  @Get(':id') @RequirePermissions('project:read') get(@CurrentAuth() a: AuthContext, @Param('id', ParseUUIDPipe) id: string) { return this.q.codeGeneration(a, id); }
+  @Get() @RequirePermissions('project:read') list(@CurrentAuth() a: AuthContext, @Query() q: ProjectQuery) {
+    return this.q.codeGenerations(a, q);
+  }
+  @Get(':id') @RequirePermissions('project:read') get(@CurrentAuth() a: AuthContext, @Param('id', ParseUUIDPipe) id: string) {
+    return this.q.codeGeneration(a, id);
+  }
 }
 
 @ApiTags('code-review')
@@ -49,8 +53,12 @@ export class CodeGenerationController {
 @Controller('code-review')
 export class CodeReviewController {
   constructor(private readonly q: SdlcQueriesService) {}
-  @Get() @RequirePermissions('project:read') list(@CurrentAuth() a: AuthContext, @Query() q: ProjectQuery) { return this.q.codeReviews(a, q); }
-  @Get(':id') @RequirePermissions('project:read') get(@CurrentAuth() a: AuthContext, @Param('id', ParseUUIDPipe) id: string) { return this.q.codeReview(a, id); }
+  @Get() @RequirePermissions('project:read') list(@CurrentAuth() a: AuthContext, @Query() q: ProjectQuery) {
+    return this.q.codeReviews(a, q);
+  }
+  @Get(':id') @RequirePermissions('project:read') get(@CurrentAuth() a: AuthContext, @Param('id', ParseUUIDPipe) id: string) {
+    return this.q.codeReview(a, id);
+  }
 }
 
 @ApiTags('qa')
@@ -58,8 +66,12 @@ export class CodeReviewController {
 @Controller('qa')
 export class QaController {
   constructor(private readonly q: SdlcQueriesService) {}
-  @Get('runs') @RequirePermissions('project:read') list(@CurrentAuth() a: AuthContext, @Query() q: ProjectQuery) { return this.q.qaRuns(a, q); }
-  @Get('runs/:id') @RequirePermissions('project:read') get(@CurrentAuth() a: AuthContext, @Param('id', ParseUUIDPipe) id: string) { return this.q.qaRun(a, id); }
+  @Get('runs') @RequirePermissions('project:read') list(@CurrentAuth() a: AuthContext, @Query() q: ProjectQuery) {
+    return this.q.qaRuns(a, q);
+  }
+  @Get('runs/:id') @RequirePermissions('project:read') get(@CurrentAuth() a: AuthContext, @Param('id', ParseUUIDPipe) id: string) {
+    return this.q.qaRun(a, id);
+  }
 }
 
 @ApiTags('deployments')
@@ -67,9 +79,15 @@ export class QaController {
 @Controller('deployments')
 export class DeploymentsController {
   constructor(private readonly q: SdlcQueriesService) {}
-  @Get() @RequirePermissions('project:read') list(@CurrentAuth() a: AuthContext, @Query() q: ProjectQuery) { return this.q.deployments(a, q); }
-  @Get('environments') @RequirePermissions('project:read') board(@CurrentAuth() a: AuthContext) { return this.q.environmentsBoard(a); }
-  @Get(':id') @RequirePermissions('project:read') get(@CurrentAuth() a: AuthContext, @Param('id', ParseUUIDPipe) id: string) { return this.q.deployment(a, id); }
+  @Get() @RequirePermissions('project:read') list(@CurrentAuth() a: AuthContext, @Query() q: ProjectQuery) {
+    return this.q.deployments(a, q);
+  }
+  @Get('environments') @RequirePermissions('project:read') board(@CurrentAuth() a: AuthContext) {
+    return this.q.environmentsBoard(a);
+  }
+  @Get(':id') @RequirePermissions('project:read') get(@CurrentAuth() a: AuthContext, @Param('id', ParseUUIDPipe) id: string) {
+    return this.q.deployment(a, id);
+  }
 }
 
 @ApiTags('documents')
@@ -77,10 +95,22 @@ export class DeploymentsController {
 @Controller('documents')
 export class DocumentsController {
   constructor(private readonly q: SdlcQueriesService) {}
-  @Get() @RequirePermissions('project:read') list(@CurrentAuth() a: AuthContext, @Query() q: ProjectQuery) { return this.q.documents(a, q); }
-  @Get(':id') @RequirePermissions('project:read') get(@CurrentAuth() a: AuthContext, @Param('id', ParseUUIDPipe) id: string) { return this.q.document(a, id); }
-  @Post() @RequirePermissions('docs:write') create(@CurrentAuth() a: AuthContext, @Body() dto: DocumentDto) { return this.q.saveDocument(a, null, dto); }
-  @Patch(':id') @RequirePermissions('docs:write') update(@CurrentAuth() a: AuthContext, @Param('id', ParseUUIDPipe) id: string, @Body() dto: DocumentDto) { return this.q.saveDocument(a, id, dto); }
+  @Get() @RequirePermissions('project:read') list(@CurrentAuth() a: AuthContext, @Query() q: ProjectQuery) {
+    return this.q.documents(a, q);
+  }
+  @Get(':id') @RequirePermissions('project:read') get(@CurrentAuth() a: AuthContext, @Param('id', ParseUUIDPipe) id: string) {
+    return this.q.document(a, id);
+  }
+  @Post() @RequirePermissions('docs:write') create(@CurrentAuth() a: AuthContext, @Body() dto: DocumentDto) {
+    return this.q.saveDocument(a, null, dto);
+  }
+  @Patch(':id') @RequirePermissions('docs:write') update(
+    @CurrentAuth() a: AuthContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: DocumentDto,
+  ) {
+    return this.q.saveDocument(a, id, dto);
+  }
 }
 
 @ApiTags('tasks')
@@ -88,15 +118,35 @@ export class DocumentsController {
 @Controller('tasks')
 export class TasksController {
   constructor(private readonly q: SdlcQueriesService) {}
-  @Get() @RequirePermissions('project:read') list(@CurrentAuth() a: AuthContext, @Query() q: ProjectQuery) { return this.q.tasks(a, q); }
-  @Post() @RequirePermissions('ticket:write') create(@CurrentAuth() a: AuthContext, @Body() dto: TaskDto) { return this.q.saveTask(a, null, dto); }
-  @Patch(':id') @RequirePermissions('ticket:write') update(@CurrentAuth() a: AuthContext, @Param('id', ParseUUIDPipe) id: string, @Body() dto: TaskDto) { return this.q.saveTask(a, id, dto); }
+  @Get() @RequirePermissions('project:read') list(@CurrentAuth() a: AuthContext, @Query() q: ProjectQuery) {
+    return this.q.tasks(a, q);
+  }
+  @Post() @RequirePermissions('ticket:write') create(@CurrentAuth() a: AuthContext, @Body() dto: TaskDto) {
+    return this.q.saveTask(a, null, dto);
+  }
+  @Patch(':id') @RequirePermissions('ticket:write') update(
+    @CurrentAuth() a: AuthContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: TaskDto,
+  ) {
+    return this.q.saveTask(a, id, dto);
+  }
 }
 
 @Global()
 @Module({
   controllers: [CodeGenerationController, CodeReviewController, QaController, DeploymentsController, DocumentsController, TasksController],
-  providers: [SandboxService, AgentTaskRunner, PlanningTools, TicketTools, CodeTools, QaTools, DeployTools, DocsNotifyTools, SdlcQueriesService],
+  providers: [
+    SandboxService,
+    AgentTaskRunner,
+    PlanningTools,
+    TicketTools,
+    CodeTools,
+    QaTools,
+    DeployTools,
+    DocsNotifyTools,
+    SdlcQueriesService,
+  ],
   exports: [SandboxService, AgentTaskRunner, SdlcQueriesService],
 })
 export class SdlcModule {}

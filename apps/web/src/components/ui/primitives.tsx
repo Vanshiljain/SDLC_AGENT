@@ -6,7 +6,19 @@ export function Card({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return <div className={cn('rounded-lg border border-line bg-surface shadow-card', className)} {...rest} />;
 }
 
-export function CardHeader({ title, description, actions, className, icon }: { title: ReactNode; description?: ReactNode; actions?: ReactNode; className?: string; icon?: ReactNode }) {
+export function CardHeader({
+  title,
+  description,
+  actions,
+  className,
+  icon,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+  className?: string;
+  icon?: ReactNode;
+}) {
   return (
     <div className={cn('flex items-start justify-between gap-3 px-4 pt-3.5 pb-2.5', className)}>
       <div className="flex min-w-0 items-center gap-2">
@@ -32,9 +44,22 @@ const TONES: Record<Tone, string> = {
   ai: 'bg-ai-soft text-ai border-transparent',
 };
 
-export function Badge({ tone = 'neutral', className, children, icon, ...rest }: HTMLAttributes<HTMLSpanElement> & { tone?: Tone; icon?: ReactNode }) {
+export function Badge({
+  tone = 'neutral',
+  className,
+  children,
+  icon,
+  ...rest
+}: HTMLAttributes<HTMLSpanElement> & { tone?: Tone; icon?: ReactNode }) {
   return (
-    <span className={cn('inline-flex h-5 shrink-0 items-center gap-1 rounded-sm border px-1.5 text-[11px] font-medium whitespace-nowrap', TONES[tone], className)} {...rest}>
+    <span
+      className={cn(
+        'inline-flex h-5 shrink-0 items-center gap-1 rounded-sm border px-1.5 text-[11px] font-medium whitespace-nowrap',
+        TONES[tone],
+        className,
+      )}
+      {...rest}
+    >
       {icon}
       {children}
     </span>
@@ -43,11 +68,29 @@ export function Badge({ tone = 'neutral', className, children, icon, ...rest }: 
 export type { Tone };
 
 export function Kbd({ children, className }: { children: ReactNode; className?: string }) {
-  return <kbd className={cn('inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-xs border border-line bg-sunken px-1 font-mono text-[10.5px] text-fg-muted', className)}>{children}</kbd>;
+  return (
+    <kbd
+      className={cn(
+        'inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-xs border border-line bg-sunken px-1 font-mono text-[10.5px] text-fg-muted',
+        className,
+      )}
+    >
+      {children}
+    </kbd>
+  );
 }
 
 export function Spinner({ className }: { className?: string }) {
-  return <span aria-label="Loading" role="status" className={cn('inline-block size-4 animate-spin rounded-full border-[1.5px] border-current border-r-transparent opacity-80', className)} />;
+  return (
+    <span
+      aria-label="Loading"
+      role="status"
+      className={cn(
+        'inline-block size-4 animate-spin rounded-full border-[1.5px] border-current border-r-transparent opacity-80',
+        className,
+      )}
+    />
+  );
 }
 
 export function Skeleton({ className }: { className?: string }) {
@@ -59,8 +102,16 @@ export function Avatar({ name, size = 24, className }: { name?: string | null; s
   return (
     <span
       title={name ?? undefined}
-      className={cn('inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white/95 ring-1 ring-black/10', className)}
-      style={{ width: size, height: size, fontSize: Math.max(9, size * 0.38), background: `linear-gradient(135deg, oklch(0.62 0.13 ${hue}), oklch(0.48 0.12 ${(hue + 40) % 360}))` }}
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white/95 ring-1 ring-black/10',
+        className,
+      )}
+      style={{
+        width: size,
+        height: size,
+        fontSize: Math.max(9, size * 0.38),
+        background: `linear-gradient(135deg, oklch(0.62 0.13 ${hue}), oklch(0.48 0.12 ${(hue + 40) % 360}))`,
+      }}
     >
       {initials(name)}
     </span>

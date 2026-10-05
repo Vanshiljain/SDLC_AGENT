@@ -15,9 +15,20 @@ export const INITIAL_REPO: Record<string, string> = {
     null,
     2,
   ),
-  'package-lock.json': JSON.stringify({ name: 'auth-service', version: '1.0.0', lockfileVersion: 3, requires: true, packages: { '': { name: 'auth-service', version: '1.0.0' } } }, null, 2),
+  'package-lock.json': JSON.stringify(
+    {
+      name: 'auth-service',
+      version: '1.0.0',
+      lockfileVersion: 3,
+      requires: true,
+      packages: { '': { name: 'auth-service', version: '1.0.0' } },
+    },
+    null,
+    2,
+  ),
   'README.md': '# Auth Service\n\nIdentity and session management. Passwords are hashed; tokens are hashed at rest.\n',
-  'docs/architecture.md': '# Architecture\n\n- `src/auth.js` — login and session helpers.\n- Tokens are random 32-byte values; only SHA-256 hashes are stored.\n- All modules are CommonJS and tested with `node --test`.\n',
+  'docs/architecture.md':
+    '# Architecture\n\n- `src/auth.js` — login and session helpers.\n- Tokens are random 32-byte values; only SHA-256 hashes are stored.\n- All modules are CommonJS and tested with `node --test`.\n',
   'src/auth.js': [
     "const crypto = require('node:crypto');",
     '',

@@ -1,15 +1,41 @@
 import { cn } from '@/lib/cn';
 
 /** Stacked daily bars (e.g. runs per day by status). Pure SVG, theme-aware. */
-export function StackedBars({ days, series, height = 140, className }: { days: string[]; series: { key: string; color: string; values: number[] }[]; height?: number; className?: string }) {
+export function StackedBars({
+  days,
+  series,
+  height = 140,
+  className,
+}: {
+  days: string[];
+  series: { key: string; color: string; values: number[] }[];
+  height?: number;
+  className?: string;
+}) {
   const totals = days.map((_, i) => series.reduce((s, x) => s + (x.values[i] ?? 0), 0));
   const max = Math.max(1, ...totals);
   const bw = 100 / Math.max(1, days.length);
   return (
     <div className={cn('w-full', className)}>
-      <svg viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" className="w-full" style={{ height }} role="img" aria-label="Daily chart">
+      <svg
+        viewBox={`0 0 100 ${height}`}
+        preserveAspectRatio="none"
+        className="w-full"
+        style={{ height }}
+        role="img"
+        aria-label="Daily chart"
+      >
         {[0.25, 0.5, 0.75].map((f) => (
-          <line key={f} x1={0} x2={100} y1={height * f} y2={height * f} stroke="var(--color-line)" strokeWidth={0.4} vectorEffect="non-scaling-stroke" />
+          <line
+            key={f}
+            x1={0}
+            x2={100}
+            y1={height * f}
+            y2={height * f}
+            stroke="var(--color-line)"
+            strokeWidth={0.4}
+            vectorEffect="non-scaling-stroke"
+          />
         ))}
         {days.map((d, i) => {
           let y = height;
@@ -19,7 +45,9 @@ export function StackedBars({ days, series, height = 140, className }: { days: s
               {series.map((s) => {
                 const h = ((s.values[i] ?? 0) / max) * (height - 4);
                 y -= h;
-                return h > 0 ? <rect key={s.key} x={i * bw + bw * 0.18} width={bw * 0.64} y={y} height={h} fill={s.color} rx={0.6} /> : null;
+                return h > 0 ? (
+                  <rect key={s.key} x={i * bw + bw * 0.18} width={bw * 0.64} y={y} height={h} fill={s.color} rx={0.6} />
+                ) : null;
               })}
             </g>
           );
@@ -34,7 +62,15 @@ export function StackedBars({ days, series, height = 140, className }: { days: s
 }
 
 /** Horizontal bar list for top-N comparisons. */
-export function BarList({ items, format = (n) => String(n), color = 'var(--color-accent)' }: { items: { label: string; value: number; hint?: string; tone?: string }[]; format?: (n: number) => string; color?: string }) {
+export function BarList({
+  items,
+  format = (n) => String(n),
+  color = 'var(--color-accent)',
+}: {
+  items: { label: string; value: number; hint?: string; tone?: string }[];
+  format?: (n: number) => string;
+  color?: string;
+}) {
   const max = Math.max(1, ...items.map((i) => i.value));
   return (
     <ul className="space-y-2">

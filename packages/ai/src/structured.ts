@@ -57,9 +57,11 @@ export function classifyLlmError(err: unknown): ToolError {
   const e = err as { status?: number; code?: string; name?: string; message?: string; lc_error_code?: string };
   const status = e.status;
   const message = e.message ?? String(err);
-  if (e.name === 'AbortError' || /aborted/i.test(message)) return new ToolError('cancelled', 'LLM call cancelled', { provider: 'llm', retryable: false });
+  if (e.name === 'AbortError' || /aborted/i.test(message))
+    return new ToolError('cancelled', 'LLM call cancelled', { provider: 'llm', retryable: false });
   if (status === 401) return new ToolError('auth', 'LLM provider rejected the API key', { provider: 'llm', status, retryable: false });
-  if (status === 403) return new ToolError('permission', `LLM provider denied the request: ${message}`, { provider: 'llm', status, retryable: false });
+  if (status === 403)
+    return new ToolError('permission', `LLM provider denied the request: ${message}`, { provider: 'llm', status, retryable: false });
   if (status === 429 || e.lc_error_code === 'MODEL_RATE_LIMIT') {
     const quota = /quota|billing/i.test(message);
     return new ToolError('rate_limit', `LLM rate limited: ${message}`, { provider: 'llm', status, retryable: !quota });
@@ -69,6 +71,7 @@ export function classifyLlmError(err: unknown): ToolError {
   }
   if (status && status >= 500) return new ToolError('external', `LLM provider error: ${message}`, { provider: 'llm', status });
   if (/timeout|timed out/i.test(message)) return new ToolError('timeout', 'LLM call timed out', { provider: 'llm' });
-  if (/ECONNREFUSED|ENOTFOUND|fetch failed|network/i.test(message)) return new ToolError('network', `LLM network error: ${message}`, { provider: 'llm' });
+  if (/ECONNREFUSED|ENOTFOUND|fetch failed|network/i.test(message))
+    return new ToolError('network', `LLM network error: ${message}`, { provider: 'llm' });
   return new ToolError('external', `LLM call failed: ${message}`, { provider: 'llm', retryable: false });
 }

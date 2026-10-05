@@ -33,7 +33,18 @@ export function ApprovalsPage() {
       <PageHeader
         title="Approvals"
         description="Human-in-the-loop gates for production deploys, merges and other risky actions. Policy is enforced by the server at execution time."
-        actions={<Segmented value={filter} onChange={(v) => (setFilter(v), setPage(1))} options={[{ value: 'PENDING', label: 'Pending' }, { value: 'APPROVED', label: 'Approved' }, { value: 'REJECTED', label: 'Rejected' }, { value: 'ALL', label: 'All' }]} />}
+        actions={
+          <Segmented
+            value={filter}
+            onChange={(v) => (setFilter(v), setPage(1))}
+            options={[
+              { value: 'PENDING', label: 'Pending' },
+              { value: 'APPROVED', label: 'Approved' },
+              { value: 'REJECTED', label: 'Rejected' },
+              { value: 'ALL', label: 'All' },
+            ]}
+          />
+        }
       />
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
@@ -47,11 +58,22 @@ export function ApprovalsPage() {
                 ))}
               </div>
             )}
-            {!isLoading && !items.length && <EmptyState compact icon={<Inbox />} title={filter === 'PENDING' ? 'Nothing waiting on you' : 'No approvals'} description={filter === 'PENDING' ? 'When a run reaches a gate, it shows up here and in your notifications.' : undefined} />}
+            {!isLoading && !items.length && (
+              <EmptyState
+                compact
+                icon={<Inbox />}
+                title={filter === 'PENDING' ? 'Nothing waiting on you' : 'No approvals'}
+                description={filter === 'PENDING' ? 'When a run reaches a gate, it shows up here and in your notifications.' : undefined}
+              />
+            )}
             <ul className="divide-y divide-line">
               {items.map((a) => (
                 <li key={a.id}>
-                  <button type="button" onClick={() => open(a.id)} className={cn('block w-full px-4 py-3 text-left transition-colors hover:bg-sunken/60', a.id === id && 'bg-sunken')}>
+                  <button
+                    type="button"
+                    onClick={() => open(a.id)}
+                    className={cn('block w-full px-4 py-3 text-left transition-colors hover:bg-sunken/60', a.id === id && 'bg-sunken')}
+                  >
                     <div className="flex items-center gap-2">
                       <Hand className={cn('size-3.5 shrink-0', a.status === 'PENDING' ? 'text-accent' : 'text-fg-subtle')} />
                       <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{a.title}</span>
@@ -75,7 +97,15 @@ export function ApprovalsPage() {
             {data && <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onPage={setPage} />}
           </Card>
           <Card className="hidden min-h-[560px] overflow-hidden lg:block">
-            {id ? <ApprovalReview key={id} approvalId={id} onDecided={() => void refetch()} /> : <EmptyState icon={<Hand />} title="Select an approval" description="Review the evidence and risk assessment, then approve or reject. Every decision is audited." />}
+            {id ? (
+              <ApprovalReview key={id} approvalId={id} onDecided={() => void refetch()} />
+            ) : (
+              <EmptyState
+                icon={<Hand />}
+                title="Select an approval"
+                description="Review the evidence and risk assessment, then approve or reject. Every decision is audited."
+              />
+            )}
           </Card>
         </div>
       )}

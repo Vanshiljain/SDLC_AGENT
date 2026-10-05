@@ -48,7 +48,10 @@ export class AuthorizationService {
 
   /** Ensure the project exists inside the caller's organization (tenant isolation). */
   async assertProjectInOrg(organizationId: string, projectId: string): Promise<void> {
-    const project = await this.prisma.project.findFirst({ where: { id: projectId, organizationId, deletedAt: null }, select: { id: true } });
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, organizationId, deletedAt: null },
+      select: { id: true },
+    });
     if (!project) throw AppException.notFound('Project', projectId);
   }
 

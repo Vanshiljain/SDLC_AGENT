@@ -18,7 +18,10 @@ describe('chunking', () => {
   });
 
   it('splits code with line ranges and symbol headings', async () => {
-    const code = Array.from({ length: 80 }, (_, i) => `export function handler${i}(req: Request) {\n  return validate(req.body.field${i});\n}\n`).join('\n');
+    const code = Array.from(
+      { length: 80 },
+      (_, i) => `export function handler${i}(req: Request) {\n  return validate(req.body.field${i});\n}\n`,
+    ).join('\n');
     const chunks = await chunkContent(code, { kind: 'code', language: 'js', chunkSize: 600 });
     expect(chunks.length).toBeGreaterThan(3);
     expect(chunks[0]!.startLine).toBe(1);
@@ -56,7 +59,11 @@ describe('vector filters', () => {
 describe('context assembly', () => {
   it('numbers sources and respects the budget', () => {
     const docs = [1, 2, 3].map(
-      (i) => new Document({ pageContent: 'x'.repeat(1000), metadata: { documentId: `d${i}`, title: `Doc ${i}`, sourceType: 'GITHUB', score: 0.9 - i / 10, startLine: 1, endLine: 20 } }),
+      (i) =>
+        new Document({
+          pageContent: 'x'.repeat(1000),
+          metadata: { documentId: `d${i}`, title: `Doc ${i}`, sourceType: 'GITHUB', score: 0.9 - i / 10, startLine: 1, endLine: 20 },
+        }),
     );
     const { text, sources } = assembleContext(docs, 2300);
     expect(text).toContain('[1] Doc 1 (lines 1-20)');
@@ -68,19 +75,36 @@ describe('LLM error classification', () => {
   it('maps provider errors to tool error kinds', () => {
     expect(classifyLlmError({ status: 401, message: 'bad key' }).kind).toBe('auth');
     expect(classifyLlmError({ status: 429, message: 'slow down' })).toMatchObject({ kind: 'rate_limit', retryable: true });
-    expect(classifyLlmError({ status: 429, message: 'You exceeded your current quota' })).toMatchObject({ kind: 'rate_limit', retryable: false });
+    expect(classifyLlmError({ status: 429, message: 'You exceeded your current quota' })).toMatchObject({
+      kind: 'rate_limit',
+      retryable: false,
+    });
     expect(classifyLlmError({ status: 503, message: 'overloaded' })).toMatchObject({ kind: 'external', retryable: true });
     expect(classifyLlmError(new Error('Request timed out'))).toMatchObject({ kind: 'timeout' });
   });
 
   it('refuses to build models without an API key', () => {
-    const p = new OpenAiLlmProvider({ model: 'gpt-4.1', embeddingModel: 'text-embedding-3-small', embeddingDimensions: 1536, timeoutMs: 1000, maxRetries: 0 });
+    const p = new OpenAiLlmProvider({
+      model: 'gpt-4.1',
+      embeddingModel: 'text-embedding-3-small',
+      embeddingDimensions: 1536,
+      timeoutMs: 1000,
+      maxRetries: 0,
+    });
     expect(p.isConfigured()).toBe(false);
     expect(() => p.chatModel('coder')).toThrow(/not configured/);
   });
 
   it('resolves per-role model names from configuration', () => {
-    const p = new OpenAiLlmProvider({ apiKey: 'k', model: 'base-model', roleModels: { coder: 'code-model' }, embeddingModel: 'e', embeddingDimensions: 8, timeoutMs: 1000, maxRetries: 0 });
+    const p = new OpenAiLlmProvider({
+      apiKey: 'k',
+      model: 'base-model',
+      roleModels: { coder: 'code-model' },
+      embeddingModel: 'e',
+      embeddingDimensions: 8,
+      timeoutMs: 1000,
+      maxRetries: 0,
+    });
     expect(p.modelName('coder')).toBe('code-model');
     expect(p.modelName('planner')).toBe('base-model');
   });
@@ -122,15 +146,31 @@ class HashEmbeddings implements EmbeddingsInterface {
 }
 
 const QDRANT_URL = process.env.QDRANT_URL ?? 'http://localhost:6333';
-const qdrantAvailable = await fetch(QDRANT_URL).then((r) => r.ok).catch(() => false);
+const qdrantAvailable = () =>
+  fetch(QDRANT_URL)
+    .then((r) => r.ok)
+    .catch(() => false);
 
-describe.runIf(qdrantAvailable)('Qdrant vector store (live)', () => {
-  it('upserts, filters by tenant/project and retrieves via the LangChain retriever', async () => {
+describe('Qdrant vector store (live)', () => {
+  it('upserts, filters by tenant/project and retrieves via the LangChain retriever', async (ctx) => {
+    if (!(await qdrantAvailable())) ctx.skip();
     const collection = `test_${randomUUID().slice(0, 8)}`;
     const store = new QdrantVectorStore({ url: QDRANT_URL, collection });
     const embeddings = new HashEmbeddings(512);
     await store.ensureCollection(512);
-    const base = { repositoryId: null, documentType: 'architecture', sourceType: 'UPLOAD', source: 'test', startLine: null, endLine: null, heading: null, branch: null, environment: null, url: null, indexedAt: new Date().toISOString() };
+    const base = {
+      repositoryId: null,
+      documentType: 'architecture',
+      sourceType: 'UPLOAD',
+      source: 'test',
+      startLine: null,
+      endLine: null,
+      heading: null,
+      branch: null,
+      environment: null,
+      url: null,
+      indexedAt: new Date().toISOString(),
+    };
     const texts = [
       { org: 'org-a', project: 'p1', doc: 'd1', text: 'password reset tokens are stored hashed and expire after thirty minutes' },
       { org: 'org-a', project: null, doc: 'd2', text: 'all services use structured logging with request ids' },
@@ -138,7 +178,13 @@ describe.runIf(qdrantAvailable)('Qdrant vector store (live)', () => {
       { org: 'org-a', project: 'p2', doc: 'd4', text: 'billing service invoices password reset unrelated project' },
     ];
     const vectors = await embeddings.embedDocuments(texts.map((t) => t.text));
-    await store.upsert(texts.map((t, i) => ({ id: chunkPointId(t.doc, 0), vector: vectors[i]!, payload: { ...base, organizationId: t.org, projectId: t.project, documentId: t.doc, title: t.doc, chunkIndex: 0, text: t.text } })));
+    await store.upsert(
+      texts.map((t, i) => ({
+        id: chunkPointId(t.doc, 0),
+        vector: vectors[i]!,
+        payload: { ...base, organizationId: t.org, projectId: t.project, documentId: t.doc, title: t.doc, chunkIndex: 0, text: t.text },
+      })),
+    );
 
     const retriever = new KnowledgeRetriever({ store, embeddings, filter: { organizationId: 'org-a', projectId: 'p1' }, k: 5 });
     const docs = await retriever.invoke('password reset tokens expire');

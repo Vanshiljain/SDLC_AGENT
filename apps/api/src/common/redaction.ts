@@ -2,7 +2,8 @@
  * Redaction of secrets before anything is logged, audited, or persisted as
  * tool input/output. Matches sensitive keys and well-known token formats.
  */
-const SENSITIVE_KEY = /(pass(word)?|secret|token|api[-_]?key|authorization|cookie|credential|private[-_]?key|client[-_]?secret|refresh|signature|session)/i;
+const SENSITIVE_KEY =
+  /(pass(word)?|secret|token|api[-_]?key|authorization|cookie|credential|private[-_]?key|client[-_]?secret|refresh|signature|session)/i;
 const TOKEN_PATTERNS: RegExp[] = [
   /\bgh[pousr]_[A-Za-z0-9]{20,}\b/g,
   /\bgithub_pat_[A-Za-z0-9_]{20,}\b/g,
@@ -20,7 +21,8 @@ const REDACTED = '[REDACTED]';
 
 export function redactString(value: string): string {
   let out = value;
-  for (const re of TOKEN_PATTERNS) out = out.replace(re, (m, prefix?: string) => (typeof prefix === 'string' && m.startsWith(prefix) ? `${prefix}${REDACTED}` : REDACTED));
+  for (const re of TOKEN_PATTERNS)
+    out = out.replace(re, (m, prefix?: string) => (typeof prefix === 'string' && m.startsWith(prefix) ? `${prefix}${REDACTED}` : REDACTED));
   return out;
 }
 
@@ -35,7 +37,10 @@ export function redact<T>(value: T, depth = 0, maxStringLength = 20_000): T {
     if (value instanceof Date) return value;
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      out[k] = SENSITIVE_KEY.test(k) && v !== null && v !== undefined && typeof v !== 'boolean' && typeof v !== 'number' ? REDACTED : redact(v, depth + 1, maxStringLength);
+      out[k] =
+        SENSITIVE_KEY.test(k) && v !== null && v !== undefined && typeof v !== 'boolean' && typeof v !== 'number'
+          ? REDACTED
+          : redact(v, depth + 1, maxStringLength);
     }
     return out as T;
   }

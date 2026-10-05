@@ -45,8 +45,10 @@ export interface IngestTextParams {
 }
 
 const MAX_DOCUMENT_CHARS = 400_000;
-const CODE_EXTENSIONS = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|java|kt|rb|rs|php|scala|swift|c|cc|cpp|h|cs|sql|prisma|graphql|proto|ya?ml|toml|json|md|mdx|rst|txt|sh|tf|css|scss|html|vue|svelte)$/i;
-const EXCLUDED_PATHS = /(^|\/)(node_modules|dist|build|coverage|vendor|\.git|\.next|out|target)\/|(\.min\.(js|css)$)|(lock(file)?\.(json|yaml)$)|(-lock\.json$)|(\.lock$)/i;
+const CODE_EXTENSIONS =
+  /\.(ts|tsx|js|jsx|mjs|cjs|py|go|java|kt|rb|rs|php|scala|swift|c|cc|cpp|h|cs|sql|prisma|graphql|proto|ya?ml|toml|json|md|mdx|rst|txt|sh|tf|css|scss|html|vue|svelte)$/i;
+const EXCLUDED_PATHS =
+  /(^|\/)(node_modules|dist|build|coverage|vendor|\.git|\.next|out|target)\/|(\.min\.(js|css)$)|(lock(file)?\.(json|yaml)$)|(-lock\.json$)|(\.lock$)/i;
 
 export function htmlToText(html: string): string {
   return html
@@ -107,7 +109,9 @@ export class KnowledgeService implements OnModuleInit {
     if (looksBinary(content)) throw AppException.badRequest('Binary content cannot be indexed', 'BINARY_CONTENT');
     const hash = contentHash(content);
     const existing = await this.prisma.knowledgeDocument.findUnique({
-      where: { organizationId_sourceType_sourceRef: { organizationId: p.organizationId, sourceType: p.sourceType, sourceRef: p.sourceRef } },
+      where: {
+        organizationId_sourceType_sourceRef: { organizationId: p.organizationId, sourceType: p.sourceType, sourceRef: p.sourceRef },
+      },
     });
     if (existing && existing.contentHash === hash && existing.status === 'INDEXED' && !existing.deletedAt) return existing;
     const data = {
@@ -128,7 +132,15 @@ export class KnowledgeService implements OnModuleInit {
     };
     const doc = existing
       ? await this.prisma.knowledgeDocument.update({ where: { id: existing.id }, data })
-      : await this.prisma.knowledgeDocument.create({ data: { ...data, organizationId: p.organizationId, sourceType: p.sourceType, sourceRef: p.sourceRef, createdById: p.userId ?? null } });
+      : await this.prisma.knowledgeDocument.create({
+          data: {
+            ...data,
+            organizationId: p.organizationId,
+            sourceType: p.sourceType,
+            sourceRef: p.sourceRef,
+            createdById: p.userId ?? null,
+          },
+        });
     await this.queue.add('knowledge.ingest', { documentId: doc.id }, { jobId: `ingest:${doc.id}:${hash.slice(0, 12)}` });
     return doc;
   }
@@ -136,11 +148,15 @@ export class KnowledgeService implements OnModuleInit {
   async process(documentId: string): Promise<void> {
     const doc = await this.prisma.knowledgeDocument.findUnique({ where: { id: documentId } });
     if (!doc || doc.deletedAt || !doc.content) return;
-    const claim = await this.prisma.knowledgeDocument.updateMany({ where: { id: documentId, status: { in: ['PENDING', 'FAILED'] } }, data: { status: 'PROCESSING' } });
+    const claim = await this.prisma.knowledgeDocument.updateMany({
+      where: { id: documentId, status: { in: ['PENDING', 'FAILED'] } },
+      data: { status: 'PROCESSING' },
+    });
     if (!claim.count) return;
     await this.publishStatus(doc.organizationId, doc.id, 'PROCESSING', doc.title);
     try {
-      if (!this.llm.isConfigured()) throw new ToolError('not_configured', 'Embeddings unavailable: set OPENAI_API_KEY to index knowledge', { retryable: false });
+      if (!this.llm.isConfigured())
+        throw new ToolError('not_configured', 'Embeddings unavailable: set OPENAI_API_KEY to index knowledge', { retryable: false });
       const path = (doc.metadata as { path?: string }).path ?? (doc.sourceType === 'UPLOAD' ? doc.title : null);
       const kind = detectKind(path, doc.sourceType === 'NOTION' || doc.documentType === 'markdown' ? 'markdown' : 'text');
       const chunks = await chunkContent(doc.content, kind);
@@ -178,7 +194,10 @@ export class KnowledgeService implements OnModuleInit {
           },
         })),
       );
-      await this.prisma.knowledgeDocument.update({ where: { id: doc.id }, data: { status: 'INDEXED', chunkCount: chunks.length, indexedAt: new Date(), error: null } });
+      await this.prisma.knowledgeDocument.update({
+        where: { id: doc.id },
+        data: { status: 'INDEXED', chunkCount: chunks.length, indexedAt: new Date(), error: null },
+      });
       await this.publishStatus(doc.organizationId, doc.id, 'INDEXED', doc.title, chunks.length);
     } catch (err) {
       const message = (err as Error).message;
@@ -189,10 +208,18 @@ export class KnowledgeService implements OnModuleInit {
   }
 
   private publishStatus(organizationId: string, documentId: string, status: string, title: string, chunks = 0, error?: string) {
-    return this.events.publish({ type: 'knowledge.document.status', organizationId, data: { documentId, status, title, chunks, error: error ?? null } });
+    return this.events.publish({
+      type: 'knowledge.document.status',
+      organizationId,
+      data: { documentId, status, title, chunks, error: error ?? null },
+    });
   }
 
-  async ingestUpload(auth: AuthContext, file: { originalname: string; buffer: Buffer; size: number }, params: { projectId?: string; documentType?: string; sourceType?: KnowledgeSourceType }) {
+  async ingestUpload(
+    auth: AuthContext,
+    file: { originalname: string; buffer: Buffer; size: number },
+    params: { projectId?: string; documentType?: string; sourceType?: KnowledgeSourceType },
+  ) {
     if (file.size > 2 * 1024 * 1024) throw AppException.badRequest('Files up to 2 MB are supported', 'FILE_TOO_LARGE');
     if (!CODE_EXTENSIONS.test(file.originalname) && !/\.(txt|log|csv|adoc)$/i.test(file.originalname)) {
       throw AppException.badRequest('Unsupported file type. Upload text, Markdown or source files.', 'UNSUPPORTED_FILE');
@@ -209,17 +236,38 @@ export class KnowledgeService implements OnModuleInit {
       documentType: params.documentType ?? (/\.(md|mdx|rst)$/i.test(file.originalname) ? 'markdown' : 'document'),
       path: file.originalname,
     });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'knowledge.uploaded', resourceType: 'knowledge_document', resourceId: doc.id, projectId: params.projectId, input: { name: file.originalname, size: file.size } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'knowledge.uploaded',
+      resourceType: 'knowledge_document',
+      resourceId: doc.id,
+      projectId: params.projectId,
+      input: { name: file.originalname, size: file.size },
+    });
     return doc;
   }
 
   async ingestUrl(auth: AuthContext, url: string, params: { projectId?: string; documentType?: string; sourceType?: KnowledgeSourceType }) {
-    const res = await safeFetch(url, { headers: { Accept: 'text/html,text/plain,text/markdown,application/json' }, timeoutMs: 15_000 }, this.config.outbound);
+    const res = await safeFetch(
+      url,
+      { headers: { Accept: 'text/html,text/plain,text/markdown,application/json' }, timeoutMs: 15_000 },
+      this.config.outbound,
+    );
     if (res.status >= 400) throw AppException.badRequest(`Fetching ${url} returned ${res.status}`, 'FETCH_FAILED');
     const type = res.headers.get('content-type') ?? '';
     const text = type.includes('html') ? htmlToText(res.body) : res.body;
     const title = /<title>([^<]+)<\/title>/i.exec(res.body)?.[1]?.trim() ?? new URL(url).pathname.split('/').filter(Boolean).pop() ?? url;
-    return this.ingestText({ organizationId: auth.organizationId, projectId: params.projectId, userId: auth.userId, sourceType: params.sourceType ?? 'URL', sourceRef: url, title, content: text, url, documentType: params.documentType ?? 'web' });
+    return this.ingestText({
+      organizationId: auth.organizationId,
+      projectId: params.projectId,
+      userId: auth.userId,
+      sourceType: params.sourceType ?? 'URL',
+      sourceRef: url,
+      title,
+      content: text,
+      url,
+      documentType: params.documentType ?? 'web',
+    });
   }
 
   async ingestGitHubRepository(auth: AuthContext, projectId: string, params: { ref?: string; maxFiles?: number; pathPrefix?: string }) {
@@ -231,7 +279,14 @@ export class KnowledgeService implements OnModuleInit {
     if (!sha) throw AppException.notFound('Branch', ref);
     const { tree } = await gh.getTree(repo.owner, repo.name, sha);
     const files = tree
-      .filter((t) => t.type === 'blob' && (t.size ?? 0) < 200_000 && CODE_EXTENSIONS.test(t.path) && !EXCLUDED_PATHS.test(t.path) && (!params.pathPrefix || t.path.startsWith(params.pathPrefix)))
+      .filter(
+        (t) =>
+          t.type === 'blob' &&
+          (t.size ?? 0) < 200_000 &&
+          CODE_EXTENSIONS.test(t.path) &&
+          !EXCLUDED_PATHS.test(t.path) &&
+          (!params.pathPrefix || t.path.startsWith(params.pathPrefix)),
+      )
       .slice(0, Math.min(params.maxFiles ?? 400, 1000));
     let queued = 0;
     for (const f of files) {
@@ -258,7 +313,14 @@ export class KnowledgeService implements OnModuleInit {
       }
     }
     await this.prisma.repository.update({ where: { id: repo.id }, data: { lastIndexedAt: new Date() } });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'knowledge.repository_indexed', resourceType: 'repository', resourceId: repo.id, projectId, output: { files: queued, ref } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'knowledge.repository_indexed',
+      resourceType: 'repository',
+      resourceId: repo.id,
+      projectId,
+      output: { files: queued, ref },
+    });
     return { repository: repo.fullName, ref, filesQueued: queued, filesConsidered: files.length };
   }
 
@@ -291,7 +353,17 @@ export class KnowledgeService implements OnModuleInit {
     for (const p of pages) {
       const page = await notion.getPageMarkdown(p.id);
       if (!page.markdown.trim()) continue;
-      await this.ingestText({ organizationId: auth.organizationId, projectId, userId: auth.userId, sourceType: 'NOTION', sourceRef: `notion:${p.id}`, title: NotionClient.pageTitle(p), content: page.markdown, documentType: 'markdown', url: page.url });
+      await this.ingestText({
+        organizationId: auth.organizationId,
+        projectId,
+        userId: auth.userId,
+        sourceType: 'NOTION',
+        sourceRef: `notion:${p.id}`,
+        title: NotionClient.pageTitle(p),
+        content: page.markdown,
+        documentType: 'markdown',
+        url: page.url,
+      });
       queued++;
     }
     return { pagesQueued: queued };
@@ -300,7 +372,10 @@ export class KnowledgeService implements OnModuleInit {
   /** Index a finished run (steps, decisions, artifacts) as institutional memory. */
   async ingestExecution(organizationId: string, executionId: string): Promise<void> {
     try {
-      const e = await this.prisma.workflowExecution.findUnique({ where: { id: executionId }, include: { steps: { orderBy: { position: 'asc' } }, artifacts: { select: { type: true, title: true, content: true } } } });
+      const e = await this.prisma.workflowExecution.findUnique({
+        where: { id: executionId },
+        include: { steps: { orderBy: { position: 'asc' } }, artifacts: { select: { type: true, title: true, content: true } } },
+      });
       if (!e || e.mode === 'DEMO') return;
       const lines = [
         `# Run: ${e.title}`,
@@ -308,9 +383,19 @@ export class KnowledgeService implements OnModuleInit {
         '',
         '## Steps',
         ...e.steps.map((s) => `- ${s.name} [${s.status}]${s.summary ? ` — ${s.summary}` : ''}`),
-        ...e.artifacts.filter((a) => ['SPECIFICATION', 'IMPLEMENTATION_PLAN', 'REVIEW_REPORT', 'TEST_REPORT'].includes(a.type)).map((a) => `\n## ${a.title}\n\n${a.content.slice(0, 8000)}`),
+        ...e.artifacts
+          .filter((a) => ['SPECIFICATION', 'IMPLEMENTATION_PLAN', 'REVIEW_REPORT', 'TEST_REPORT'].includes(a.type))
+          .map((a) => `\n## ${a.title}\n\n${a.content.slice(0, 8000)}`),
       ];
-      await this.ingestText({ organizationId, projectId: e.projectId, sourceType: 'EXECUTION', sourceRef: `execution:${e.id}`, title: `Run: ${e.title}`, content: lines.join('\n'), documentType: 'execution' });
+      await this.ingestText({
+        organizationId,
+        projectId: e.projectId,
+        sourceType: 'EXECUTION',
+        sourceRef: `execution:${e.id}`,
+        title: `Run: ${e.title}`,
+        content: lines.join('\n'),
+        documentType: 'execution',
+      });
     } catch (err) {
       this.logger.debug({ err: (err as Error).message, executionId }, 'Execution not indexed');
     }
@@ -318,15 +403,31 @@ export class KnowledgeService implements OnModuleInit {
 
   // ───────────────────────── retrieval ─────────────────────────
 
-  async retrieve(params: { organizationId: string; projectId?: string | null; query: string; k?: number; documentTypes?: string[]; sourceTypes?: string[]; maxChars?: number }): Promise<{ context: string; sources: ContextSource[]; available: boolean }> {
-    if (!this.llm.isConfigured()) return { context: 'Knowledge retrieval unavailable: embeddings are not configured.', sources: [], available: false };
-    const indexed = await this.prisma.knowledgeDocument.count({ where: { organizationId: params.organizationId, status: 'INDEXED', deletedAt: null } });
+  async retrieve(params: {
+    organizationId: string;
+    projectId?: string | null;
+    query: string;
+    k?: number;
+    documentTypes?: string[];
+    sourceTypes?: string[];
+    maxChars?: number;
+  }): Promise<{ context: string; sources: ContextSource[]; available: boolean }> {
+    if (!this.llm.isConfigured())
+      return { context: 'Knowledge retrieval unavailable: embeddings are not configured.', sources: [], available: false };
+    const indexed = await this.prisma.knowledgeDocument.count({
+      where: { organizationId: params.organizationId, status: 'INDEXED', deletedAt: null },
+    });
     if (!indexed) return { context: 'No knowledge has been indexed for this organization yet.', sources: [], available: true };
     await this.vectors.ensureCollection(this.llm.embeddingDimensions);
     const retriever = new KnowledgeRetriever({
       store: this.vectors,
       embeddings: this.llm.embeddings(),
-      filter: { organizationId: params.organizationId, projectId: params.projectId ?? undefined, documentTypes: params.documentTypes, sourceTypes: params.sourceTypes },
+      filter: {
+        organizationId: params.organizationId,
+        projectId: params.projectId ?? undefined,
+        documentTypes: params.documentTypes,
+        sourceTypes: params.sourceTypes,
+      },
       k: params.k ?? 8,
       scoreThreshold: 0.2,
     });
@@ -336,11 +437,21 @@ export class KnowledgeService implements OnModuleInit {
   }
 
   async search(auth: AuthContext, q: { query: string; projectId?: string; documentTypes?: string[]; sourceTypes?: string[]; k?: number }) {
-    const res = await this.retrieve({ organizationId: auth.organizationId, projectId: q.projectId, query: q.query, k: q.k ?? 10, documentTypes: q.documentTypes, sourceTypes: q.sourceTypes });
+    const res = await this.retrieve({
+      organizationId: auth.organizationId,
+      projectId: q.projectId,
+      query: q.query,
+      k: q.k ?? 10,
+      documentTypes: q.documentTypes,
+      sourceTypes: q.sourceTypes,
+    });
     return res;
   }
 
-  async list(auth: AuthContext, q: { page: number; pageSize: number; projectId?: string; sourceType?: KnowledgeSourceType; status?: string; search?: string }) {
+  async list(
+    auth: AuthContext,
+    q: { page: number; pageSize: number; projectId?: string; sourceType?: KnowledgeSourceType; status?: string; search?: string },
+  ) {
     const where: Prisma.KnowledgeDocumentWhereInput = {
       organizationId: auth.organizationId,
       deletedAt: null,
@@ -350,7 +461,27 @@ export class KnowledgeService implements OnModuleInit {
       ...(q.search && { title: { contains: q.search, mode: 'insensitive' } }),
     };
     const [items, total] = await Promise.all([
-      this.prisma.knowledgeDocument.findMany({ where, orderBy: { updatedAt: 'desc' }, select: { id: true, title: true, sourceType: true, sourceRef: true, documentType: true, status: true, chunkCount: true, tokenCount: true, url: true, error: true, indexedAt: true, updatedAt: true, projectId: true, branch: true }, ...skipTake(q) }),
+      this.prisma.knowledgeDocument.findMany({
+        where,
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          id: true,
+          title: true,
+          sourceType: true,
+          sourceRef: true,
+          documentType: true,
+          status: true,
+          chunkCount: true,
+          tokenCount: true,
+          url: true,
+          error: true,
+          indexedAt: true,
+          updatedAt: true,
+          projectId: true,
+          branch: true,
+        },
+        ...skipTake(q),
+      }),
       this.prisma.knowledgeDocument.count({ where }),
     ]);
     return paginate(items, total, q);
@@ -358,9 +489,20 @@ export class KnowledgeService implements OnModuleInit {
 
   async stats(auth: AuthContext) {
     const [bySource, byStatus, chunks] = await Promise.all([
-      this.prisma.knowledgeDocument.groupBy({ by: ['sourceType'], where: { organizationId: auth.organizationId, deletedAt: null }, _count: true }),
-      this.prisma.knowledgeDocument.groupBy({ by: ['status'], where: { organizationId: auth.organizationId, deletedAt: null }, _count: true }),
-      this.prisma.knowledgeDocument.aggregate({ where: { organizationId: auth.organizationId, deletedAt: null, status: 'INDEXED' }, _sum: { chunkCount: true, tokenCount: true } }),
+      this.prisma.knowledgeDocument.groupBy({
+        by: ['sourceType'],
+        where: { organizationId: auth.organizationId, deletedAt: null },
+        _count: true,
+      }),
+      this.prisma.knowledgeDocument.groupBy({
+        by: ['status'],
+        where: { organizationId: auth.organizationId, deletedAt: null },
+        _count: true,
+      }),
+      this.prisma.knowledgeDocument.aggregate({
+        where: { organizationId: auth.organizationId, deletedAt: null, status: 'INDEXED' },
+        _sum: { chunkCount: true, tokenCount: true },
+      }),
     ]);
     return {
       embeddingsAvailable: this.embeddingsAvailable,
@@ -388,8 +530,15 @@ export class KnowledgeService implements OnModuleInit {
 
   async remove(auth: AuthContext, id: string) {
     const doc = await this.get(auth, id);
-    await this.vectors.deleteDocument(auth.organizationId, doc.id).catch((err: unknown) => this.logger.warn({ err }, 'Vector deletion failed'));
+    await this.vectors
+      .deleteDocument(auth.organizationId, doc.id)
+      .catch((err: unknown) => this.logger.warn({ err }, 'Vector deletion failed'));
     await this.prisma.knowledgeDocument.update({ where: { id }, data: { deletedAt: new Date(), content: null } });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'knowledge.deleted', resourceType: 'knowledge_document', resourceId: id });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'knowledge.deleted',
+      resourceType: 'knowledge_document',
+      resourceId: id,
+    });
   }
 }

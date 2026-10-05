@@ -65,7 +65,12 @@ export class ApprovalPolicyService {
     return typeof tool.approvalAction === 'function' ? tool.approvalAction(input) : tool.approvalAction;
   }
 
-  async evaluate(organizationId: string, project: ProjectContext | null, requestedAction: string, environmentName?: string | null): Promise<PolicyDecision> {
+  async evaluate(
+    organizationId: string,
+    project: ProjectContext | null,
+    requestedAction: string,
+    environmentName?: string | null,
+  ): Promise<PolicyDecision> {
     let action = requestedAction;
     if (action === 'deploy.environment') {
       // Resolve to the environment type; unknown environments are treated as production (safest).
@@ -75,7 +80,11 @@ export class ApprovalPolicyService {
     const locked = LOCKED_ACTIONS.has(action);
     const projectPolicy = (project?.settings.approvalPolicy ?? {}) as Record<string, PolicySetting>;
     let required = locked || (projectPolicy[action] ?? DEFAULT_POLICY[action] ?? 'auto') === 'required';
-    let reason = locked ? `${action} always requires approval` : required ? `Project policy requires approval for ${action}` : `${action} runs automatically`;
+    let reason = locked
+      ? `${action} always requires approval`
+      : required
+        ? `Project policy requires approval for ${action}`
+        : `${action} runs automatically`;
     if (environmentName && project) {
       const env = project.environments.find((e) => e.name === environmentName);
       if (env?.requiresApproval && !required) {

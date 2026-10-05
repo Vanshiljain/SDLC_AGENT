@@ -50,7 +50,13 @@ export class AgentTaskRunner {
         signal: p.ctx.signal,
       });
       const summary = p.summarize?.(output) ?? p.task;
-      await this.agentRuns.complete(p.ctx.organizationId, run, { usage, output, summary, model: this.llm.modelName(p.role), executionId: p.ctx.executionId });
+      await this.agentRuns.complete(p.ctx.organizationId, run, {
+        usage,
+        output,
+        summary,
+        model: this.llm.modelName(p.role),
+        executionId: p.ctx.executionId,
+      });
       p.ctx.logger.info(`${p.task}: ${summary}`, { tokens: usage.totalTokens, model: this.llm.modelName(p.role) });
       return { output, agentRunId: run.id, usage: usage.snapshot() };
     } catch (err) {

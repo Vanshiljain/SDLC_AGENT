@@ -204,11 +204,42 @@ export interface ExecutionDetail extends Omit<ExecutionListItem, 'steps'> {
   artifacts: ArtifactSummary[];
   externalResources: ExternalResource[];
   deployments: (Deployment & { environment: { name: string; type: EnvironmentType } })[];
-  codeReviews: (Omit<CodeReviewDetail, 'project' | 'repository'>)[];
-  qaRuns: Pick<QaRun, 'id' | 'type' | 'status' | 'title' | 'total' | 'passed' | 'failed' | 'skipped' | 'durationMs' | 'simulated' | 'createdAt'>[];
-  codeGenerations: { id: string; status: string; branch: string; files: { path: string; action: string; explanation?: string }[]; commitSha: string | null; prUrl: string | null; prNumber: number | null; iterations: number; simulated: boolean; validation: { passed: boolean | null; ran: boolean; summary: string; checks: { name: string; status: string; command: string; exitCode: number | null; durationMs: number; excerpt: string | null }[] } | null }[];
+  codeReviews: Omit<CodeReviewDetail, 'project' | 'repository'>[];
+  qaRuns: Pick<
+    QaRun,
+    'id' | 'type' | 'status' | 'title' | 'total' | 'passed' | 'failed' | 'skipped' | 'durationMs' | 'simulated' | 'createdAt'
+  >[];
+  codeGenerations: {
+    id: string;
+    status: string;
+    branch: string;
+    files: { path: string; action: string; explanation?: string }[];
+    commitSha: string | null;
+    prUrl: string | null;
+    prNumber: number | null;
+    iterations: number;
+    simulated: boolean;
+    validation: {
+      passed: boolean | null;
+      ran: boolean;
+      summary: string;
+      checks: { name: string; status: string; command: string; exitCode: number | null; durationMs: number; excerpt: string | null }[];
+    } | null;
+  }[];
   agentRuns: (AgentRun & { agent: { key: string; name: string; kind: string } })[];
-  toolExecutions: { id: string; stepId: string | null; tool: string; status: string; attempt: number; durationMs: number | null; startedAt: string; completedAt: string | null; simulated: boolean; externalUrl: string | null; error: StepError | null }[];
+  toolExecutions: {
+    id: string;
+    stepId: string | null;
+    tool: string;
+    status: string;
+    attempt: number;
+    durationMs: number | null;
+    startedAt: string;
+    completedAt: string | null;
+    simulated: boolean;
+    externalUrl: string | null;
+    error: StepError | null;
+  }[];
   usage: { totalTokens: number; llmCalls: number };
 }
 export interface ExecutionLog {
@@ -234,7 +265,14 @@ export interface ApprovalEvidence {
   action?: string;
 }
 export interface ApprovalContext {
-  risk?: { level: RiskLevel; source: string; summary: string; factors: { factor: string; impact: 'positive' | 'negative' | 'neutral' | string }[]; mitigations: string[]; recommendation: string };
+  risk?: {
+    level: RiskLevel;
+    source: string;
+    summary: string;
+    factors: { factor: string; impact: 'positive' | 'negative' | 'neutral' | string }[];
+    mitigations: string[];
+    recommendation: string;
+  };
   evidence?: ApprovalEvidence;
   ticket?: { key: string; url: string | null; summary: string | null } | null;
   pullRequest?: { number: number | null; url: string | null; title: string | null } | null;
@@ -366,7 +404,11 @@ export interface ToolInfo {
   approvalAction: string | null;
   supportsDemo: boolean;
   polling: boolean;
-  inputSchema: { type?: string; properties?: Record<string, { type?: string | string[]; description?: string; enum?: unknown[]; default?: unknown }>; required?: string[] };
+  inputSchema: {
+    type?: string;
+    properties?: Record<string, { type?: string | string[]; description?: string; enum?: unknown[]; default?: unknown }>;
+    required?: string[];
+  };
 }
 
 // ───────── Commands ─────────
@@ -496,16 +538,58 @@ export interface Team {
 
 // ───────── Dashboard ─────────
 export interface DashboardData {
-  headline: { activeRuns: number; pendingApprovals: number; failedRuns7d: number; successRate30d: number | null; deployments7d: number; tokens7d: number };
-  activeRuns: { id: string; title: string; status: ExecutionStatus; mode: ExecutionMode; startedAt: string | null; project: ProjectRef | null; steps: { stepKey: string; name: string; status: StepStatus; agent: string | null; summary: string | null }[] }[];
-  recentRuns: { id: string; title: string; status: ExecutionStatus; mode: ExecutionMode; createdAt: string; completedAt: string | null; template: string | null; project: { name: string; key: string } | null }[];
+  headline: {
+    activeRuns: number;
+    pendingApprovals: number;
+    failedRuns7d: number;
+    successRate30d: number | null;
+    deployments7d: number;
+    tokens7d: number;
+  };
+  activeRuns: {
+    id: string;
+    title: string;
+    status: ExecutionStatus;
+    mode: ExecutionMode;
+    startedAt: string | null;
+    project: ProjectRef | null;
+    steps: { stepKey: string; name: string; status: StepStatus; agent: string | null; summary: string | null }[];
+  }[];
+  recentRuns: {
+    id: string;
+    title: string;
+    status: ExecutionStatus;
+    mode: ExecutionMode;
+    createdAt: string;
+    completedAt: string | null;
+    template: string | null;
+    project: { name: string; key: string } | null;
+  }[];
   failedRuns: { id: string; title: string; error: { message: string } | null; completedAt: string; project: { name: string } | null }[];
-  pendingApprovals: { id: string; title: string; action: string; riskLevel: RiskLevel; createdAt: string; context: ApprovalContext; execution: { id: string; title: string; mode: ExecutionMode } | null }[];
+  pendingApprovals: {
+    id: string;
+    title: string;
+    action: string;
+    riskLevel: RiskLevel;
+    createdAt: string;
+    context: ApprovalContext;
+    execution: { id: string; title: string; mode: ExecutionMode } | null;
+  }[];
   deployments: (Deployment & { environment: { name: string; type: EnvironmentType }; project: { name: string; key: string } })[];
   qa: { byStatus: Record<string, number>; runs: number; passed: number; failed: number };
   reviews: { count: number; critical: number; high: number; medium: number; low: number };
   integrations: Pick<Integration, 'id' | 'provider' | 'name' | 'status' | 'healthStatus' | 'healthMessage' | 'lastHealthCheckAt'>[];
-  agentActivity: { id: string; task: string; status: string; summary: string | null; startedAt: string; durationMs: number | null; totalTokens: number; executionId: string | null; agent: { key: string; name: string; kind: string } }[];
+  agentActivity: {
+    id: string;
+    task: string;
+    status: string;
+    summary: string | null;
+    startedAt: string;
+    durationMs: number | null;
+    totalTokens: number;
+    executionId: string | null;
+    agent: { key: string; name: string; kind: string };
+  }[];
   projects: { id: string; name: string; key: string; health: ProjectHealth }[];
 }
 

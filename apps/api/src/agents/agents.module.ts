@@ -18,7 +18,10 @@ export class AgentsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(auth: AuthContext) {
-    const agents = await this.prisma.agent.findMany({ where: { OR: [{ organizationId: null }, { organizationId: auth.organizationId }], isEnabled: true }, orderBy: { kind: 'asc' } });
+    const agents = await this.prisma.agent.findMany({
+      where: { OR: [{ organizationId: null }, { organizationId: auth.organizationId }], isEnabled: true },
+      orderBy: { kind: 'asc' },
+    });
     const since = new Date(Date.now() - 30 * 86_400_000);
     const stats = await this.prisma.agentRun.groupBy({
       by: ['agentId', 'status'],
@@ -49,9 +52,18 @@ export class AgentsService {
   }
 
   async runs(auth: AuthContext, q: RunsQuery) {
-    const where = { organizationId: auth.organizationId, ...(q.executionId && { executionId: q.executionId }), ...(q.agent && { agent: { key: q.agent } }) };
+    const where = {
+      organizationId: auth.organizationId,
+      ...(q.executionId && { executionId: q.executionId }),
+      ...(q.agent && { agent: { key: q.agent } }),
+    };
     const [items, total] = await Promise.all([
-      this.prisma.agentRun.findMany({ where, orderBy: { startedAt: 'desc' }, include: { agent: { select: { key: true, name: true, kind: true } } }, ...skipTake(q) }),
+      this.prisma.agentRun.findMany({
+        where,
+        orderBy: { startedAt: 'desc' },
+        include: { agent: { select: { key: true, name: true, kind: true } } },
+        ...skipTake(q),
+      }),
       this.prisma.agentRun.count({ where }),
     ]);
     return paginate(items, total, q);

@@ -32,15 +32,7 @@ export type SchedulerDecision =
   | { type: 'rerun_after_repair'; key: string; iteration: number }
   | { type: 'fail_step'; key: string; reason: string };
 
-export type SchedulerOutcome =
-  | 'running'
-  | 'waiting_approval'
-  | 'completed'
-  | 'failed'
-  | 'compensate'
-  | 'paused'
-  | 'inactive'
-  | 'stalled';
+export type SchedulerOutcome = 'running' | 'waiting_approval' | 'completed' | 'failed' | 'compensate' | 'paused' | 'inactive' | 'stalled';
 
 export interface SchedulerInput {
   definition: WorkflowDefinition;
@@ -76,10 +68,7 @@ export function isTerminalStatus(status: StepStatus): boolean {
   return TERMINAL.has(status);
 }
 
-export function buildScope(
-  scope: Omit<TemplateScope, 'steps'>,
-  steps: Record<string, StepRuntimeState>,
-): TemplateScope {
+export function buildScope(scope: Omit<TemplateScope, 'steps'>, steps: Record<string, StepRuntimeState>): TemplateScope {
   const stepScope: TemplateScope['steps'] = {};
   for (const [key, s] of Object.entries(steps)) {
     stepScope[key] = { output: s.output ?? null, status: s.status, summary: s.summary ?? null };
@@ -103,9 +92,7 @@ export function schedule(input: SchedulerInput): SchedulerResult {
   // Work on a copy so decisions made in this pass are visible to later checks.
   const state: Record<string, StepRuntimeState> = {};
   for (const s of definition.steps) {
-    state[s.key] = input.steps[s.key]
-      ? { ...input.steps[s.key]! }
-      : { key: s.key, status: 'PENDING', attempt: 0, iteration: 0 };
+    state[s.key] = input.steps[s.key] ? { ...input.steps[s.key]! } : { key: s.key, status: 'PENDING', attempt: 0, iteration: 0 };
   }
 
   const decisions: SchedulerDecision[] = [];
@@ -253,8 +240,7 @@ export function schedule(input: SchedulerInput): SchedulerResult {
     }
     if (blockingFailures.length) {
       const canCompensate =
-        definition.onFailure === 'compensate' &&
-        definition.steps.some((s) => s.compensate && state[s.key]!.status === 'COMPLETED');
+        definition.onFailure === 'compensate' && definition.steps.some((s) => s.compensate && state[s.key]!.status === 'COMPLETED');
       outcome = canCompensate ? 'compensate' : 'failed';
     } else {
       outcome = 'completed';
@@ -274,10 +260,7 @@ export function schedule(input: SchedulerInput): SchedulerResult {
  * Saga compensation: next completed step (reverse topological order) that has
  * a compensation action and has not been compensated yet.
  */
-export function nextCompensation(
-  definition: WorkflowDefinition,
-  steps: Record<string, StepRuntimeState>,
-): StepDefinition | null {
+export function nextCompensation(definition: WorkflowDefinition, steps: Record<string, StepRuntimeState>): StepDefinition | null {
   const { order } = topologicalOrder(definition.steps);
   const defs = stepMap(definition.steps);
   for (const key of [...order].reverse()) {
@@ -291,11 +274,7 @@ export function nextCompensation(
  * Steps to reset when a user retries a failed step: the step itself plus every
  * normal step that was skipped or cancelled as a consequence of the failure.
  */
-export function stepsToResetForRetry(
-  definition: WorkflowDefinition,
-  steps: Record<string, StepRuntimeState>,
-  key: string,
-): string[] {
+export function stepsToResetForRetry(definition: WorkflowDefinition, steps: Record<string, StepRuntimeState>, key: string): string[] {
   const target = steps[key];
   if (!target || !['FAILED', 'CANCELLED'].includes(target.status)) return [];
   const repairKeys = repairStepKeys(definition.steps);

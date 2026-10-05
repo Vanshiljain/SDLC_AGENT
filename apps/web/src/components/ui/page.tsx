@@ -1,7 +1,19 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
-export function PageHeader({ title, description, actions, eyebrow, className }: { title: ReactNode; description?: ReactNode; actions?: ReactNode; eyebrow?: ReactNode; className?: string }) {
+export function PageHeader({
+  title,
+  description,
+  actions,
+  eyebrow,
+  className,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+  eyebrow?: ReactNode;
+  className?: string;
+}) {
   return (
     <div className={cn('flex flex-wrap items-end justify-between gap-4 pb-5', className)}>
       <div className="min-w-0">
@@ -15,16 +27,34 @@ export function PageHeader({ title, description, actions, eyebrow, className }: 
 }
 
 export function Page({ children, className, wide }: { children: ReactNode; className?: string; wide?: boolean }) {
-  return <div className={cn('mx-auto w-full px-4 py-6 sm:px-6 lg:px-8', wide ? 'max-w-[1600px]' : 'max-w-[1240px]', className)}>{children}</div>;
+  return (
+    <div className={cn('mx-auto w-full px-4 py-6 sm:px-6 lg:px-8', wide ? 'max-w-[1600px]' : 'max-w-[1240px]', className)}>{children}</div>
+  );
 }
 
-export function EmptyState({ icon, title, description, action, className, compact }: { icon?: ReactNode; title: ReactNode; description?: ReactNode; action?: ReactNode; className?: string; compact?: boolean }) {
+export function EmptyState({
+  icon,
+  title,
+  description,
+  action,
+  className,
+  compact,
+}: {
+  icon?: ReactNode;
+  title: ReactNode;
+  description?: ReactNode;
+  action?: ReactNode;
+  className?: string;
+  compact?: boolean;
+}) {
   return (
     <div className={cn('flex flex-col items-center justify-center text-center', compact ? 'px-4 py-8' : 'px-6 py-14', className)}>
       {icon && (
         <div className="relative mb-4">
           <div className="absolute inset-0 rounded-xl bg-accent/20 blur-xl" />
-          <div className="relative flex size-11 items-center justify-center rounded-xl border border-line bg-raised text-fg-muted shadow-card [&>svg]:size-5">{icon}</div>
+          <div className="relative flex size-11 items-center justify-center rounded-xl border border-line bg-raised text-fg-muted shadow-card [&>svg]:size-5">
+            {icon}
+          </div>
         </div>
       )}
       <h3 className="text-[14px] font-semibold tracking-tight">{title}</h3>
@@ -49,7 +79,21 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
   );
 }
 
-export function Stat({ label, value, hint, icon, tone, className }: { label: ReactNode; value: ReactNode; hint?: ReactNode; icon?: ReactNode; tone?: 'accent' | 'ok' | 'bad' | 'warn' | 'arc'; className?: string }) {
+export function Stat({
+  label,
+  value,
+  hint,
+  icon,
+  tone,
+  className,
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  hint?: ReactNode;
+  icon?: ReactNode;
+  tone?: 'accent' | 'ok' | 'bad' | 'warn' | 'arc';
+  className?: string;
+}) {
   const toneCls = tone ? { accent: 'text-accent', ok: 'text-ok', bad: 'text-bad', warn: 'text-warn', arc: 'text-arc' }[tone] : 'text-fg';
   return (
     <div className={cn('min-w-0 px-4 py-3.5', className)}>
@@ -63,7 +107,17 @@ export function Stat({ label, value, hint, icon, tone, className }: { label: Rea
   );
 }
 
-export function Section({ title, actions, children, className }: { title: ReactNode; actions?: ReactNode; children: ReactNode; className?: string }) {
+export function Section({
+  title,
+  actions,
+  children,
+  className,
+}: {
+  title: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <section className={cn('space-y-3', className)}>
       <div className="flex items-center justify-between gap-2">

@@ -68,7 +68,7 @@ export function assembleContext(
   let used = 0;
   for (const d of docs) {
     const m = d.metadata;
-    const location = m.startLine ? `lines ${m.startLine}-${m.endLine}` : m.heading ?? null;
+    const location = m.startLine ? `lines ${m.startLine}-${m.endLine}` : (m.heading ?? null);
     const header = `[${sources.length + 1}] ${m.title ?? 'Untitled'}${location ? ` (${location})` : ''} — ${m.sourceType ?? 'doc'}`;
     const body = d.pageContent.trim();
     const block = `${header}\n${body}`;
@@ -80,7 +80,14 @@ export function assembleContext(
       parts.push(block);
     }
     used += block.length;
-    sources.push({ documentId: m.documentId ?? '', title: m.title ?? 'Untitled', sourceType: m.sourceType ?? 'doc', url: m.url ?? null, score: Number((m.score ?? 0).toFixed(3)), location });
+    sources.push({
+      documentId: m.documentId ?? '',
+      title: m.title ?? 'Untitled',
+      sourceType: m.sourceType ?? 'doc',
+      url: m.url ?? null,
+      score: Number((m.score ?? 0).toFixed(3)),
+      location,
+    });
   }
   return { text: parts.length ? parts.join('\n\n---\n\n') : 'No indexed knowledge matched this request.', sources };
 }

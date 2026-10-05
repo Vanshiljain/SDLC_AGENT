@@ -1,5 +1,19 @@
 import type { ReactNode } from 'react';
-import { AlertTriangle, Ban, Check, CircleDashed, Clock, FlaskConical, Hand, Loader2, Pause, RotateCcw, SkipForward, Undo2, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  Ban,
+  Check,
+  CircleDashed,
+  Clock,
+  FlaskConical,
+  Hand,
+  Loader2,
+  Pause,
+  RotateCcw,
+  SkipForward,
+  Undo2,
+  X,
+} from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { titleCase } from '@/lib/format';
 import { Badge, type Tone } from './primitives';
@@ -83,14 +97,26 @@ const DOT: Record<Tone, string> = {
 
 export function StatusDot({ status, className, title }: { status: string; className?: string; title?: string }) {
   const tone = statusTone(status);
-  return <span title={title ?? titleCase(status)} className={cn('inline-block size-2 shrink-0 rounded-full', DOT[tone], isLive(status) && 'animate-pulse-dot', className)} />;
+  return (
+    <span
+      title={title ?? titleCase(status)}
+      className={cn('inline-block size-2 shrink-0 rounded-full', DOT[tone], isLive(status) && 'animate-pulse-dot', className)}
+    />
+  );
 }
 
 export function ModeBadge({ mode, className }: { mode: string; className?: string }) {
   if (mode !== 'DEMO') return null;
   return (
     <Tooltip content="Simulated run in a demo workspace. No external system was changed.">
-      <span className={cn('demo-stripes inline-flex h-5 items-center rounded-sm border border-warn/40 px-1.5 text-[10.5px] font-semibold tracking-wide text-warn uppercase', className)}>Simulated</span>
+      <span
+        className={cn(
+          'demo-stripes inline-flex h-5 items-center rounded-sm border border-warn/40 px-1.5 text-[10.5px] font-semibold tracking-wide text-warn uppercase',
+          className,
+        )}
+      >
+        Simulated
+      </span>
     </Tooltip>
   );
 }
@@ -119,7 +145,17 @@ export function ForgeProgress({ steps, className }: { steps: { status: string; k
             <span
               className={cn(
                 'h-full min-w-1 flex-1 rounded-full',
-                live ? 'forge-line' : tone === 'ok' ? 'bg-ok/80' : tone === 'bad' ? 'bg-bad' : tone === 'warn' ? 'bg-warn/80' : tone === 'accent' ? 'bg-accent/70' : 'bg-line-strong/70',
+                live
+                  ? 'forge-line'
+                  : tone === 'ok'
+                    ? 'bg-ok/80'
+                    : tone === 'bad'
+                      ? 'bg-bad'
+                      : tone === 'warn'
+                        ? 'bg-warn/80'
+                        : tone === 'accent'
+                          ? 'bg-accent/70'
+                          : 'bg-line-strong/70',
               )}
             />
           </Tooltip>

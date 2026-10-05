@@ -23,7 +23,8 @@ export interface PipelineToolOutput {
 export const devopsRunPipeline = defineTool({
   name: 'devops.runPipeline',
   title: 'Run CI/CD pipeline',
-  description: 'Run pipeline stages (lint, build, test, security_scan, artifact, container_build, image_scan) on the configured CI/CD provider and wait for the result.',
+  description:
+    'Run pipeline stages (lint, build, test, security_scan, artifact, container_build, image_scan) on the configured CI/CD provider and wait for the result.',
   category: 'devops',
   provider: 'CUSTOM_DEVOPS',
   agent: 'release',
@@ -56,11 +57,30 @@ export const devopsRunPipeline = defineTool({
       run = await cicd.getPipeline(cp.runId);
     }
     const done = run.stages.filter((s) => isTerminalRunStatus(s.status)).length;
-    ctx.progress({ percent: run.stages.length ? Math.round((done / run.stages.length) * 100) : undefined, message: `${cicd.name}: ${run.status}` });
-    const resource = { provider: cicd.kind, type: 'CI_RUN' as const, externalId: run.id, key: `pipeline ${run.id}`, title: `Pipeline ${input.ref}`, url: run.url ?? undefined, status: run.status };
+    ctx.progress({
+      percent: run.stages.length ? Math.round((done / run.stages.length) * 100) : undefined,
+      message: `${cicd.name}: ${run.status}`,
+    });
+    const resource = {
+      provider: cicd.kind,
+      type: 'CI_RUN' as const,
+      externalId: run.id,
+      key: `pipeline ${run.id}`,
+      title: `Pipeline ${input.ref}`,
+      url: run.url ?? undefined,
+      status: run.status,
+    };
     if (!isTerminalRunStatus(run.status)) {
       return {
-        output: { runId: run.id, status: run.status, url: run.url ?? null, stages: run.stages, artifact: null, image: null, logsExcerpt: null },
+        output: {
+          runId: run.id,
+          status: run.status,
+          url: run.url ?? null,
+          stages: run.stages,
+          artifact: null,
+          image: null,
+          logsExcerpt: null,
+        },
         summary: `Pipeline ${run.id} ${run.status}`,
         externalResources: [resource],
         continuation: { pollAfterMs: 10_000, checkpoint: { runId: run.id }, message: `Pipeline ${run.status}` },
@@ -76,15 +96,30 @@ export const devopsRunPipeline = defineTool({
     }
     const failedStages = run.stages.filter((s) => s.status === 'failed').map((s) => s.stage);
     return {
-      output: { runId: run.id, status: run.status, url: run.url ?? null, stages: run.stages, artifact: run.artifact ?? null, image: run.image ?? null, logsExcerpt, failedStages },
-      summary: run.status === 'succeeded' ? `Pipeline passed: ${run.stages.map((s) => s.stage).join(' → ')}` : `Pipeline ${run.status}${failedStages.length ? ` at ${failedStages.join(', ')}` : ''}`,
+      output: {
+        runId: run.id,
+        status: run.status,
+        url: run.url ?? null,
+        stages: run.stages,
+        artifact: run.artifact ?? null,
+        image: run.image ?? null,
+        logsExcerpt,
+        failedStages,
+      },
+      summary:
+        run.status === 'succeeded'
+          ? `Pipeline passed: ${run.stages.map((s) => s.stage).join(' → ')}`
+          : `Pipeline ${run.status}${failedStages.length ? ` at ${failedStages.join(', ')}` : ''}`,
       externalResources: [resource],
     };
   },
   async simulate(input, ctx): Promise<ToolExecutionResult<PipelineToolOutput>> {
     const polls = ((ctx.checkpoint as { polls?: number } | undefined)?.polls ?? 0) + 1;
     const id = `demo-${demoNumber(ctx.idempotencyKey, 1000, 9999)}`;
-    const stages = input.stages.map((stage, i) => ({ stage, status: (i < polls ? 'succeeded' : i === polls ? 'running' : 'queued') as PipelineRun['status'] }));
+    const stages = input.stages.map((stage, i) => ({
+      stage,
+      status: (i < polls ? 'succeeded' : i === polls ? 'running' : 'queued') as PipelineRun['status'],
+    }));
     if (polls < input.stages.length) {
       return {
         simulated: true,
@@ -95,7 +130,16 @@ export const devopsRunPipeline = defineTool({
     }
     return {
       simulated: true,
-      output: { runId: id, status: 'succeeded', url: null, stages: input.stages.map((stage) => ({ stage, status: 'succeeded' as const })), artifact: { ref: `demo-artifact:${input.ref}` }, image: null, logsExcerpt: null, failedStages: [] },
+      output: {
+        runId: id,
+        status: 'succeeded',
+        url: null,
+        stages: input.stages.map((stage) => ({ stage, status: 'succeeded' as const })),
+        artifact: { ref: `demo-artifact:${input.ref}` },
+        image: null,
+        logsExcerpt: null,
+        failedStages: [],
+      },
       summary: `[Simulated] Pipeline passed: ${input.stages.join(' → ')}`,
     };
   },

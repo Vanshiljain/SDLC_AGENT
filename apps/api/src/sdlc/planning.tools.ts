@@ -1,6 +1,13 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import { z } from 'zod';
-import { implementationPlanSchema, pullRequestDescriptionSchema, technicalSpecSchema, ticketDraftSchema, type ImplementationPlan, type TechnicalSpec } from '@forgeline/ai';
+import {
+  implementationPlanSchema,
+  pullRequestDescriptionSchema,
+  technicalSpecSchema,
+  ticketDraftSchema,
+  type ImplementationPlan,
+  type TechnicalSpec,
+} from '@forgeline/ai';
 import { defineLooseTool } from '@forgeline/integrations';
 import { ToolError } from '@forgeline/shared';
 import { PrismaService } from '../common/prisma/prisma.service';
@@ -16,7 +23,9 @@ export function specToMarkdown(s: TechnicalSpec): string {
     `## Goals\n${list(s.goals)}`,
     `## Non-goals\n${list(s.nonGoals)}`,
     `## Approach\n${s.approach}`,
-    s.components.length ? `## Components\n| Component | Responsibility | Changes |\n|---|---|---|\n${s.components.map((c) => `| ${c.name} | ${c.responsibility} | ${c.changes} |`).join('\n')}` : '',
+    s.components.length
+      ? `## Components\n| Component | Responsibility | Changes |\n|---|---|---|\n${s.components.map((c) => `| ${c.name} | ${c.responsibility} | ${c.changes} |`).join('\n')}`
+      : '',
     s.apiChanges.length ? `## API changes\n${s.apiChanges.map((a) => `- \`${a.method} ${a.path}\` — ${a.description}`).join('\n')}` : '',
     s.dataModelChanges.length ? `## Data model\n${s.dataModelChanges.map((d) => `- **${d.entity}**: ${d.change}`).join('\n')}` : '',
     `## Security\n${list(s.security)}`,
@@ -61,8 +70,26 @@ export function sanitizeBranch(name: string, ticketKey?: string | null): string 
 
 const repoSummary = (repo: unknown) => {
   if (!repo || typeof repo !== 'object') return '(repository not analysed)';
-  const r = repo as { fileCount?: number; frameworks?: string[]; languages?: unknown; scripts?: unknown; manifests?: string[]; topLevel?: string[]; sampleFiles?: string[] };
-  return forPrompt({ fileCount: r.fileCount, frameworks: r.frameworks, languages: r.languages, scripts: r.scripts, manifests: r.manifests, topLevel: r.topLevel }, 4000);
+  const r = repo as {
+    fileCount?: number;
+    frameworks?: string[];
+    languages?: unknown;
+    scripts?: unknown;
+    manifests?: string[];
+    topLevel?: string[];
+    sampleFiles?: string[];
+  };
+  return forPrompt(
+    {
+      fileCount: r.fileCount,
+      frameworks: r.frameworks,
+      languages: r.languages,
+      scripts: r.scripts,
+      manifests: r.manifests,
+      topLevel: r.topLevel,
+    },
+    4000,
+  );
 };
 
 @Injectable()
@@ -96,7 +123,11 @@ export class PlanningTools implements OnModuleInit {
             agent: 'planning',
             task: 'Draft ticket',
             prompt: 'ticketDraft',
-            variables: { project: ctx.project ? `${ctx.project.name} (${ctx.project.key})` : 'Unknown', context: forPrompt(input.context), requirement: input.requirement },
+            variables: {
+              project: ctx.project ? `${ctx.project.name} (${ctx.project.key})` : 'Unknown',
+              context: forPrompt(input.context),
+              requirement: input.requirement,
+            },
             schema: ticketDraftSchema,
             schemaName: 'ticket_draft',
             role: 'planner',
@@ -111,9 +142,19 @@ export class PlanningTools implements OnModuleInit {
         },
         async simulate(input) {
           const summary = `Implement ${input.requirement.replace(/^implement\s+/i, '').slice(0, 80)}`;
-          const acceptanceCriteria = ['Users can request a reset link by email', 'Reset tokens are single-use, hashed at rest and expire after 30 minutes', 'Passwords are validated against the password policy', 'All sessions are revoked after a successful reset'];
+          const acceptanceCriteria = [
+            'Users can request a reset link by email',
+            'Reset tokens are single-use, hashed at rest and expire after 30 minutes',
+            'Passwords are validated against the password policy',
+            'All sessions are revoked after a successful reset',
+          ];
           const description = `## Context\nDemo ticket generated in simulation mode.\n\n## Acceptance criteria\n${acceptanceCriteria.map((c) => `- [ ] ${c}`).join('\n')}`;
-          return { simulated: true, output: { summary, issueType: 'Story' as const, priority: 'High' as const, description, acceptanceCriteria, labels: ['auth'] }, summary: `[Simulated] Drafted story "${summary}"`, artifacts: [{ type: 'TICKET', title: summary, content: description }] };
+          return {
+            simulated: true,
+            output: { summary, issueType: 'Story' as const, priority: 'High' as const, description, acceptanceCriteria, labels: ['auth'] },
+            summary: `[Simulated] Drafted story "${summary}"`,
+            artifacts: [{ type: 'TICKET', title: summary, content: description }],
+          };
         },
       }),
     );
@@ -155,9 +196,23 @@ export class PlanningTools implements OnModuleInit {
           });
           const markdown = specToMarkdown(output);
           const artifact = ctx.executionId
-            ? await prisma.artifact.create({ data: { organizationId: ctx.organizationId, projectId: ctx.project?.id, executionId: ctx.executionId, type: 'SPECIFICATION', title: output.title, content: markdown, data: output as object, createdById: ctx.userId } })
+            ? await prisma.artifact.create({
+                data: {
+                  organizationId: ctx.organizationId,
+                  projectId: ctx.project?.id,
+                  executionId: ctx.executionId,
+                  type: 'SPECIFICATION',
+                  title: output.title,
+                  content: markdown,
+                  data: output as object,
+                  createdById: ctx.userId,
+                },
+              })
             : null;
-          return { output: { ...output, markdown, artifactId: artifact?.id ?? null }, summary: `Specification "${output.title}" (${output.components.length} components)` };
+          return {
+            output: { ...output, markdown, artifactId: artifact?.id ?? null },
+            summary: `Specification "${output.title}" (${output.components.length} components)`,
+          };
         },
         async simulate(input, ctx) {
           const spec: TechnicalSpec = {
@@ -166,9 +221,15 @@ export class PlanningTools implements OnModuleInit {
             problem: 'Users who forget their password cannot regain access without support involvement.',
             goals: ['Self-service password reset via email', 'Secure single-use tokens'],
             nonGoals: ['SMS-based recovery'],
-            approach: 'Add `POST /auth/password-reset/request` and `POST /auth/password-reset/confirm` to the existing AuthController, store SHA-256 hashed tokens with 30-minute expiry in a new `PasswordResetToken` table, and revoke refresh tokens on success.',
-            components: [{ name: 'AuthService', responsibility: 'Token issuance and verification', changes: 'Add request/confirm methods' }],
-            apiChanges: [{ method: 'POST', path: '/auth/password-reset/request', description: 'Send reset email' }, { method: 'POST', path: '/auth/password-reset/confirm', description: 'Set new password' }],
+            approach:
+              'Add `POST /auth/password-reset/request` and `POST /auth/password-reset/confirm` to the existing AuthController, store SHA-256 hashed tokens with 30-minute expiry in a new `PasswordResetToken` table, and revoke refresh tokens on success.',
+            components: [
+              { name: 'AuthService', responsibility: 'Token issuance and verification', changes: 'Add request/confirm methods' },
+            ],
+            apiChanges: [
+              { method: 'POST', path: '/auth/password-reset/request', description: 'Send reset email' },
+              { method: 'POST', path: '/auth/password-reset/confirm', description: 'Set new password' },
+            ],
             dataModelChanges: [{ entity: 'PasswordResetToken', change: 'New table (userId, tokenHash, expiresAt, usedAt)' }],
             security: ['Constant-time responses to prevent account enumeration', 'Rate limit reset requests'],
             testing: ['Unit tests for token lifecycle', 'API tests for both endpoints'],
@@ -177,8 +238,24 @@ export class PlanningTools implements OnModuleInit {
             rollout: 'Ship behind a feature flag to staging first.',
           };
           const markdown = specToMarkdown(spec);
-          const artifact = ctx.executionId ? await prisma.artifact.create({ data: { organizationId: ctx.organizationId, projectId: ctx.project?.id, executionId: ctx.executionId, type: 'SPECIFICATION', title: spec.title, content: `> Simulated (demo mode)\n\n${markdown}`, createdById: ctx.userId } }) : null;
-          return { simulated: true, output: { ...spec, markdown, artifactId: artifact?.id ?? null }, summary: '[Simulated] Specification with 1 component, 2 API changes' };
+          const artifact = ctx.executionId
+            ? await prisma.artifact.create({
+                data: {
+                  organizationId: ctx.organizationId,
+                  projectId: ctx.project?.id,
+                  executionId: ctx.executionId,
+                  type: 'SPECIFICATION',
+                  title: spec.title,
+                  content: `> Simulated (demo mode)\n\n${markdown}`,
+                  createdById: ctx.userId,
+                },
+              })
+            : null;
+          return {
+            simulated: true,
+            output: { ...spec, markdown, artifactId: artifact?.id ?? null },
+            summary: '[Simulated] Specification with 1 component, 2 API changes',
+          };
         },
       }),
     );
@@ -224,9 +301,23 @@ export class PlanningTools implements OnModuleInit {
           const plan = { ...output, branchName: sanitizeBranch(output.branchName, input.ticketKey ?? undefined) };
           const markdown = planToMarkdown(plan);
           const artifact = ctx.executionId
-            ? await prisma.artifact.create({ data: { organizationId: ctx.organizationId, projectId: ctx.project?.id, executionId: ctx.executionId, type: 'IMPLEMENTATION_PLAN', title: `Implementation plan · ${plan.branchName}`, content: markdown, data: plan as object, createdById: ctx.userId } })
+            ? await prisma.artifact.create({
+                data: {
+                  organizationId: ctx.organizationId,
+                  projectId: ctx.project?.id,
+                  executionId: ctx.executionId,
+                  type: 'IMPLEMENTATION_PLAN',
+                  title: `Implementation plan · ${plan.branchName}`,
+                  content: markdown,
+                  data: plan as object,
+                  createdById: ctx.userId,
+                },
+              })
             : null;
-          return { output: { ...plan, markdown, artifactId: artifact?.id ?? null }, summary: `Plan: ${plan.affectedFiles.length} files across ${plan.steps.length} steps on ${plan.branchName}` };
+          return {
+            output: { ...plan, markdown, artifactId: artifact?.id ?? null },
+            summary: `Plan: ${plan.affectedFiles.length} files across ${plan.steps.length} steps on ${plan.branchName}`,
+          };
         },
         async simulate(input, ctx) {
           const plan: ImplementationPlan = {
@@ -238,12 +329,35 @@ export class PlanningTools implements OnModuleInit {
               { path: 'src/auth/auth.controller.ts', action: 'modify', reason: 'New endpoints' },
               { path: 'src/auth/password-reset.service.spec.ts', action: 'create', reason: 'Unit tests' },
             ],
-            steps: [{ title: 'Add token model', detail: 'Prisma model + migration', files: ['prisma/schema.prisma'] }, { title: 'Implement service and endpoints', detail: 'Request + confirm flows', files: ['src/auth/password-reset.service.ts'] }],
+            steps: [
+              { title: 'Add token model', detail: 'Prisma model + migration', files: ['prisma/schema.prisma'] },
+              {
+                title: 'Implement service and endpoints',
+                detail: 'Request + confirm flows',
+                files: ['src/auth/password-reset.service.ts'],
+              },
+            ],
             testPlan: ['Token expiry', 'Single use', 'Enumeration-safe responses'],
             risks: ['Email provider limits'],
           };
-          const artifact = ctx.executionId ? await prisma.artifact.create({ data: { organizationId: ctx.organizationId, projectId: ctx.project?.id, executionId: ctx.executionId, type: 'IMPLEMENTATION_PLAN', title: `Implementation plan · ${plan.branchName}`, content: `> Simulated (demo mode)\n\n${planToMarkdown(plan)}`, createdById: ctx.userId } }) : null;
-          return { simulated: true, output: { ...plan, markdown: planToMarkdown(plan), artifactId: artifact?.id ?? null }, summary: `[Simulated] Plan: 3 files on ${plan.branchName}` };
+          const artifact = ctx.executionId
+            ? await prisma.artifact.create({
+                data: {
+                  organizationId: ctx.organizationId,
+                  projectId: ctx.project?.id,
+                  executionId: ctx.executionId,
+                  type: 'IMPLEMENTATION_PLAN',
+                  title: `Implementation plan · ${plan.branchName}`,
+                  content: `> Simulated (demo mode)\n\n${planToMarkdown(plan)}`,
+                  createdById: ctx.userId,
+                },
+              })
+            : null;
+          return {
+            simulated: true,
+            output: { ...plan, markdown: planToMarkdown(plan), artifactId: artifact?.id ?? null },
+            summary: `[Simulated] Plan: 3 files on ${plan.branchName}`,
+          };
         },
       }),
     );
@@ -256,7 +370,11 @@ export class PlanningTools implements OnModuleInit {
         category: 'ai',
         provider: null,
         agent: 'code',
-        inputSchema: z.object({ codeGenerationId: z.string().uuid(), ticketKey: z.string().nullable().optional(), ticketUrl: z.string().nullable().optional() }),
+        inputSchema: z.object({
+          codeGenerationId: z.string().uuid(),
+          ticketKey: z.string().nullable().optional(),
+          ticketUrl: z.string().nullable().optional(),
+        }),
         permission: 'agent:use',
         risk: 'read',
         sideEffects: false,
@@ -282,11 +400,19 @@ export class PlanningTools implements OnModuleInit {
           });
           const title = input.ticketKey && !output.title.includes(input.ticketKey) ? `${output.title} (${input.ticketKey})` : output.title;
           const body = `${output.body}\n\n---\n_Generated and validated by Forgeline. Sandbox validation: ${(cg.validation as { summary?: string } | null)?.summary ?? 'not run'}._`;
-          return { output: { title: title.slice(0, 250), body }, summary: `PR title: ${title}`, artifacts: [{ type: 'PR_SUMMARY', title, content: body }] };
+          return {
+            output: { title: title.slice(0, 250), body },
+            summary: `PR title: ${title}`,
+            artifacts: [{ type: 'PR_SUMMARY', title, content: body }],
+          };
         },
         async simulate(input) {
           const title = `feat(auth): password reset${input.ticketKey ? ` (${input.ticketKey})` : ''}`;
-          return { simulated: true, output: { title, body: '## Summary\nDemo pull request description (simulated).' }, summary: `[Simulated] PR title: ${title}` };
+          return {
+            simulated: true,
+            output: { title, body: '## Summary\nDemo pull request description (simulated).' },
+            summary: `[Simulated] PR title: ${title}`,
+          };
         },
       }),
     );

@@ -45,7 +45,10 @@ function Part({ part, conversationId, compact }: { part: MessagePart; conversati
       );
     case 'approval':
       return (
-        <Link to={`/approvals/${part.approvalId}`} className="flex items-center gap-2 rounded-md border border-accent/30 bg-accent-soft px-3 py-2 text-[12.5px] hover:border-accent/60">
+        <Link
+          to={`/approvals/${part.approvalId}`}
+          className="flex items-center gap-2 rounded-md border border-accent/30 bg-accent-soft px-3 py-2 text-[12.5px] hover:border-accent/60"
+        >
           <Hand className="size-4 text-accent" />
           <span className="flex-1 truncate font-medium">{part.title}</span>
           <span className="text-accent">Review →</span>
@@ -53,7 +56,10 @@ function Part({ part, conversationId, compact }: { part: MessagePart; conversati
       );
     case 'entity':
       return (
-        <Link to={entityLink(part.kind, part.id)} className="inline-flex items-center gap-1.5 rounded-md border border-line bg-raised px-2.5 py-1.5 text-[12.5px] hover:border-line-strong">
+        <Link
+          to={entityLink(part.kind, part.id)}
+          className="inline-flex items-center gap-1.5 rounded-md border border-line bg-raised px-2.5 py-1.5 text-[12.5px] hover:border-line-strong"
+        >
           {part.title}
           <ArrowUpRight className="size-3.5 text-fg-subtle" />
         </Link>
@@ -73,7 +79,14 @@ function Part({ part, conversationId, compact }: { part: MessagePart; conversati
 }
 
 function entityLink(kind: string, id: string): string {
-  const map: Record<string, string> = { deployment: '/deployments', code_review: '/code-reviews', qa_run: '/qa', code_generation: '/executions', document: '/documents', task: '/tasks' };
+  const map: Record<string, string> = {
+    deployment: '/deployments',
+    code_review: '/code-reviews',
+    qa_run: '/qa',
+    code_generation: '/executions',
+    document: '/documents',
+    task: '/tasks',
+  };
   return kind === 'code_review' || kind === 'document' ? `${map[kind]}/${id}` : (map[kind] ?? '/dashboard');
 }
 
@@ -84,9 +97,18 @@ export function ToolCalls({ tools }: { tools: ToolCallPart[] }) {
         <span
           key={t.callId}
           title={t.summary}
-          className={cn('inline-flex h-6 items-center gap-1.5 rounded-sm border px-2 text-[11.5px]', t.status === 'failed' ? 'border-bad/30 bg-bad-soft text-bad' : 'border-line bg-sunken text-fg-muted')}
+          className={cn(
+            'inline-flex h-6 items-center gap-1.5 rounded-sm border px-2 text-[11.5px]',
+            t.status === 'failed' ? 'border-bad/30 bg-bad-soft text-bad' : 'border-line bg-sunken text-fg-muted',
+          )}
         >
-          {t.status === 'running' ? <Loader2 className="size-3 animate-spin text-arc" /> : t.status === 'failed' ? <X className="size-3" /> : <Wrench className="size-3 text-fg-subtle" />}
+          {t.status === 'running' ? (
+            <Loader2 className="size-3 animate-spin text-arc" />
+          ) : t.status === 'failed' ? (
+            <X className="size-3" />
+          ) : (
+            <Wrench className="size-3 text-fg-subtle" />
+          )}
           {t.title}
         </span>
       ))}
@@ -96,12 +118,17 @@ export function ToolCalls({ tools }: { tools: ToolCallPart[] }) {
 
 function ProposalCard({ part, conversationId, compact }: { part: FlowProposalPart; conversationId: string; compact?: boolean }) {
   const navigate = useNavigate();
-  const start = useAction(() => api.post<{ execution: { id: string } }>(`/conversations/${conversationId}/proposals/${part.proposalId}/start`, {}), {
-    success: part.mode === 'DEMO' ? 'Flow started (simulated)' : 'Flow started',
-    invalidate: [qk.conversation(conversationId), ['executions', 'list']],
-    onSuccess: (r) => !compact && navigate(`/executions/${r.execution.id}`),
+  const start = useAction(
+    () => api.post<{ execution: { id: string } }>(`/conversations/${conversationId}/proposals/${part.proposalId}/start`, {}),
+    {
+      success: part.mode === 'DEMO' ? 'Flow started (simulated)' : 'Flow started',
+      invalidate: [qk.conversation(conversationId), ['executions', 'list']],
+      onSuccess: (r) => !compact && navigate(`/executions/${r.execution.id}`),
+    },
+  );
+  const dismiss = useAction(() => api.post(`/conversations/${conversationId}/proposals/${part.proposalId}/dismiss`, {}), {
+    invalidate: [qk.conversation(conversationId)],
   });
-  const dismiss = useAction(() => api.post(`/conversations/${conversationId}/proposals/${part.proposalId}/dismiss`, {}), { invalidate: [qk.conversation(conversationId)] });
   const steps = part.steps.filter((s) => s.type !== 'repair');
   const gates = new Set(part.approvalsRequired);
   const blocked = part.missingIntegrations.length > 0;
@@ -160,7 +187,14 @@ function ProposalCard({ part, conversationId, compact }: { part: FlowProposalPar
       <div className="flex items-center gap-2 border-t border-line bg-sunken/50 px-4 py-2.5">
         {part.state === 'proposed' ? (
           <>
-            <Button variant="primary" size="sm" icon={<Play className="size-3.5" />} loading={start.isPending} disabled={blocked} onClick={() => start.mutate(undefined)}>
+            <Button
+              variant="primary"
+              size="sm"
+              icon={<Play className="size-3.5" />}
+              loading={start.isPending}
+              disabled={blocked}
+              onClick={() => start.mutate(undefined)}
+            >
               Start flow
             </Button>
             <Button variant="ghost" size="sm" loading={dismiss.isPending} onClick={() => dismiss.mutate(undefined)}>
@@ -183,11 +217,16 @@ function ProposalCard({ part, conversationId, compact }: { part: FlowProposalPar
 function RunCard({ part }: { part: RunCardPart }) {
   const live = useExecution(part.executionId);
   const status = live.data?.status ?? part.status;
-  const steps = live.data?.steps.map((s) => ({ key: s.stepKey, name: s.name, status: s.status })) ?? part.steps.map((s) => ({ key: s.key, name: s.name, status: s.status }));
+  const steps =
+    live.data?.steps.map((s) => ({ key: s.stepKey, name: s.name, status: s.status })) ??
+    part.steps.map((s) => ({ key: s.key, name: s.name, status: s.status }));
   const current = live.data?.steps.find((s) => ['RUNNING', 'WAITING_APPROVAL', 'RETRYING', 'REPAIRING'].includes(s.status));
   const done = TERMINAL_EXECUTION_STATUSES.includes(status);
   return (
-    <Link to={`/executions/${part.executionId}`} className="block rounded-lg border border-line bg-raised px-4 py-3 shadow-card transition-colors hover:border-line-strong">
+    <Link
+      to={`/executions/${part.executionId}`}
+      className="block rounded-lg border border-line bg-raised px-4 py-3 shadow-card transition-colors hover:border-line-strong"
+    >
       <div className="flex items-center gap-2">
         <StatusDot status={status} />
         <span className="flex-1 truncate text-[13px] font-medium">{part.title}</span>
@@ -196,7 +235,13 @@ function RunCard({ part }: { part: RunCardPart }) {
       </div>
       <ForgeProgress steps={steps} className="mt-3" />
       <div className="mt-2 flex items-center justify-between text-[11.5px] text-fg-subtle">
-        <span className="truncate">{done ? `${steps.filter((s) => s.status === 'COMPLETED').length} steps completed` : current ? `${current.name}${current.status === 'WAITING_APPROVAL' ? ' · waiting for approval' : '…'}` : 'Starting…'}</span>
+        <span className="truncate">
+          {done
+            ? `${steps.filter((s) => s.status === 'COMPLETED').length} steps completed`
+            : current
+              ? `${current.name}${current.status === 'WAITING_APPROVAL' ? ' · waiting for approval' : '…'}`
+              : 'Starting…'}
+        </span>
         <span className="inline-flex items-center gap-1 text-fg-muted">
           Open <ArrowUpRight className="size-3" />
         </span>
@@ -211,7 +256,13 @@ function Sources({ part }: { part: SourcesPart }) {
     <div className="flex flex-wrap items-center gap-1.5 text-[11.5px]">
       <BookOpen className="size-3.5 text-fg-subtle" />
       {part.sources.map((s) => (
-        <a key={s.documentId} href={s.url ?? undefined} target="_blank" rel="noreferrer" className="inline-flex h-6 items-center gap-1 rounded-sm border border-line bg-sunken px-2 text-fg-muted hover:text-fg">
+        <a
+          key={s.documentId}
+          href={s.url ?? undefined}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex h-6 items-center gap-1 rounded-sm border border-line bg-sunken px-2 text-fg-muted hover:text-fg"
+        >
           {s.title}
           <span className="font-mono text-[10px] text-fg-subtle">{Math.round(s.score * 100)}%</span>
         </a>

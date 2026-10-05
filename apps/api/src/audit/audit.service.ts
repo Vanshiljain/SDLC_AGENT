@@ -98,7 +98,9 @@ export class AuditService {
       this.prisma.auditLog.count({ where }),
     ]);
     const actorIds = [...new Set(items.map((i) => i.actorId).filter((x): x is string => Boolean(x)))];
-    const actors = actorIds.length ? await this.prisma.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, name: true, email: true } }) : [];
+    const actors = actorIds.length
+      ? await this.prisma.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, name: true, email: true } })
+      : [];
     const byId = new Map(actors.map((a) => [a.id, a]));
     return paginate(
       items.map((i) => ({ ...i, actor: i.actorId ? (byId.get(i.actorId) ?? null) : null })),

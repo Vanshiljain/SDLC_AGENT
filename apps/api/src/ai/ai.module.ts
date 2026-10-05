@@ -20,7 +20,13 @@ import { AgentRunsService } from './agent-runs.service';
           baseUrl: c.ai.baseUrl,
           organization: c.ai.organization,
           model: c.ai.model,
-          roleModels: { orchestrator: c.ai.model, planner: c.ai.roleModels.planner, coder: c.ai.roleModels.coder, reviewer: c.ai.roleModels.reviewer, fast: c.ai.roleModels.fast },
+          roleModels: {
+            orchestrator: c.ai.model,
+            planner: c.ai.roleModels.planner,
+            coder: c.ai.roleModels.coder,
+            reviewer: c.ai.roleModels.reviewer,
+            fast: c.ai.roleModels.fast,
+          },
           embeddingModel: c.ai.embeddingModel,
           embeddingDimensions: c.ai.embeddingDimensions,
           temperature: c.ai.temperature,
@@ -31,7 +37,8 @@ import { AgentRunsService } from './agent-runs.service';
     {
       provide: VECTOR_STORE,
       inject: [APP_CONFIG],
-      useFactory: (c: AppConfig): VectorStore => new QdrantVectorStore({ url: c.qdrant.url, apiKey: c.qdrant.apiKey, collection: c.qdrant.collection }),
+      useFactory: (c: AppConfig): VectorStore =>
+        new QdrantVectorStore({ url: c.qdrant.url, apiKey: c.qdrant.apiKey, collection: c.qdrant.collection }),
     },
     AgentRunsService,
   ],

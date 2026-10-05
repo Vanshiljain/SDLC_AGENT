@@ -60,8 +60,13 @@ function CommandDialog({ command, prefill, onClose }: { command: CommandDef; pre
   const run = useAction(
     async () => {
       const { projectId, ...inputs } = values;
-      for (const i of command.inputs) if (i.type === 'pull_request' && inputs[i.name] !== undefined) inputs[i.name] = Number(inputs[i.name]);
-      return api.post<ExecutionDetail>(`/commands/${command.id}/execute`, { projectId: projectId || undefined, inputs, source: 'COMMAND_PALETTE' });
+      for (const i of command.inputs)
+        if (i.type === 'pull_request' && inputs[i.name] !== undefined) inputs[i.name] = Number(inputs[i.name]);
+      return api.post<ExecutionDetail>(`/commands/${command.id}/execute`, {
+        projectId: projectId || undefined,
+        inputs,
+        source: 'COMMAND_PALETTE',
+      });
     },
     {
       success: (e) => (e.mode === 'DEMO' ? `Started (simulated): ${e.title}` : `Started: ${e.title}`),
@@ -88,7 +93,13 @@ function CommandDialog({ command, prefill, onClose }: { command: CommandDef; pre
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" icon={<Play className="size-3.5" />} loading={run.isPending} disabled={missing.length > 0} onClick={() => run.mutate(undefined)}>
+          <Button
+            variant="primary"
+            icon={<Play className="size-3.5" />}
+            loading={run.isPending}
+            disabled={missing.length > 0}
+            onClick={() => run.mutate(undefined)}
+          >
             Run
           </Button>
         </>
@@ -119,7 +130,12 @@ function CommandDialog({ command, prefill, onClose }: { command: CommandDef; pre
               );
             case 'environment':
               return (
-                <Field key={input.name} label={input.label} required={input.required} hint={!project ? 'Select a project first' : undefined}>
+                <Field
+                  key={input.name}
+                  label={input.label}
+                  required={input.required}
+                  hint={!project ? 'Select a project first' : undefined}
+                >
                   <Select value={String(v ?? '')} onChange={(e) => set(input.name, e.target.value)} disabled={!project}>
                     <option value="">Select an environment…</option>
                     {envOptions.map((env) => (
@@ -133,7 +149,12 @@ function CommandDialog({ command, prefill, onClose }: { command: CommandDef; pre
             case 'text':
               return (
                 <Field key={input.name} label={input.label} required={input.required}>
-                  <Textarea value={String(v ?? '')} placeholder={input.placeholder} onChange={(e) => set(input.name, e.target.value)} rows={4} />
+                  <Textarea
+                    value={String(v ?? '')}
+                    placeholder={input.placeholder}
+                    onChange={(e) => set(input.name, e.target.value)}
+                    rows={4}
+                  />
                 </Field>
               );
             case 'boolean':
@@ -147,7 +168,13 @@ function CommandDialog({ command, prefill, onClose }: { command: CommandDef; pre
             case 'number':
               return (
                 <Field key={input.name} label={input.label} required={input.required}>
-                  <Input type="number" min={1} value={v === undefined ? '' : String(v)} placeholder={input.placeholder} onChange={(e) => set(input.name, e.target.value === '' ? undefined : e.target.value)} />
+                  <Input
+                    type="number"
+                    min={1}
+                    value={v === undefined ? '' : String(v)}
+                    placeholder={input.placeholder}
+                    onChange={(e) => set(input.name, e.target.value === '' ? undefined : e.target.value)}
+                  />
                 </Field>
               );
             default:

@@ -32,7 +32,9 @@ describe('validateWorkflowDefinition', () => {
   });
 
   it('rejects unknown variables and bad expressions', () => {
-    expect(validateWorkflowDefinition({ steps: [tool('a', { when: 'secrets.token == 1' })] }).issues[0]!.message).toMatch(/Unknown variable 'secrets'/);
+    expect(validateWorkflowDefinition({ steps: [tool('a', { when: 'secrets.token == 1' })] }).issues[0]!.message).toMatch(
+      /Unknown variable 'secrets'/,
+    );
     expect(validateWorkflowDefinition({ steps: [tool('a', { when: 'inputs.x ==' })] }).issues[0]!.message).toMatch(/Invalid expression/);
   });
 
@@ -50,7 +52,11 @@ describe('validateWorkflowDefinition', () => {
     });
     expect(ownerRef.issues).toEqual([]);
     const downstreamRef = validateWorkflowDefinition({
-      steps: [tool('ci', { repair: { step: 'fix' } }), tool('fix'), tool('deploy', { dependsOn: ['ci'], input: { sha: '{{ steps.fix.output.sha }}' } })],
+      steps: [
+        tool('ci', { repair: { step: 'fix' } }),
+        tool('fix'),
+        tool('deploy', { dependsOn: ['ci'], input: { sha: '{{ steps.fix.output.sha }}' } }),
+      ],
     });
     expect(downstreamRef.issues).toEqual([]);
     const bad = validateWorkflowDefinition({

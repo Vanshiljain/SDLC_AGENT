@@ -68,7 +68,8 @@ export class SandboxService {
   async applyChanges(ws: Workspace, files: { path: string; content: string | null }[]): Promise<void> {
     for (const f of files) {
       const target = resolve(ws.root, f.path);
-      if (!target.startsWith(resolve(ws.root) + sep)) throw new ToolError('validation', `Refusing to write outside the workspace: ${f.path}`, { retryable: false });
+      if (!target.startsWith(resolve(ws.root) + sep))
+        throw new ToolError('validation', `Refusing to write outside the workspace: ${f.path}`, { retryable: false });
       if (f.content === null) {
         await rm(target, { force: true });
       } else {
@@ -105,34 +106,64 @@ export class SandboxService {
     return out;
   }
 
-  async run(ws: Workspace, command: string, options: { image?: string; timeoutMs?: number; signal?: AbortSignal; env?: Record<string, string> } = {}): Promise<CommandResult> {
-    if (!this.enabled) throw new ToolError('not_configured', 'Sandbox execution is disabled (SANDBOX_DRIVER=disabled)', { retryable: false });
+  async run(
+    ws: Workspace,
+    command: string,
+    options: { image?: string; timeoutMs?: number; signal?: AbortSignal; env?: Record<string, string> } = {},
+  ): Promise<CommandResult> {
+    if (!this.enabled)
+      throw new ToolError('not_configured', 'Sandbox execution is disabled (SANDBOX_DRIVER=disabled)', { retryable: false });
     const timeoutMs = options.timeoutMs ?? this.config.sandbox.timeoutMs;
     const started = Date.now();
-    const env = { CI: 'true', FORCE_COLOR: '0', HOME: '/tmp', npm_config_cache: '/tmp/.npm', NODE_OPTIONS: '--max-old-space-size=3072', ...options.env };
+    const env = {
+      CI: 'true',
+      FORCE_COLOR: '0',
+      HOME: '/tmp',
+      npm_config_cache: '/tmp/.npm',
+      NODE_OPTIONS: '--max-old-space-size=3072',
+      ...options.env,
+    };
     let child;
     if (this.config.sandbox.driver === 'docker') {
       const args = [
-        'run', '--rm', '--init',
-        '--name', `forgeline-${ws.id}-${Date.now().toString(36)}`,
-        '--network', this.config.sandbox.network,
-        '--memory', `${this.config.sandbox.memoryMb}m`,
-        '--cpus', String(this.config.sandbox.cpus),
-        '--pids-limit', '512',
+        'run',
+        '--rm',
+        '--init',
+        '--name',
+        `forgeline-${ws.id}-${Date.now().toString(36)}`,
+        '--network',
+        this.config.sandbox.network,
+        '--memory',
+        `${this.config.sandbox.memoryMb}m`,
+        '--cpus',
+        String(this.config.sandbox.cpus),
+        '--pids-limit',
+        '512',
         '--read-only',
-        '--cap-drop', 'ALL',
-        '--security-opt', 'no-new-privileges',
-        '--tmpfs', '/tmp:rw,size=1g',
-        '-v', `${ws.root}:/workspace`,
-        '-w', '/workspace',
+        '--cap-drop',
+        'ALL',
+        '--security-opt',
+        'no-new-privileges',
+        '--tmpfs',
+        '/tmp:rw,size=1g',
+        '-v',
+        `${ws.root}:/workspace`,
+        '-w',
+        '/workspace',
         ...Object.entries(env).flatMap(([k, v]) => ['-e', `${k}=${v}`]),
         options.image ?? this.config.sandbox.defaultImage,
-        'sh', '-lc', command,
+        'sh',
+        '-lc',
+        command,
       ];
       child = spawn('docker', args, { stdio: ['ignore', 'pipe', 'pipe'] });
     } else {
       // Development driver: minimal environment, no inherited secrets.
-      child = spawn('sh', ['-lc', command], { cwd: ws.root, env: { PATH: process.env.PATH ?? '/usr/bin:/bin', ...env, HOME: ws.root, npm_config_cache: join(ws.root, '.npm-cache') }, stdio: ['ignore', 'pipe', 'pipe'] });
+      child = spawn('sh', ['-lc', command], {
+        cwd: ws.root,
+        env: { PATH: process.env.PATH ?? '/usr/bin:/bin', ...env, HOME: ws.root, npm_config_cache: join(ws.root, '.npm-cache') },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
     }
     let output = '';
     const append = (chunk: Buffer) => {

@@ -24,9 +24,16 @@ export function verifyJiraSignature(secret: string, rawBody: Buffer | string, he
 }
 
 /** Trello: X-Trello-Webhook = base64(HMAC-SHA1(appSecret, body + callbackURL)). */
-export function verifyTrelloSignature(appSecret: string, rawBody: Buffer | string, callbackUrl: string, header: string | undefined): boolean {
+export function verifyTrelloSignature(
+  appSecret: string,
+  rawBody: Buffer | string,
+  callbackUrl: string,
+  header: string | undefined,
+): boolean {
   if (!header) return false;
-  const expected = createHmac('sha1', appSecret).update(Buffer.concat([Buffer.from(rawBody), Buffer.from(callbackUrl)])).digest('base64');
+  const expected = createHmac('sha1', appSecret)
+    .update(Buffer.concat([Buffer.from(rawBody), Buffer.from(callbackUrl)]))
+    .digest('base64');
   return safeEqual(expected, header);
 }
 
@@ -45,6 +52,8 @@ export function verifyTimestampedSignature(
   if (!timestamp || !header) return false;
   const ts = Number(timestamp);
   if (!Number.isFinite(ts) || Math.abs(now / 1000 - ts) > toleranceSeconds) return false;
-  const expected = `v1=${createHmac('sha256', secret).update(`${timestamp}.${Buffer.from(rawBody).toString('utf8')}`).digest('hex')}`;
+  const expected = `v1=${createHmac('sha256', secret)
+    .update(`${timestamp}.${Buffer.from(rawBody).toString('utf8')}`)
+    .digest('hex')}`;
   return safeEqual(expected, header);
 }

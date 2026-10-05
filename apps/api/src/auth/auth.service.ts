@@ -48,12 +48,22 @@ export class AuthService {
     const passwordHash = await this.hashPassword(dto.password);
     const user = await this.prisma.$transaction(async (tx) => {
       const u = await tx.user.create({ data: { email: dto.email, name: dto.name, passwordHash } });
-      await this.organizations.createWithOwner(tx, { name: dto.organizationName ?? `${dto.name.split(' ')[0]}'s workspace`, ownerId: u.id });
+      await this.organizations.createWithOwner(tx, {
+        name: dto.organizationName ?? `${dto.name.split(' ')[0]}'s workspace`,
+        ownerId: u.id,
+      });
       return u;
     });
     const session = await this.issueSession(user.id, meta);
     const orgId = session.memberships[0]?.organizationId;
-    if (orgId) await this.audit.record({ organizationId: orgId, action: 'auth.register', resourceType: 'user', resourceId: user.id, actorId: user.id });
+    if (orgId)
+      await this.audit.record({
+        organizationId: orgId,
+        action: 'auth.register',
+        resourceType: 'user',
+        resourceId: user.id,
+        actorId: user.id,
+      });
     return session;
   }
 
@@ -65,7 +75,15 @@ export class AuthService {
     if (!user || !ok || !user.passwordHash) {
       if (user) {
         const m = await this.prisma.membership.findFirst({ where: { userId: user.id } });
-        if (m) await this.audit.record({ organizationId: m.organizationId, action: 'auth.login', resourceType: 'user', resourceId: user.id, actorId: user.id, status: 'FAILURE' });
+        if (m)
+          await this.audit.record({
+            organizationId: m.organizationId,
+            action: 'auth.login',
+            resourceType: 'user',
+            resourceId: user.id,
+            actorId: user.id,
+            status: 'FAILURE',
+          });
       }
       throw AppException.unauthorized('Invalid email or password', 'INVALID_CREDENTIALS');
     }
@@ -76,7 +94,13 @@ export class AuthService {
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     const session = await this.issueSession(user.id, meta);
     for (const m of session.memberships.slice(0, 1)) {
-      await this.audit.record({ organizationId: m.organizationId, action: 'auth.login', resourceType: 'user', resourceId: user.id, actorId: user.id });
+      await this.audit.record({
+        organizationId: m.organizationId,
+        action: 'auth.login',
+        resourceType: 'user',
+        resourceId: user.id,
+        actorId: user.id,
+      });
     }
     return session;
   }
@@ -89,7 +113,11 @@ export class AuthService {
     const passwordHash = await this.hashPassword(dto.password);
     const userId = await this.prisma.$transaction(async (tx) => {
       let user = await tx.user.findUnique({ where: { email: invite.email } });
-      if (user?.passwordHash) throw AppException.conflict('An account with this email already exists — sign in and accept from your workspace list', 'EMAIL_TAKEN');
+      if (user?.passwordHash)
+        throw AppException.conflict(
+          'An account with this email already exists — sign in and accept from your workspace list',
+          'EMAIL_TAKEN',
+        );
       user = user
         ? await tx.user.update({ where: { id: user.id }, data: { name: dto.name, passwordHash } })
         : await tx.user.create({ data: { email: invite.email, name: dto.name, passwordHash } });
@@ -102,7 +130,14 @@ export class AuthService {
       if (claimed.count !== 1) throw AppException.conflict('Invitation already used', 'INVITE_USED');
       return user.id;
     });
-    await this.audit.record({ organizationId: invite.organizationId, action: 'member.joined', resourceType: 'user', resourceId: userId, actorId: userId, output: { role: invite.role } });
+    await this.audit.record({
+      organizationId: invite.organizationId,
+      action: 'member.joined',
+      resourceType: 'user',
+      resourceId: userId,
+      actorId: userId,
+      output: { role: invite.role },
+    });
     return this.issueSession(userId, meta);
   }
 
@@ -124,11 +159,22 @@ export class AuthService {
   async issueSession(userId: string, meta: { ip?: string; userAgent?: string }, familyId: string = randomUUID()): Promise<IssuedSession> {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     const payload: AccessTokenPayload = { sub: user.id, email: user.email, name: user.name, typ: 'access' };
-    const accessToken = await this.jwt.signAsync(payload, { secret: this.config.jwt.secret, expiresIn: this.config.jwt.accessTtlSeconds, algorithm: 'HS256' });
+    const accessToken = await this.jwt.signAsync(payload, {
+      secret: this.config.jwt.secret,
+      expiresIn: this.config.jwt.accessTtlSeconds,
+      algorithm: 'HS256',
+    });
     const refreshToken = EncryptionService.randomToken(48);
     const refreshExpiresAt = new Date(Date.now() + this.config.jwt.refreshTtlDays * 86_400_000);
     await this.prisma.refreshToken.create({
-      data: { userId, tokenHash: this.hashRefreshToken(refreshToken), familyId, expiresAt: refreshExpiresAt, ip: meta.ip, userAgent: meta.userAgent?.slice(0, 300) },
+      data: {
+        userId,
+        tokenHash: this.hashRefreshToken(refreshToken),
+        familyId,
+        expiresAt: refreshExpiresAt,
+        ip: meta.ip,
+        userAgent: meta.userAgent?.slice(0, 300),
+      },
     });
     return {
       accessToken,
@@ -149,10 +195,21 @@ export class AuthService {
     const existing = await this.prisma.refreshToken.findUnique({ where: { tokenHash } });
     if (!existing) throw AppException.unauthorized('Invalid refresh token', 'REFRESH_INVALID');
     if (existing.revokedAt) {
-      await this.prisma.refreshToken.updateMany({ where: { familyId: existing.familyId, revokedAt: null }, data: { revokedAt: new Date() } });
+      await this.prisma.refreshToken.updateMany({
+        where: { familyId: existing.familyId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
       this.logger.warn({ userId: existing.userId, familyId: existing.familyId }, 'Refresh token reuse detected; family revoked');
       const m = await this.prisma.membership.findFirst({ where: { userId: existing.userId } });
-      if (m) await this.audit.record({ organizationId: m.organizationId, action: 'auth.refresh_reuse_detected', resourceType: 'user', resourceId: existing.userId, actorId: existing.userId, status: 'DENIED' });
+      if (m)
+        await this.audit.record({
+          organizationId: m.organizationId,
+          action: 'auth.refresh_reuse_detected',
+          resourceType: 'user',
+          resourceId: existing.userId,
+          actorId: existing.userId,
+          status: 'DENIED',
+        });
       throw AppException.unauthorized('Session revoked', 'REFRESH_REUSED');
     }
     if (existing.expiresAt < new Date()) throw AppException.unauthorized('Session expired', 'REFRESH_EXPIRED');
@@ -160,7 +217,10 @@ export class AuthService {
     if (!user || !user.isActive || user.deletedAt) throw AppException.unauthorized('Account disabled', 'ACCOUNT_DISABLED');
 
     // Claim atomically so two concurrent refreshes cannot both rotate.
-    const claimed = await this.prisma.refreshToken.updateMany({ where: { id: existing.id, revokedAt: null }, data: { revokedAt: new Date() } });
+    const claimed = await this.prisma.refreshToken.updateMany({
+      where: { id: existing.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
     if (claimed.count !== 1) throw AppException.unauthorized('Session revoked', 'REFRESH_REUSED');
     const session = await this.issueSession(existing.userId, meta, existing.familyId);
     const next = await this.prisma.refreshToken.findUnique({ where: { tokenHash: this.hashRefreshToken(session.refreshToken) } });
@@ -171,12 +231,17 @@ export class AuthService {
   async logout(token: string | undefined): Promise<void> {
     if (!token) return;
     const existing = await this.prisma.refreshToken.findUnique({ where: { tokenHash: this.hashRefreshToken(token) } });
-    if (existing) await this.prisma.refreshToken.updateMany({ where: { familyId: existing.familyId, revokedAt: null }, data: { revokedAt: new Date() } });
+    if (existing)
+      await this.prisma.refreshToken.updateMany({
+        where: { familyId: existing.familyId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
   }
 
   async changePassword(userId: string, current: string, next: string): Promise<void> {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
-    if (!user.passwordHash || !(await argon2.verify(user.passwordHash, current))) throw AppException.badRequest('Current password is incorrect', 'INVALID_CREDENTIALS');
+    if (!user.passwordHash || !(await argon2.verify(user.passwordHash, current)))
+      throw AppException.badRequest('Current password is incorrect', 'INVALID_CREDENTIALS');
     await this.prisma.$transaction([
       this.prisma.user.update({ where: { id: userId }, data: { passwordHash: await this.hashPassword(next) } }),
       this.prisma.refreshToken.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } }),

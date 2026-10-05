@@ -11,7 +11,10 @@ describe('Tenant isolation & RBAC', () => {
     app = await createTestApp();
     ownerA = await register(app, 'Owner A');
     ownerB = await register(app, 'Owner B');
-    const p = await authed(app, ownerA).post('/api/projects').send({ name: 'Billing', key: 'BILL', createDefaultEnvironments: true }).expect(201);
+    const p = await authed(app, ownerA)
+      .post('/api/projects')
+      .send({ name: 'Billing', key: 'BILL', createDefaultEnvironments: true })
+      .expect(201);
     projectA = p.body.id;
   });
   afterAll(async () => {
@@ -37,7 +40,10 @@ describe('Tenant isolation & RBAC', () => {
 
   it('members cannot manage integrations or invite people', async () => {
     const member = await invite(app, ownerA, 'MEMBER');
-    await authed(app, member).post('/api/integrations/github/connect').send({ credentials: { token: 'ghp_x' } }).expect(403);
+    await authed(app, member)
+      .post('/api/integrations/github/connect')
+      .send({ credentials: { token: 'ghp_x' } })
+      .expect(403);
     await authed(app, member).post('/api/organizations/current/invitations').send({ email: 'x@forgeline.test', role: 'ADMIN' }).expect(403);
   });
 

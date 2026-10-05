@@ -37,7 +37,10 @@ test('password reset: request → proposal → live run → approvals → produc
 
   // 2. Start the proposed flow and open the live run.
   await panel.getByRole('button', { name: 'Start flow' }).click();
-  await panel.getByRole('link', { name: /Open run|Open/ }).last().click();
+  await panel
+    .getByRole('link', { name: /Open run|Open/ })
+    .last()
+    .click();
   await expect(engineer).toHaveURL(/\/executions\//);
   await expect(engineer.getByRole('heading', { level: 1 })).toContainText(/password reset/i);
 
@@ -82,7 +85,10 @@ test('password reset: request → proposal → live run → approvals → produc
   await expect(lead.getByText('approval.approved').first()).toBeVisible();
 
   // 6. Real side effects in the external systems.
-  const state = (await (await fetch(`${ws.mockUrl}/__state`)).json()) as { github: { pulls: { merged: boolean }[] }; devops: { deployments: { environment: string }[] } };
+  const state = (await (await fetch(`${ws.mockUrl}/__state`)).json()) as {
+    github: { pulls: { merged: boolean }[] };
+    devops: { deployments: { environment: string }[] };
+  };
   expect(state.github.pulls.some((p) => p.merged)).toBe(true);
   expect(state.devops.deployments.map((d) => d.environment).sort()).toEqual(['production', 'staging']);
 });

@@ -27,17 +27,41 @@ export class QaTools implements OnModuleInit {
     private readonly events: EventBus,
   ) {}
 
-  async run(input: { ref?: string | null; requirement?: string | null; codeGenerationId?: string | null; acceptanceCriteria?: string[] | null }, ctx: ToolExecutionContext) {
+  async run(
+    input: { ref?: string | null; requirement?: string | null; codeGenerationId?: string | null; acceptanceCriteria?: string[] | null },
+    ctx: ToolExecutionContext,
+  ) {
     const repo = ctx.project?.repository;
-    if (!repo || !ctx.project) throw new ToolError('not_configured', 'QA requires a repository linked to the project', { retryable: false });
+    if (!repo || !ctx.project)
+      throw new ToolError('not_configured', 'QA requires a repository linked to the project', { retryable: false });
     const ref = input.ref || repo.defaultBranch;
-    const cg = input.codeGenerationId ? await this.prisma.codeGeneration.findFirst({ where: { id: input.codeGenerationId, organizationId: ctx.organizationId } }) : null;
+    const cg = input.codeGenerationId
+      ? await this.prisma.codeGeneration.findFirst({ where: { id: input.codeGenerationId, organizationId: ctx.organizationId } })
+      : null;
     const changed = (cg?.files as unknown as StoredFile[] | undefined) ?? [];
 
     const run = await this.prisma.qATestRun.create({
-      data: { organizationId: ctx.organizationId, projectId: ctx.project.id, repositoryId: repo.id, executionId: ctx.executionId ?? null, type: 'REGRESSION', status: 'RUNNING', title: `QA · ${ref}`, ref, commitSha: cg?.commitSha ?? null, startedAt: new Date(), command: repo.settings.testCommand ?? null },
+      data: {
+        organizationId: ctx.organizationId,
+        projectId: ctx.project.id,
+        repositoryId: repo.id,
+        executionId: ctx.executionId ?? null,
+        type: 'REGRESSION',
+        status: 'RUNNING',
+        title: `QA · ${ref}`,
+        ref,
+        commitSha: cg?.commitSha ?? null,
+        startedAt: new Date(),
+        command: repo.settings.testCommand ?? null,
+      },
     });
-    await this.events.publish({ type: 'qa.started', organizationId: ctx.organizationId, projectId: ctx.project.id, executionId: ctx.executionId, data: { qaRunId: run.id, ref } });
+    await this.events.publish({
+      type: 'qa.started',
+      organizationId: ctx.organizationId,
+      projectId: ctx.project.id,
+      executionId: ctx.executionId,
+      data: { qaRunId: run.id, ref },
+    });
 
     let plan: QATestPlan | null = null;
     if (input.requirement || changed.length) {
@@ -47,9 +71,24 @@ export class QaTools implements OnModuleInit {
         task: 'Derive test cases',
         prompt: 'qaPlan',
         variables: {
-          requirement: forPrompt(`${input.requirement ?? cg?.requirement ?? ''}\n\nAcceptance criteria:\n${(input.acceptanceCriteria ?? []).map((c) => `- ${c}`).join('\n')}`, 8000),
-          changes: forPrompt(changed.filter((f) => f.content).map((f) => `=== ${f.path} ===\n${(f.content ?? '').slice(0, 6000)}`).join('\n\n'), 60_000),
-          conventions: forPrompt({ testCommand: repo.settings.testCommand, frameworkHints: changed.filter((f) => /\.(spec|test)\./.test(f.path)).map((f) => f.path) }, 2000),
+          requirement: forPrompt(
+            `${input.requirement ?? cg?.requirement ?? ''}\n\nAcceptance criteria:\n${(input.acceptanceCriteria ?? []).map((c) => `- ${c}`).join('\n')}`,
+            8000,
+          ),
+          changes: forPrompt(
+            changed
+              .filter((f) => f.content)
+              .map((f) => `=== ${f.path} ===\n${(f.content ?? '').slice(0, 6000)}`)
+              .join('\n\n'),
+            60_000,
+          ),
+          conventions: forPrompt(
+            {
+              testCommand: repo.settings.testCommand,
+              frameworkHints: changed.filter((f) => /\.(spec|test)\./.test(f.path)).map((f) => f.path),
+            },
+            2000,
+          ),
         },
         schema: qaTestPlanSchema,
         schemaName: 'qa_test_plan',
@@ -75,9 +114,15 @@ export class QaTools implements OnModuleInit {
       const ws = await this.sandbox.createWorkspace(gh, repo.owner, repo.name, ref, ctx.signal);
       try {
         const generated = (plan?.automatedTests ?? []).filter((t) => !t.path.includes('..') && !t.path.startsWith('/'));
-        await this.sandbox.applyChanges(ws, generated.map((t) => ({ path: t.path, content: t.content })));
+        await this.sandbox.applyChanges(
+          ws,
+          generated.map((t) => ({ path: t.path, content: t.content })),
+        );
         if (repo.settings.installCommand) {
-          const install = await this.sandbox.run(ws, repo.settings.installCommand, { image: repo.settings.sandboxImage, signal: ctx.signal });
+          const install = await this.sandbox.run(ws, repo.settings.installCommand, {
+            image: repo.settings.sandboxImage,
+            signal: ctx.signal,
+          });
           if (install.exitCode !== 0) {
             status = 'ERROR';
             outputText = failureExcerpt(install.output);
@@ -102,7 +147,10 @@ export class QaTools implements OnModuleInit {
           agent: 'qa',
           task: 'Analyse QA failures',
           prompt: 'qaAnalyzeFailure',
-          variables: { change: forPrompt({ requirement: input.requirement, files: changed.map((f) => f.path) }, 3000), output: forPrompt(outputText, 16_000) },
+          variables: {
+            change: forPrompt({ requirement: input.requirement, files: changed.map((f) => f.path) }, 3000),
+            output: forPrompt(outputText, 16_000),
+          },
           schema: failureAnalysisSchema,
           schemaName: 'failure_analysis',
           role: 'reviewer',
@@ -134,19 +182,39 @@ export class QaTools implements OnModuleInit {
         completedAt: new Date(),
       },
     });
-    await this.events.publish({ type: 'qa.completed', organizationId: ctx.organizationId, projectId: ctx.project.id, executionId: ctx.executionId, data: { qaRunId: run.id, status, passed: counts.passed, failed: counts.failed, total: counts.total } });
+    await this.events.publish({
+      type: 'qa.completed',
+      organizationId: ctx.organizationId,
+      projectId: ctx.project.id,
+      executionId: ctx.executionId,
+      data: { qaRunId: run.id, status, passed: counts.passed, failed: counts.failed, total: counts.total },
+    });
     const report = [
       `# QA report · ${ref}`,
       `**Status:** ${status} · ${summary}`,
-      plan ? `## Test cases\n| ID | Title | Type | Priority |\n|---|---|---|---|\n${plan.testCases.map((t) => `| ${t.id} | ${t.title} | ${t.type} | ${t.priority} |`).join('\n')}` : '',
-      plan?.automatedTests.length ? `## Generated automated tests\n${plan.automatedTests.map((t) => `- \`${t.path}\` — ${t.description}`).join('\n')}` : '',
+      plan
+        ? `## Test cases\n| ID | Title | Type | Priority |\n|---|---|---|---|\n${plan.testCases.map((t) => `| ${t.id} | ${t.title} | ${t.type} | ${t.priority} |`).join('\n')}`
+        : '',
+      plan?.automatedTests.length
+        ? `## Generated automated tests\n${plan.automatedTests.map((t) => `- \`${t.path}\` — ${t.description}`).join('\n')}`
+        : '',
       analysis ? `## Root cause analysis\n${forPrompt(analysis, 3000)}` : '',
       outputText && status !== 'PASSED' ? `## Output\n\`\`\`\n${outputText.slice(0, 8000)}\n\`\`\`` : '',
     ]
       .filter(Boolean)
       .join('\n\n');
     return {
-      output: { qaRunId: updated.id, status, total: counts.total, passed: counts.passed, failed: counts.failed, skipped: counts.skipped, testCases: plan?.testCases.length ?? 0, summary, analysis },
+      output: {
+        qaRunId: updated.id,
+        status,
+        total: counts.total,
+        passed: counts.passed,
+        failed: counts.failed,
+        skipped: counts.skipped,
+        testCases: plan?.testCases.length ?? 0,
+        summary,
+        analysis,
+      },
       summary,
       artifacts: [{ type: 'TEST_REPORT' as const, title: `QA report · ${ref}`, content: report, data: { qaRunId: updated.id } }],
     };
@@ -162,7 +230,12 @@ export class QaTools implements OnModuleInit {
         category: 'quality',
         provider: null,
         agent: 'qa',
-        inputSchema: z.object({ ref: z.string().max(200).nullable().optional(), requirement: z.string().max(20_000).nullable().optional(), codeGenerationId: z.string().uuid().nullable().optional(), acceptanceCriteria: z.array(z.string()).nullable().optional() }),
+        inputSchema: z.object({
+          ref: z.string().max(200).nullable().optional(),
+          requirement: z.string().max(20_000).nullable().optional(),
+          codeGenerationId: z.string().uuid().nullable().optional(),
+          acceptanceCriteria: z.array(z.string()).nullable().optional(),
+        }),
         permission: 'qa:run',
         risk: 'read',
         sideEffects: false,
@@ -171,9 +244,50 @@ export class QaTools implements OnModuleInit {
         execute: (input, ctx) => self.run(input, ctx),
         async simulate(input, ctx) {
           const run = await self.prisma.qATestRun.create({
-            data: { organizationId: ctx.organizationId, projectId: ctx.project!.id, executionId: ctx.executionId ?? null, type: 'REGRESSION', status: 'PASSED', title: `QA · ${input.ref ?? 'main'}`, ref: input.ref ?? 'main', total: 31, passed: 31, failed: 0, skipped: 0, durationMs: 41_000, simulated: true, testCases: [{ id: 'TC-1', title: 'Request reset for existing user', type: 'API', priority: 'P0', steps: [], expected: '202 Accepted', preconditions: null }], startedAt: new Date(), completedAt: new Date() },
+            data: {
+              organizationId: ctx.organizationId,
+              projectId: ctx.project!.id,
+              executionId: ctx.executionId ?? null,
+              type: 'REGRESSION',
+              status: 'PASSED',
+              title: `QA · ${input.ref ?? 'main'}`,
+              ref: input.ref ?? 'main',
+              total: 31,
+              passed: 31,
+              failed: 0,
+              skipped: 0,
+              durationMs: 41_000,
+              simulated: true,
+              testCases: [
+                {
+                  id: 'TC-1',
+                  title: 'Request reset for existing user',
+                  type: 'API',
+                  priority: 'P0',
+                  steps: [],
+                  expected: '202 Accepted',
+                  preconditions: null,
+                },
+              ],
+              startedAt: new Date(),
+              completedAt: new Date(),
+            },
           });
-          return { simulated: true, output: { qaRunId: run.id, status: 'PASSED', total: 31, passed: 31, failed: 0, skipped: 0, testCases: 12, summary: '[Simulated] QA passed: 31/31 tests', analysis: null }, summary: '[Simulated] QA passed: 31/31 tests · 12 cases derived' };
+          return {
+            simulated: true,
+            output: {
+              qaRunId: run.id,
+              status: 'PASSED',
+              total: 31,
+              passed: 31,
+              failed: 0,
+              skipped: 0,
+              testCases: 12,
+              summary: '[Simulated] QA passed: 31/31 tests',
+              analysis: null,
+            },
+            summary: '[Simulated] QA passed: 31/31 tests · 12 cases derived',
+          };
         },
       }),
     );

@@ -66,7 +66,13 @@ export class OrchestratorService {
     if (!this.llm.isConfigured()) return this.fallback(turn, result);
 
     const usage = new UsageTracker();
-    const run = await this.agentRuns.start({ organizationId: turn.organizationId, agentKey: 'orchestrator', task: turn.userMessage.slice(0, 200), userId: turn.userId, conversationId: turn.conversationId });
+    const run = await this.agentRuns.start({
+      organizationId: turn.organizationId,
+      agentKey: 'orchestrator',
+      task: turn.userMessage.slice(0, 200),
+      userId: turn.userId,
+      conversationId: turn.conversationId,
+    });
     const tools = this.buildTools(turn, result);
     const byName = new Map(tools.map((t) => [t.name, t]));
     try {
@@ -87,7 +93,12 @@ export class OrchestratorService {
         const delta = buffer;
         buffer = '';
         lastFlush = Date.now();
-        await this.events.publish({ type: 'agent.message.delta', organizationId: turn.organizationId, conversationId: turn.conversationId, data: { messageId: turn.assistantMessageId, delta } });
+        await this.events.publish({
+          type: 'agent.message.delta',
+          organizationId: turn.organizationId,
+          conversationId: turn.conversationId,
+          data: { messageId: turn.assistantMessageId, delta },
+        });
       };
 
       for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -111,7 +122,12 @@ export class OrchestratorService {
           const t = byName.get(call.name);
           const callId = call.id ?? `${call.name}-${round}`;
           const title = TOOL_TITLES[call.name] ?? call.name;
-          await this.events.publish({ type: 'agent.tool.started', organizationId: turn.organizationId, conversationId: turn.conversationId, data: { messageId: turn.assistantMessageId, callId, tool: call.name, title } });
+          await this.events.publish({
+            type: 'agent.tool.started',
+            organizationId: turn.organizationId,
+            conversationId: turn.conversationId,
+            data: { messageId: turn.assistantMessageId, callId, tool: call.name, title },
+          });
           let content: string;
           let ok = true;
           try {
@@ -124,7 +140,19 @@ export class OrchestratorService {
           }
           const summary = content.startsWith('Error') ? content.slice(0, 200) : undefined;
           result.parts.push({ type: 'tool_call', callId, tool: call.name, title, status: ok ? 'succeeded' : 'failed', summary });
-          await this.events.publish({ type: 'agent.tool.completed', organizationId: turn.organizationId, conversationId: turn.conversationId, data: { messageId: turn.assistantMessageId, callId, tool: call.name, title, status: ok ? 'succeeded' : 'failed', summary: summary ?? null } });
+          await this.events.publish({
+            type: 'agent.tool.completed',
+            organizationId: turn.organizationId,
+            conversationId: turn.conversationId,
+            data: {
+              messageId: turn.assistantMessageId,
+              callId,
+              tool: call.name,
+              title,
+              status: ok ? 'succeeded' : 'failed',
+              summary: summary ?? null,
+            },
+          });
           messages.push(new ToolMessage({ content: content.slice(0, 20_000), tool_call_id: callId }));
         }
         if (result.content && !result.content.endsWith('\n')) {
@@ -133,7 +161,12 @@ export class OrchestratorService {
         }
       }
       if (!result.content.trim()) result.content = result.proposals.length ? 'Here is the plan I prepared.' : 'Done.';
-      await this.agentRuns.complete(turn.organizationId, run, { usage, summary: `Responded${result.proposals.length ? ` with ${result.proposals.length} flow proposal(s)` : ''}`, conversationId: turn.conversationId, output: { tools: result.parts.filter((p) => p.type === 'tool_call').length } });
+      await this.agentRuns.complete(turn.organizationId, run, {
+        usage,
+        summary: `Responded${result.proposals.length ? ` with ${result.proposals.length} flow proposal(s)` : ''}`,
+        conversationId: turn.conversationId,
+        output: { tools: result.parts.filter((p) => p.type === 'tool_call').length },
+      });
       return result;
     } catch (err) {
       await this.agentRuns.fail(turn.organizationId, run, err, usage);
@@ -147,7 +180,11 @@ export class OrchestratorService {
 
   private async systemContext(turn: OrchestratorTurn): Promise<string> {
     const [projects, connected, org] = await Promise.all([
-      this.prisma.project.findMany({ where: { organizationId: turn.organizationId, deletedAt: null }, select: { id: true, name: true, key: true }, take: 50 }),
+      this.prisma.project.findMany({
+        where: { organizationId: turn.organizationId, deletedAt: null },
+        select: { id: true, name: true, key: true },
+        take: 50,
+      }),
       this.connections.connectedProviders(turn.organizationId),
       this.prisma.organization.findUniqueOrThrow({ where: { id: turn.organizationId }, select: { name: true } }),
     ]);
@@ -158,7 +195,9 @@ export class OrchestratorService {
       `Current project: ${current ? `${current.name} (${current.key}, id ${current.id})` : 'none selected'}`,
       `Projects: ${projects.map((p) => `${p.name} [${p.key}] id=${p.id}`).join('; ') || 'none'}`,
       `Connected integrations: ${connected.join(', ') || 'none'}`,
-      turn.pageContext ? `The user is looking at: ${turn.pageContext.title ?? turn.pageContext.route}${turn.pageContext.entity ? ` (${turn.pageContext.entity.kind} ${turn.pageContext.entity.label ?? ''} id=${turn.pageContext.entity.id})` : ''}` : '',
+      turn.pageContext
+        ? `The user is looking at: ${turn.pageContext.title ?? turn.pageContext.route}${turn.pageContext.entity ? ` (${turn.pageContext.entity.kind} ${turn.pageContext.entity.label ?? ''} id=${turn.pageContext.entity.id})` : ''}`
+        : '',
       `Date: ${new Date().toISOString().slice(0, 10)}`,
     ]
       .filter(Boolean)
@@ -167,10 +206,20 @@ export class OrchestratorService {
 
   private buildTools(turn: OrchestratorTurn, result: OrchestratorResult): StructuredToolInterface[] {
     const org = turn.organizationId;
-    const can = (permission: Parameters<AuthorizationService['hasPermission']>[2], projectId?: string | null) => this.authz.hasPermission(turn.userId, org, permission, projectId);
+    const can = (permission: Parameters<AuthorizationService['hasPermission']>[2], projectId?: string | null) =>
+      this.authz.hasPermission(turn.userId, org, permission, projectId);
     const projectOf = (id?: string | null) => id ?? turn.projectId;
     const invoke = async (name: string, input: unknown, projectId: string | null) => {
-      const res = await this.tools.execute({ tool: name, input, organizationId: org, userId: turn.userId, projectId, idempotencyKey: `chat:${turn.assistantMessageId}:${name}`, mode: turn.isDemo ? 'DEMO' : 'LIVE', signal: turn.signal });
+      const res = await this.tools.execute({
+        tool: name,
+        input,
+        organizationId: org,
+        userId: turn.userId,
+        projectId,
+        idempotencyKey: `chat:${turn.assistantMessageId}:${name}`,
+        mode: turn.isDemo ? 'DEMO' : 'LIVE',
+        signal: turn.signal,
+      });
       return res.result;
     };
 
@@ -179,7 +228,14 @@ export class OrchestratorService {
         async () => {
           const projects = await this.prisma.project.findMany({
             where: { organizationId: org, deletedAt: null },
-            select: { id: true, name: true, key: true, description: true, repositories: { where: { deletedAt: null }, select: { fullName: true } }, environments: { select: { name: true, type: true, url: true } } },
+            select: {
+              id: true,
+              name: true,
+              key: true,
+              description: true,
+              repositories: { where: { deletedAt: null }, select: { fullName: true } },
+              environments: { select: { name: true, type: true, url: true } },
+            },
           });
           return projects;
         },
@@ -189,10 +245,24 @@ export class OrchestratorService {
         async ({ query, projectId }) => {
           if (!(await can('knowledge:read'))) return 'Permission denied: knowledge:read';
           const res = await this.knowledge.retrieve({ organizationId: org, projectId: projectOf(projectId), query, k: 6 });
-          if (res.sources.length) result.parts.push({ type: 'sources', sources: res.sources.map((s) => ({ documentId: s.documentId, title: s.title, score: s.score, sourceType: s.sourceType, url: s.url })) });
+          if (res.sources.length)
+            result.parts.push({
+              type: 'sources',
+              sources: res.sources.map((s) => ({
+                documentId: s.documentId,
+                title: s.title,
+                score: s.score,
+                sourceType: s.sourceType,
+                url: s.url,
+              })),
+            });
           return res.context;
         },
-        { name: 'search_knowledge', description: 'Semantic search over project documentation, code, tickets, specs and past runs.', schema: z.object({ query: z.string(), projectId: z.string().uuid().nullable().optional() }) },
+        {
+          name: 'search_knowledge',
+          description: 'Semantic search over project documentation, code, tickets, specs and past runs.',
+          schema: z.object({ query: z.string(), projectId: z.string().uuid().nullable().optional() }),
+        },
       ),
       tool(
         async ({ status, projectId }) => {
@@ -201,13 +271,28 @@ export class OrchestratorService {
             where: { organizationId: org, ...(status && { status }), ...(projectId && { projectId }) },
             orderBy: { createdAt: 'desc' },
             take: 10,
-            select: { id: true, title: true, status: true, mode: true, createdAt: true, completedAt: true, error: true, project: { select: { name: true } } },
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              mode: true,
+              createdAt: true,
+              completedAt: true,
+              error: true,
+              project: { select: { name: true } },
+            },
           });
         },
         {
           name: 'list_runs',
           description: 'List recent workflow runs, optionally filtered by status.',
-          schema: z.object({ status: z.enum(['PENDING', 'RUNNING', 'WAITING_APPROVAL', 'PAUSED', 'COMPLETED', 'FAILED', 'CANCELLED', 'COMPENSATING', 'COMPENSATED']).nullable().optional(), projectId: z.string().uuid().nullable().optional() }),
+          schema: z.object({
+            status: z
+              .enum(['PENDING', 'RUNNING', 'WAITING_APPROVAL', 'PAUSED', 'COMPLETED', 'FAILED', 'CANCELLED', 'COMPENSATING', 'COMPENSATED'])
+              .nullable()
+              .optional(),
+            projectId: z.string().uuid().nullable().optional(),
+          }),
         },
       ),
       tool(
@@ -215,34 +300,68 @@ export class OrchestratorService {
           if (!(await can('workflow:read'))) return 'Permission denied: workflow:read';
           const e = await this.prisma.workflowExecution.findFirst({
             where: { id: runId, organizationId: org },
-            select: { id: true, title: true, status: true, mode: true, error: true, steps: { orderBy: { position: 'asc' }, select: { id: true, name: true, status: true, summary: true, error: true, tool: true, attempt: true, iteration: true } } },
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              mode: true,
+              error: true,
+              steps: {
+                orderBy: { position: 'asc' },
+                select: { id: true, name: true, status: true, summary: true, error: true, tool: true, attempt: true, iteration: true },
+              },
+            },
           });
           if (!e) return 'Run not found';
           result.parts.push(toRunCard(e));
-          const logs = await this.prisma.executionLog.findMany({ where: { executionId: runId, level: { in: ['WARN', 'ERROR'] } }, orderBy: { createdAt: 'desc' }, take: 15, select: { level: true, message: true, createdAt: true } });
+          const logs = await this.prisma.executionLog.findMany({
+            where: { executionId: runId, level: { in: ['WARN', 'ERROR'] } },
+            orderBy: { createdAt: 'desc' },
+            take: 15,
+            select: { level: true, message: true, createdAt: true },
+          });
           return { ...e, recentWarnings: logs };
         },
-        { name: 'get_run', description: 'Get a run with step statuses, summaries, errors and recent warnings (use to explain failures).', schema: z.object({ runId: z.string().uuid() }) },
+        {
+          name: 'get_run',
+          description: 'Get a run with step statuses, summaries, errors and recent warnings (use to explain failures).',
+          schema: z.object({ runId: z.string().uuid() }),
+        },
       ),
       tool(
         async ({ key, projectId }) => {
           const r = await invoke('ticket.get', { key }, projectOf(projectId));
           return r.output;
         },
-        { name: 'get_ticket', description: 'Read a Jira/Trello/Forgeline ticket by key.', schema: z.object({ key: z.string(), projectId: z.string().uuid().nullable().optional() }) },
+        {
+          name: 'get_ticket',
+          description: 'Read a Jira/Trello/Forgeline ticket by key.',
+          schema: z.object({ key: z.string(), projectId: z.string().uuid().nullable().optional() }),
+        },
       ),
       tool(
         async ({ projectId }) => {
           const r = await invoke('github.listPullRequests', { state: 'open' }, projectOf(projectId));
           return r.output;
         },
-        { name: 'list_pull_requests', description: "List open pull requests of the project's repository.", schema: z.object({ projectId: z.string().uuid().nullable().optional() }) },
+        {
+          name: 'list_pull_requests',
+          description: "List open pull requests of the project's repository.",
+          schema: z.object({ projectId: z.string().uuid().nullable().optional() }),
+        },
       ),
       tool(
         async () =>
           this.prisma.approval.findMany({
             where: { organizationId: org, status: 'PENDING' },
-            select: { id: true, title: true, action: true, riskLevel: true, createdAt: true, execution: { select: { id: true, title: true } } },
+            select: {
+              id: true,
+              title: true,
+              action: true,
+              riskLevel: true,
+              createdAt: true,
+              execution: { select: { id: true, title: true } },
+            },
             take: 20,
           }),
         { name: 'list_pending_approvals', description: 'List approvals waiting for a decision.', schema: z.object({}) },
@@ -253,9 +372,24 @@ export class OrchestratorService {
             where: { organizationId: org, ...(projectId && { projectId }), ...(environment && { environment: { name: environment } }) },
             orderBy: { createdAt: 'desc' },
             take: 10,
-            select: { id: true, version: true, status: true, error: true, simulated: true, createdAt: true, executionId: true, environment: { select: { name: true } }, healthChecks: true, smokeTests: true },
+            select: {
+              id: true,
+              version: true,
+              status: true,
+              error: true,
+              simulated: true,
+              createdAt: true,
+              executionId: true,
+              environment: { select: { name: true } },
+              healthChecks: true,
+              smokeTests: true,
+            },
           }),
-        { name: 'list_deployments', description: 'Recent deployments with health/smoke results and errors.', schema: z.object({ projectId: z.string().uuid().nullable().optional(), environment: z.string().nullable().optional() }) },
+        {
+          name: 'list_deployments',
+          description: 'Recent deployments with health/smoke results and errors.',
+          schema: z.object({ projectId: z.string().uuid().nullable().optional(), environment: z.string().nullable().optional() }),
+        },
       ),
       tool(
         async ({ request, projectId, startImmediately }) => {
@@ -281,18 +415,48 @@ export class OrchestratorService {
             part.state = 'started';
             part.executionId = exec.id;
             result.parts.push(part);
-            const steps = await this.prisma.workflowExecutionStep.findMany({ where: { executionId: exec.id }, orderBy: { position: 'asc' }, select: { stepKey: true, name: true, status: true, agent: true } });
-            result.parts.push({ type: 'run', executionId: exec.id, title: exec.title, status: exec.status, mode: exec.mode, steps: steps.map((s) => ({ key: s.stepKey, name: s.name, status: s.status as StepStatus, agent: s.agent })) });
-            return { started: true, runId: exec.id, title: proposal.title, steps: part.steps.length, approvalsRequired: part.approvalsRequired };
+            const steps = await this.prisma.workflowExecutionStep.findMany({
+              where: { executionId: exec.id },
+              orderBy: { position: 'asc' },
+              select: { stepKey: true, name: true, status: true, agent: true },
+            });
+            result.parts.push({
+              type: 'run',
+              executionId: exec.id,
+              title: exec.title,
+              status: exec.status,
+              mode: exec.mode,
+              steps: steps.map((s) => ({ key: s.stepKey, name: s.name, status: s.status as StepStatus, agent: s.agent })),
+            });
+            return {
+              started: true,
+              runId: exec.id,
+              title: proposal.title,
+              steps: part.steps.length,
+              approvalsRequired: part.approvalsRequired,
+            };
           }
           result.parts.push(part);
-          return { started: false, proposalId: proposal.id, title: proposal.title, summary: proposal.summary, steps: part.steps.map((s) => s.name), approvalsRequired: part.approvalsRequired, missingIntegrations: part.missingIntegrations, note: 'The user can review and start this flow from the proposal card.' };
+          return {
+            started: false,
+            proposalId: proposal.id,
+            title: proposal.title,
+            summary: proposal.summary,
+            steps: part.steps.map((s) => s.name),
+            approvalsRequired: part.approvalsRequired,
+            missingIntegrations: part.missingIntegrations,
+            note: 'The user can review and start this flow from the proposal card.',
+          };
         },
         {
           name: 'propose_flow',
           description:
             'Plan an engineering workflow (ticket, spec, code, review, QA, CI, deploy, docs, notify…) for the request. Set startImmediately=true only when the user explicitly asked to do it now; gates and approvals are enforced automatically.',
-          schema: z.object({ request: z.string().describe('The full engineering request'), projectId: z.string().uuid().nullable().optional(), startImmediately: z.boolean().default(false) }),
+          schema: z.object({
+            request: z.string().describe('The full engineering request'),
+            projectId: z.string().uuid().nullable().optional(),
+            startImmediately: z.boolean().default(false),
+          }),
         },
       ),
     ];
@@ -300,12 +464,20 @@ export class OrchestratorService {
 
   /** No LLM configured: honest keyword-based planning instead of pretending to reason. */
   private async fallback(turn: OrchestratorTurn, result: OrchestratorResult): Promise<OrchestratorResult> {
-    const actionable = /\b(create|implement|build|deploy|review|run|generate|write|fix|notify|roll ?back|ship|document|plan|analy[sz]e)\b/i.test(turn.userMessage);
+    const actionable =
+      /\b(create|implement|build|deploy|review|run|generate|write|fix|notify|roll ?back|ship|document|plan|analy[sz]e)\b/i.test(
+        turn.userMessage,
+      );
     if (!actionable || !(await this.authz.hasPermission(turn.userId, turn.organizationId, 'workflow:execute', turn.projectId))) {
       result.content = `${BRAND.assistantName} needs an AI provider for open-ended conversation. Ask an administrator to set \`OPENAI_API_KEY\`. You can still run Flows from the command palette (⌘K) or the Flows page.`;
       return result;
     }
-    const { proposal, part } = await this.planner.plan({ organizationId: turn.organizationId, userId: turn.userId, projectId: turn.projectId, request: turn.userMessage });
+    const { proposal, part } = await this.planner.plan({
+      organizationId: turn.organizationId,
+      userId: turn.userId,
+      projectId: turn.projectId,
+      request: turn.userMessage,
+    });
     result.proposals.push(proposal);
     result.parts.push(part);
     result.content = `${turn.isDemo ? '**Demo workspace** — results will be simulated.\n\n' : ''}The AI provider is not configured, so I matched your request to the **${part.title.split(':')[0]}** flow by keywords. Review the plan below and start it when ready.`;
@@ -325,7 +497,13 @@ const TOOL_TITLES: Record<string, string> = {
   propose_flow: 'Planning workflow',
 };
 
-function toRunCard(e: { id: string; title: string; status: string; mode: string; steps: { name: string; status: string; tool: string | null }[] }): RunCardPart {
+function toRunCard(e: {
+  id: string;
+  title: string;
+  status: string;
+  mode: string;
+  steps: { name: string; status: string; tool: string | null }[];
+}): RunCardPart {
   return {
     type: 'run',
     executionId: e.id,

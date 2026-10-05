@@ -13,7 +13,14 @@ const bool = (def: boolean) =>
 const csv = z
   .string()
   .optional()
-  .transform((v) => (v ? v.split(',').map((s) => s.trim()).filter(Boolean) : []));
+  .transform((v) =>
+    v
+      ? v
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [],
+  );
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -29,7 +36,10 @@ const envSchema = z.object({
   REDIS_URL: z.string().default('redis://localhost:6379'),
   QUEUE_DRIVER: z.enum(['bullmq', 'inline']).default('bullmq'),
   /** BullMQ queue name — separate environments sharing one Redis must use different names. */
-  QUEUE_NAME: z.string().regex(/^[a-z0-9][a-z0-9-]{0,62}$/).default('forgeline'),
+  QUEUE_NAME: z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9-]{0,62}$/)
+    .default('forgeline'),
   QDRANT_URL: z.string().default('http://localhost:6333'),
   QDRANT_API_KEY: z.string().optional(),
   QDRANT_COLLECTION: z.string().default('forgeline_knowledge'),
@@ -81,7 +91,10 @@ const envSchema = z.object({
   SANDBOX_DRIVER: z.enum(['docker', 'local', 'disabled']).default('disabled'),
   SANDBOX_DEFAULT_IMAGE: z.string().default('node:22-bookworm'),
   SANDBOX_WORKDIR: z.string().default('/tmp/forgeline-sandbox'),
-  SANDBOX_TIMEOUT_MS: z.coerce.number().int().default(15 * 60_000),
+  SANDBOX_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .default(15 * 60_000),
   SANDBOX_MEMORY_MB: z.coerce.number().int().default(4096),
   SANDBOX_CPUS: z.coerce.number().default(2),
   SANDBOX_NETWORK: z.enum(['none', 'bridge']).default('bridge'),
@@ -185,14 +198,24 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
       baseUrl: e.OPENAI_BASE_URL,
       organization: e.OPENAI_ORGANIZATION,
       model: e.OPENAI_MODEL,
-      roleModels: { planner: e.OPENAI_MODEL_PLANNER, coder: e.OPENAI_MODEL_CODER, reviewer: e.OPENAI_MODEL_REVIEWER, fast: e.OPENAI_MODEL_FAST },
+      roleModels: {
+        planner: e.OPENAI_MODEL_PLANNER,
+        coder: e.OPENAI_MODEL_CODER,
+        reviewer: e.OPENAI_MODEL_REVIEWER,
+        fast: e.OPENAI_MODEL_FAST,
+      },
       embeddingModel: e.OPENAI_EMBEDDING_MODEL,
       embeddingDimensions: e.OPENAI_EMBEDDING_DIMENSIONS,
       temperature: e.OPENAI_TEMPERATURE,
       timeoutMs: e.OPENAI_TIMEOUT_MS,
       maxRetries: e.OPENAI_MAX_RETRIES,
     },
-    jwt: { secret: e.JWT_SECRET, refreshSecret: e.JWT_REFRESH_SECRET, accessTtlSeconds: e.JWT_ACCESS_TTL_SECONDS, refreshTtlDays: e.JWT_REFRESH_TTL_DAYS },
+    jwt: {
+      secret: e.JWT_SECRET,
+      refreshSecret: e.JWT_REFRESH_SECRET,
+      accessTtlSeconds: e.JWT_ACCESS_TTL_SECONDS,
+      refreshTtlDays: e.JWT_REFRESH_TTL_DAYS,
+    },
     cookies: { secure: e.COOKIE_SECURE, domain: e.COOKIE_DOMAIN },
     encryptionKeys: e.ENCRYPTION_KEYS,
     rateLimit: { ttlSeconds: e.RATE_LIMIT_TTL_SECONDS, max: e.RATE_LIMIT_MAX, authMax: e.AUTH_RATE_LIMIT_MAX },

@@ -1,4 +1,20 @@
-import { Body, Controller, Delete, Get, Global, HttpCode, Injectable, Module, type OnModuleInit, Param, ParseUUIDPipe, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Global,
+  HttpCode,
+  Injectable,
+  Module,
+  type OnModuleInit,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
@@ -32,7 +48,11 @@ class TextDocDto {
   @ApiProperty() @IsString() @MinLength(1) @MaxLength(400_000) content!: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() projectId?: string;
   @ApiPropertyOptional({ enum: KNOWLEDGE_SOURCE_TYPES }) @IsOptional() @IsIn(KNOWLEDGE_SOURCE_TYPES) sourceType?: KnowledgeSourceType;
-  @ApiPropertyOptional({ description: 'architecture | api | guideline | spec | runbook | markdown …' }) @IsOptional() @IsString() @MaxLength(40) documentType?: string;
+  @ApiPropertyOptional({ description: 'architecture | api | guideline | spec | runbook | markdown …' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  documentType?: string;
 }
 class UrlDocDto {
   @ApiProperty() @IsUrl({ protocols: ['http', 'https'], require_protocol: true }) url!: string;
@@ -173,16 +193,31 @@ export class KnowledgeTools implements OnModuleInit {
         category: 'ai',
         provider: null,
         agent: 'architect',
-        inputSchema: z.object({ query: z.string().min(2).max(2000), k: z.number().int().min(1).max(20).default(8), documentTypes: z.array(z.string()).optional() }),
+        inputSchema: z.object({
+          query: z.string().min(2).max(2000),
+          k: z.number().int().min(1).max(20).default(8),
+          documentTypes: z.array(z.string()).optional(),
+        }),
         permission: 'knowledge:read',
         risk: 'read',
         sideEffects: false,
         async execute(input, ctx) {
-          const res = await knowledge.retrieve({ organizationId: ctx.organizationId, projectId: ctx.project?.id, query: input.query, k: input.k, documentTypes: input.documentTypes });
+          const res = await knowledge.retrieve({
+            organizationId: ctx.organizationId,
+            projectId: ctx.project?.id,
+            query: input.query,
+            k: input.k,
+            documentTypes: input.documentTypes,
+          });
           ctx.logger.info(res.sources.length ? `Retrieved ${res.sources.length} source(s)` : res.context);
           return {
             output: { context: res.context, sources: res.sources, available: res.available },
-            summary: res.sources.length ? `Retrieved ${res.sources.length} relevant source(s): ${res.sources.slice(0, 3).map((s) => s.title).join(', ')}` : res.context,
+            summary: res.sources.length
+              ? `Retrieved ${res.sources.length} relevant source(s): ${res.sources
+                  .slice(0, 3)
+                  .map((s) => s.title)
+                  .join(', ')}`
+              : res.context,
           };
         },
         async simulate(input) {
@@ -191,7 +226,14 @@ export class KnowledgeTools implements OnModuleInit {
             output: {
               context: `[1] Authentication Service — Architecture (demo)\nThe auth service is a NestJS module using JWT access tokens, refresh tokens stored hashed in PostgreSQL, and Prisma for persistence. Email is sent via the notifications module.\n\n[2] Security guidelines (demo)\nTokens must be single-use, hashed at rest, and expire within 30 minutes.`,
               sources: [
-                { documentId: 'demo-1', title: 'Authentication Service — Architecture', sourceType: 'ARCHITECTURE', url: null, score: 0.89, location: null },
+                {
+                  documentId: 'demo-1',
+                  title: 'Authentication Service — Architecture',
+                  sourceType: 'ARCHITECTURE',
+                  url: null,
+                  score: 0.89,
+                  location: null,
+                },
                 { documentId: 'demo-2', title: 'Security guidelines', sourceType: 'GUIDELINE', url: null, score: 0.81, location: null },
               ],
               available: true,

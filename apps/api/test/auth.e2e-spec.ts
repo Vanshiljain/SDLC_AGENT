@@ -18,7 +18,10 @@ describe('Auth & sessions', () => {
   };
 
   it('issues an access token and secure session cookies; the refresh token never appears in the body', async () => {
-    const res = await request(app.getHttpServer()).post('/api/auth/register').send({ email: `reg-${Date.now()}@forgeline.test`, name: 'Reg', password: PASSWORD }).expect(201);
+    const res = await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({ email: `reg-${Date.now()}@forgeline.test`, name: 'Reg', password: PASSWORD })
+      .expect(201);
     expect(res.body.accessToken).toEqual(expect.any(String));
     expect(JSON.stringify(res.body)).not.toMatch(/refresh/i);
     const cookies = setCookies(res);
@@ -30,7 +33,10 @@ describe('Auth & sessions', () => {
   });
 
   it('rejects weak passwords and duplicate emails', async () => {
-    await request(app.getHttpServer()).post('/api/auth/register').send({ email: `weak-${Date.now()}@forgeline.test`, name: 'W', password: 'password' }).expect(400);
+    await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({ email: `weak-${Date.now()}@forgeline.test`, name: 'W', password: 'password' })
+      .expect(400);
     const u = await register(app);
     await request(app.getHttpServer()).post('/api/auth/register').send({ email: u.email, name: 'Dup', password: PASSWORD }).expect(409);
   });
@@ -38,7 +44,10 @@ describe('Auth & sessions', () => {
   it('rejects bad credentials without revealing which part was wrong', async () => {
     const u = await register(app);
     const a = await request(app.getHttpServer()).post('/api/auth/login').send({ email: u.email, password: 'Wrong!Password1' }).expect(401);
-    const b = await request(app.getHttpServer()).post('/api/auth/login').send({ email: `nobody-${Date.now()}@forgeline.test`, password: PASSWORD }).expect(401);
+    const b = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: `nobody-${Date.now()}@forgeline.test`, password: PASSWORD })
+      .expect(401);
     expect(a.body.message).toBe(b.body.message);
   });
 

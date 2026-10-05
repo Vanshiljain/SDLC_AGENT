@@ -99,7 +99,11 @@ export async function safeFetch(
   if (parsed.username || parsed.password) {
     throw new ToolError('validation', 'URLs with embedded credentials are not allowed', { retryable: false });
   }
-  if (isIP(parsed.hostname.replace(/^\[|\]$/g, '')) && !options.allowPrivateNetworks && isPrivateAddress(parsed.hostname.replace(/^\[|\]$/g, ''))) {
+  if (
+    isIP(parsed.hostname.replace(/^\[|\]$/g, '')) &&
+    !options.allowPrivateNetworks &&
+    isPrivateAddress(parsed.hostname.replace(/^\[|\]$/g, ''))
+  ) {
     throw new ToolError('permission', `Requests to private network addresses are blocked (${parsed.hostname})`, { retryable: false });
   }
   const timeout = AbortSignal.timeout(init.timeoutMs ?? 10_000);

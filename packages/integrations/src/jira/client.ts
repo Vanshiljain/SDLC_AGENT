@@ -70,7 +70,9 @@ export class JiraClient {
   }
 
   getProject(keyOrId: string) {
-    return this.http.get<{ id: string; key: string; name: string; issueTypes?: { id: string; name: string; subtask: boolean }[] }>(`/project/${encodeURIComponent(keyOrId)}`);
+    return this.http.get<{ id: string; key: string; name: string; issueTypes?: { id: string; name: string; subtask: boolean }[] }>(
+      `/project/${encodeURIComponent(keyOrId)}`,
+    );
   }
 
   listProjects() {
@@ -113,7 +115,9 @@ export class JiraClient {
     });
   }
 
-  async getIssueAsText(key: string): Promise<{ key: string; summary: string; description: string; status: string; url: string; labels: string[]; type: string }> {
+  async getIssueAsText(
+    key: string,
+  ): Promise<{ key: string; summary: string; description: string; status: string; url: string; labels: string[]; type: string }> {
     const issue = await this.getIssue(key);
     return {
       key: issue.key,
@@ -145,11 +149,15 @@ export class JiraClient {
   }
 
   addComment(key: string, markdown: string) {
-    return this.http.post<{ id: string; self: string }>(`/issue/${encodeURIComponent(key)}/comment`, { body: markdownToAdf(markdown) satisfies AdfDocument });
+    return this.http.post<{ id: string; self: string }>(`/issue/${encodeURIComponent(key)}/comment`, {
+      body: markdownToAdf(markdown) satisfies AdfDocument,
+    });
   }
 
   listComments(key: string) {
-    return this.http.get<{ comments: { id: string; body: unknown }[] }>(`/issue/${encodeURIComponent(key)}/comment`, { query: { maxResults: 100 } });
+    return this.http.get<{ comments: { id: string; body: unknown }[] }>(`/issue/${encodeURIComponent(key)}/comment`, {
+      query: { maxResults: 100 },
+    });
   }
 
   async getTransitions(key: string): Promise<JiraTransition[]> {
@@ -164,14 +172,27 @@ export class JiraClient {
     const transitions = await this.getTransitions(key);
     const t = transitions.find((x) => x.to.name.toLowerCase() === target.toLowerCase() || x.name.toLowerCase() === target.toLowerCase());
     if (!t) {
-      throw new ToolError('validation', `No transition to "${target}" from "${issue.fields.status?.name}". Available: ${transitions.map((x) => x.to.name).join(', ')}`, { provider: 'jira', retryable: false });
+      throw new ToolError(
+        'validation',
+        `No transition to "${target}" from "${issue.fields.status?.name}". Available: ${transitions.map((x) => x.to.name).join(', ')}`,
+        { provider: 'jira', retryable: false },
+      );
     }
-    await this.http.request(`/issue/${encodeURIComponent(key)}/transitions`, { method: 'POST', body: { transition: { id: t.id } }, responseType: 'none' });
+    await this.http.request(`/issue/${encodeURIComponent(key)}/transitions`, {
+      method: 'POST',
+      body: { transition: { id: t.id } },
+      responseType: 'none',
+    });
     return { transitioned: true, to: t.to.name };
   }
 
   /** Attach a text artifact (spec, report) to the issue. */
-  async attachText(key: string, filename: string, content: string, contentType = 'text/markdown'): Promise<{ id: string; filename: string }[]> {
+  async attachText(
+    key: string,
+    filename: string,
+    content: string,
+    contentType = 'text/markdown',
+  ): Promise<{ id: string; filename: string }[]> {
     const form = new FormData();
     form.append('file', new Blob([content], { type: contentType }), filename);
     const res = await this.http.request<{ id: string; filename: string }[]>(`/issue/${encodeURIComponent(key)}/attachments`, {
@@ -184,10 +205,14 @@ export class JiraClient {
 
   /** Link an external resource (PR, Notion page, deployment) to the issue. Idempotent by globalId. */
   addRemoteLink(key: string, link: { globalId: string; url: string; title: string; summary?: string; icon?: string }) {
-    return this.http.post<{ id: number; self: string }>(`/issue/${encodeURIComponent(key)}/remotelink`, {
-      globalId: link.globalId,
-      object: { url: link.url, title: link.title, summary: link.summary, ...(link.icon && { icon: { url16x16: link.icon } }) },
-    }, { retry: true });
+    return this.http.post<{ id: number; self: string }>(
+      `/issue/${encodeURIComponent(key)}/remotelink`,
+      {
+        globalId: link.globalId,
+        object: { url: link.url, title: link.title, summary: link.summary, ...(link.icon && { icon: { url16x16: link.icon } }) },
+      },
+      { retry: true },
+    );
   }
 
   registerWebhook(url: string, events: string[], jqlFilter: string) {

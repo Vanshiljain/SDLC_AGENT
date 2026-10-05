@@ -30,8 +30,14 @@ export function KnowledgePage() {
   const [adding, setAdding] = useState<AddMode | null>(null);
   const manage = can('knowledge:manage');
   const inv = [['knowledge']];
-  const reindex = useAction((id: string) => api.post(`/knowledge/documents/${id}/reindex`), { success: 'Re-indexing started', invalidate: inv });
-  const remove = useAction((id: string) => api.del(`/knowledge/documents/${id}`), { success: 'Document removed from the index', invalidate: inv });
+  const reindex = useAction((id: string) => api.post(`/knowledge/documents/${id}/reindex`), {
+    success: 'Re-indexing started',
+    invalidate: inv,
+  });
+  const remove = useAction((id: string) => api.del(`/knowledge/documents/${id}`), {
+    success: 'Document removed from the index',
+    invalidate: inv,
+  });
   const s = stats.data;
 
   return (
@@ -52,19 +58,48 @@ export function KnowledgePage() {
           )
         }
       />
-      {s && !s.embeddingsAvailable && <div className="mb-4 rounded-lg border border-warn/30 bg-warn-soft px-4 py-2.5 text-[12.5px] text-warn">Embeddings are not configured (OPENAI_API_KEY). Documents can be stored but agents can’t retrieve them until an embedding model is available.</div>}
+      {s && !s.embeddingsAvailable && (
+        <div className="mb-4 rounded-lg border border-warn/30 bg-warn-soft px-4 py-2.5 text-[12.5px] text-warn">
+          Embeddings are not configured (OPENAI_API_KEY). Documents can be stored but agents can’t retrieve them until an embedding model is
+          available.
+        </div>
+      )}
       <Card className="mb-6 grid grid-cols-2 divide-line lg:grid-cols-4 lg:divide-x [&>*]:border-line max-lg:[&>*]:border-b">
-        <Stat icon={<BookOpenText />} label="Documents" value={formatNumber(Object.values(s?.byStatus ?? {}).reduce((a, b) => a + b, 0))} hint={s ? `${s.byStatus.INDEXED ?? 0} indexed${s.byStatus.FAILED ? ` · ${s.byStatus.FAILED} failed` : ''}` : undefined} />
-        <Stat icon={<Database />} label="Chunks" value={formatNumber(s?.chunks ?? 0)} hint={s ? `${formatNumber(s.tokens)} tokens` : undefined} />
+        <Stat
+          icon={<BookOpenText />}
+          label="Documents"
+          value={formatNumber(Object.values(s?.byStatus ?? {}).reduce((a, b) => a + b, 0))}
+          hint={s ? `${s.byStatus.INDEXED ?? 0} indexed${s.byStatus.FAILED ? ` · ${s.byStatus.FAILED} failed` : ''}` : undefined}
+        />
+        <Stat
+          icon={<Database />}
+          label="Chunks"
+          value={formatNumber(s?.chunks ?? 0)}
+          hint={s ? `${formatNumber(s.tokens)} tokens` : undefined}
+        />
         <Stat icon={<Sparkles />} label="Embedding model" value={<span className="text-[14px]">{s?.embeddingModel ?? '—'}</span>} />
-        <Stat icon={<Database />} label="Vector store" value={<span className={s?.vectorStore.ok ? 'text-[14px] text-ok' : 'text-[14px] text-bad'}>{s ? (s.vectorStore.ok ? 'Healthy' : 'Unavailable') : '—'}</span>} hint={s?.vectorStore.message} />
+        <Stat
+          icon={<Database />}
+          label="Vector store"
+          value={
+            <span className={s?.vectorStore.ok ? 'text-[14px] text-ok' : 'text-[14px] text-bad'}>
+              {s ? (s.vectorStore.ok ? 'Healthy' : 'Unavailable') : '—'}
+            </span>
+          }
+          hint={s?.vectorStore.message}
+        />
       </Card>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
         <Card>
           <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-2.5">
             <div className="w-56">
-              <Input icon={<Search className="size-3.5" />} placeholder="Filter by title…" value={search} onChange={(e) => (setSearch(e.target.value), setPage(1))} />
+              <Input
+                icon={<Search className="size-3.5" />}
+                placeholder="Filter by title…"
+                value={search}
+                onChange={(e) => (setSearch(e.target.value), setPage(1))}
+              />
             </div>
             <Select value={sourceType} onChange={(e) => (setSourceType(e.target.value), setPage(1))} className="w-40" aria-label="Source">
               <option value="">All sources</option>
@@ -97,7 +132,15 @@ export function KnowledgePage() {
                   {docs.data?.items.map((d) => (
                     <Tr key={d.id}>
                       <Td>
-                        <div className="max-w-[360px] truncate font-medium">{d.url ? <a href={d.url} target="_blank" rel="noreferrer" className="hover:text-accent">{d.title}</a> : d.title}</div>
+                        <div className="max-w-[360px] truncate font-medium">
+                          {d.url ? (
+                            <a href={d.url} target="_blank" rel="noreferrer" className="hover:text-accent">
+                              {d.title}
+                            </a>
+                          ) : (
+                            d.title
+                          )}
+                        </div>
                         <div className="text-[11.5px] text-fg-subtle">{d.documentType}</div>
                         {d.error && <div className="mt-0.5 line-clamp-1 text-[11.5px] text-bad">{d.error}</div>}
                       </Td>
@@ -111,8 +154,20 @@ export function KnowledgePage() {
                       <Td className="text-right text-[12px] text-fg-muted">{timeAgo(d.updatedAt)}</Td>
                       {manage && (
                         <Td className="text-right whitespace-nowrap">
-                          <Button size="icon-sm" variant="ghost" aria-label="Re-index" onClick={() => reindex.mutate(d.id)} icon={<RefreshCw className="size-3.5" />} />
-                          <Button size="icon-sm" variant="ghost" aria-label="Remove" onClick={() => remove.mutate(d.id)} icon={<Trash2 className="size-3.5" />} />
+                          <Button
+                            size="icon-sm"
+                            variant="ghost"
+                            aria-label="Re-index"
+                            onClick={() => reindex.mutate(d.id)}
+                            icon={<RefreshCw className="size-3.5" />}
+                          />
+                          <Button
+                            size="icon-sm"
+                            variant="ghost"
+                            aria-label="Remove"
+                            onClick={() => remove.mutate(d.id)}
+                            icon={<Trash2 className="size-3.5" />}
+                          />
                         </Td>
                       )}
                     </Tr>
@@ -125,7 +180,13 @@ export function KnowledgePage() {
                   icon={<BookOpenText />}
                   title="No knowledge yet"
                   description="Index a repository, import Jira tickets or Notion pages, or upload architecture docs. Agents ground specs, plans and code in it."
-                  action={manage && <Button size="sm" variant="primary" onClick={() => setAdding('upload')}>Add knowledge</Button>}
+                  action={
+                    manage && (
+                      <Button size="sm" variant="primary" onClick={() => setAdding('upload')}>
+                        Add knowledge
+                      </Button>
+                    )
+                  }
                 />
               )}
               {docs.data && <Pagination page={docs.data.page} pageSize={docs.data.pageSize} total={docs.data.total} onPage={setPage} />}
@@ -141,7 +202,15 @@ export function KnowledgePage() {
 
 function SearchBench() {
   const [query, setQuery] = useState('');
-  const search = useAction(() => api.post<{ context: string; available: boolean; sources: { documentId: string; title: string; score: number; sourceType: string; url?: string | null; location?: string | null }[] }>('/knowledge/search', { query, k: 6 }), {});
+  const search = useAction(
+    () =>
+      api.post<{
+        context: string;
+        available: boolean;
+        sources: { documentId: string; title: string; score: number; sourceType: string; url?: string | null; location?: string | null }[];
+      }>('/knowledge/search', { query, k: 6 }),
+    {},
+  );
   return (
     <Card className="self-start">
       <CardHeader title="Test retrieval" description="See exactly which context an agent would receive for a question." />
@@ -256,7 +325,10 @@ function AddDialog({ initial, onClose }: { initial: AddMode; onClose: () => void
             { value: 'notion', label: 'Notion' },
           ]}
         />
-        <Field label="Project" hint={mode === 'github' ? 'The project’s linked repository is indexed' : 'Optional — scope retrieval to a project'}>
+        <Field
+          label="Project"
+          hint={mode === 'github' ? 'The project’s linked repository is indexed' : 'Optional — scope retrieval to a project'}
+        >
           <Select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
             <option value="">{mode === 'github' ? 'Choose a project…' : 'Whole workspace'}</option>
             {projects.data?.map((p) => (
@@ -279,7 +351,12 @@ function AddDialog({ initial, onClose }: { initial: AddMode; onClose: () => void
         )}
         {mode === 'upload' && (
           <Field label="File" hint="Markdown, text, JSON, YAML or source files up to 2 MB">
-            <input ref={file} type="file" accept=".md,.markdown,.txt,.json,.yaml,.yml,.ts,.js,.py,.go,.java,.rb,.rs,.sql,.graphql,.proto" className="block w-full text-[12.5px] file:mr-3 file:rounded-md file:border file:border-line file:bg-raised file:px-3 file:py-1.5 file:text-[12px] file:text-fg" />
+            <input
+              ref={file}
+              type="file"
+              accept=".md,.markdown,.txt,.json,.yaml,.yml,.ts,.js,.py,.go,.java,.rb,.rs,.sql,.graphql,.proto"
+              className="block w-full text-[12.5px] file:mr-3 file:rounded-md file:border file:border-line file:bg-raised file:px-3 file:py-1.5 file:text-[12px] file:text-fg"
+            />
           </Field>
         )}
         {mode === 'text' && (
@@ -294,7 +371,12 @@ function AddDialog({ initial, onClose }: { initial: AddMode; onClose: () => void
         )}
         {mode === 'url' && (
           <Field label="URL">
-            <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://docs.example.com/architecture" icon={<Globe className="size-3.5" />} />
+            <Input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://docs.example.com/architecture"
+              icon={<Globe className="size-3.5" />}
+            />
           </Field>
         )}
         {mode === 'github' && (
@@ -304,7 +386,12 @@ function AddDialog({ initial, onClose }: { initial: AddMode; onClose: () => void
         )}
         {mode === 'jira' && (
           <Field label="JQL">
-            <Input value={jql} onChange={(e) => setJql(e.target.value)} className="font-mono text-[12px]" icon={<Ticket className="size-3.5" />} />
+            <Input
+              value={jql}
+              onChange={(e) => setJql(e.target.value)}
+              className="font-mono text-[12px]"
+              icon={<Ticket className="size-3.5" />}
+            />
           </Field>
         )}
         {mode === 'notion' && (

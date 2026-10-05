@@ -37,13 +37,7 @@ export const PERMISSIONS = [
 
 export type Permission = (typeof PERMISSIONS)[number];
 
-const READ_ONLY: Permission[] = [
-  'org:read',
-  'project:read',
-  'integration:read',
-  'workflow:read',
-  'knowledge:read',
-];
+const READ_ONLY: Permission[] = ['org:read', 'project:read', 'integration:read', 'workflow:read', 'knowledge:read'];
 
 const CONTRIBUTOR: Permission[] = [
   ...READ_ONLY,
@@ -75,21 +69,12 @@ export const ORG_ROLE_PERMISSIONS: Record<OrgRole, readonly Permission[]> = {
  * unioned with the organization role's permissions.
  */
 export const PROJECT_ROLE_PERMISSIONS: Record<ProjectRole, readonly Permission[]> = {
-  MAINTAINER: [
-    ...CONTRIBUTOR,
-    'project:manage',
-    'code:merge',
-    'deploy:production',
-    'audit:read',
-  ],
+  MAINTAINER: [...CONTRIBUTOR, 'project:manage', 'code:merge', 'deploy:production', 'audit:read'],
   DEVELOPER: CONTRIBUTOR,
   VIEWER: READ_ONLY,
 };
 
-export function resolvePermissions(
-  orgRole: OrgRole,
-  projectRole?: ProjectRole | null,
-): Set<Permission> {
+export function resolvePermissions(orgRole: OrgRole, projectRole?: ProjectRole | null): Set<Permission> {
   const result = new Set<Permission>(ORG_ROLE_PERMISSIONS[orgRole]);
   if (projectRole) {
     for (const p of PROJECT_ROLE_PERMISSIONS[projectRole]) result.add(p);
@@ -97,18 +82,12 @@ export function resolvePermissions(
   return result;
 }
 
-export function hasPermission(
-  orgRole: OrgRole,
-  permission: Permission,
-  projectRole?: ProjectRole | null,
-): boolean {
+export function hasPermission(orgRole: OrgRole, permission: Permission, projectRole?: ProjectRole | null): boolean {
   return resolvePermissions(orgRole, projectRole).has(permission);
 }
 
 /** Permission required to deploy to an environment type. */
-export function deployPermissionFor(
-  envType: 'DEVELOPMENT' | 'STAGING' | 'PRODUCTION',
-): Permission {
+export function deployPermissionFor(envType: 'DEVELOPMENT' | 'STAGING' | 'PRODUCTION'): Permission {
   switch (envType) {
     case 'PRODUCTION':
       return 'deploy:production';

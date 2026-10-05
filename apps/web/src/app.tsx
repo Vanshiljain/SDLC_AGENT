@@ -91,41 +91,251 @@ const router = createBrowserRouter([
     element: <Root />,
     errorElement: <RouteError />,
     children: [
-      { path: '/login', element: <PublicOnly><LoginPage /></PublicOnly> },
-      { path: '/register', element: <PublicOnly><RegisterPage /></PublicOnly> },
+      {
+        path: '/login',
+        element: (
+          <PublicOnly>
+            <LoginPage />
+          </PublicOnly>
+        ),
+      },
+      {
+        path: '/register',
+        element: (
+          <PublicOnly>
+            <RegisterPage />
+          </PublicOnly>
+        ),
+      },
       { path: '/accept-invite', element: <AcceptInvitePage /> },
       {
         element: <RequireAuth />,
         children: [
           { index: true, element: <Navigate to="/dashboard" replace /> },
-          { path: '/dashboard', element: <Lazy><DashboardPage /></Lazy> },
-          { path: '/chat', element: <Lazy><ChatPage /></Lazy> },
-          { path: '/chat/:conversationId', element: <Lazy><ChatPage /></Lazy> },
-          { path: '/executions', element: <Lazy><ExecutionsPage /></Lazy> },
-          { path: '/executions/:id', element: <Lazy><ExecutionDetailPage /></Lazy> },
-          { path: '/approvals', element: <Lazy><ApprovalsPage /></Lazy> },
-          { path: '/approvals/:id', element: <Lazy><ApprovalsPage /></Lazy> },
-          { path: '/deployments', element: <Lazy><DeploymentsPage /></Lazy> },
-          { path: '/workflows', element: <Lazy><WorkflowsPage /></Lazy> },
-          { path: '/workflows/new', element: <Lazy><FlowBuilderPage /></Lazy> },
-          { path: '/workflows/:id', element: <Lazy><FlowBuilderPage /></Lazy> },
-          { path: '/projects', element: <Lazy><ProjectsPage /></Lazy> },
-          { path: '/projects/:id', element: <Lazy><ProjectDetailPage /></Lazy> },
-          { path: '/graph', element: <Lazy><GraphPage /></Lazy> },
-          { path: '/knowledge', element: <Lazy><KnowledgePage /></Lazy> },
-          { path: '/agents', element: <Lazy><AgentsPage /></Lazy> },
-          { path: '/tasks', element: <Lazy><TasksPage /></Lazy> },
-          { path: '/code-reviews', element: <Lazy><CodeReviewsPage /></Lazy> },
-          { path: '/code-reviews/:id', element: <Lazy><CodeReviewDetailPage /></Lazy> },
-          { path: '/qa', element: <Lazy><QaPage /></Lazy> },
-          { path: '/documents', element: <Lazy><DocumentsPage /></Lazy> },
-          { path: '/documents/:id', element: <Lazy><DocumentDetailPage /></Lazy> },
-          { path: '/audit-logs', element: <Lazy><AuditPage /></Lazy> },
-          { path: '/observability', element: <Lazy><ObservabilityPage /></Lazy> },
-          { path: '/integrations', element: <Lazy><IntegrationsPage /></Lazy> },
-          { path: '/integrations/trello/callback', element: <Lazy><TrelloCallbackPage /></Lazy> },
-          { path: '/settings', element: <Lazy><SettingsPage /></Lazy> },
-          { path: '*', element: <Lazy><NotFoundPage /></Lazy> },
+          {
+            path: '/dashboard',
+            element: (
+              <Lazy>
+                <DashboardPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/chat',
+            element: (
+              <Lazy>
+                <ChatPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/chat/:conversationId',
+            element: (
+              <Lazy>
+                <ChatPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/executions',
+            element: (
+              <Lazy>
+                <ExecutionsPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/executions/:id',
+            element: (
+              <Lazy>
+                <ExecutionDetailPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/approvals',
+            element: (
+              <Lazy>
+                <ApprovalsPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/approvals/:id',
+            element: (
+              <Lazy>
+                <ApprovalsPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/deployments',
+            element: (
+              <Lazy>
+                <DeploymentsPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/workflows',
+            element: (
+              <Lazy>
+                <WorkflowsPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/workflows/new',
+            element: (
+              <Lazy>
+                <FlowBuilderPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/workflows/:id',
+            element: (
+              <Lazy>
+                <FlowBuilderPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/projects',
+            element: (
+              <Lazy>
+                <ProjectsPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/projects/:id',
+            element: (
+              <Lazy>
+                <ProjectDetailPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/graph',
+            element: (
+              <Lazy>
+                <GraphPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/knowledge',
+            element: (
+              <Lazy>
+                <KnowledgePage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/agents',
+            element: (
+              <Lazy>
+                <AgentsPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/tasks',
+            element: (
+              <Lazy>
+                <TasksPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/code-reviews',
+            element: (
+              <Lazy>
+                <CodeReviewsPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/code-reviews/:id',
+            element: (
+              <Lazy>
+                <CodeReviewDetailPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/qa',
+            element: (
+              <Lazy>
+                <QaPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/documents',
+            element: (
+              <Lazy>
+                <DocumentsPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/documents/:id',
+            element: (
+              <Lazy>
+                <DocumentDetailPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/audit-logs',
+            element: (
+              <Lazy>
+                <AuditPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/observability',
+            element: (
+              <Lazy>
+                <ObservabilityPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/integrations',
+            element: (
+              <Lazy>
+                <IntegrationsPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/integrations/trello/callback',
+            element: (
+              <Lazy>
+                <TrelloCallbackPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '/settings',
+            element: (
+              <Lazy>
+                <SettingsPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: '*',
+            element: (
+              <Lazy>
+                <NotFoundPage />
+              </Lazy>
+            ),
+          },
         ],
       },
     ],
@@ -138,7 +348,11 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={250}>
         <RouterProvider router={router} />
-        <Toaster theme={theme} position="bottom-right" toastOptions={{ className: '!bg-raised !border-line !text-fg !text-[13px] !shadow-pop' }} />
+        <Toaster
+          theme={theme}
+          position="bottom-right"
+          toastOptions={{ className: '!bg-raised !border-line !text-fg !text-[13px] !shadow-pop' }}
+        />
       </TooltipProvider>
     </QueryClientProvider>
   );

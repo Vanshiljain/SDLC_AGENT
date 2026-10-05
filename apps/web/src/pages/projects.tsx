@@ -19,12 +19,37 @@ export function HealthRing({ health, size = 44 }: { health: ProjectHealth; size?
   const r = (size - 6) / 2;
   const c = 2 * Math.PI * r;
   const score = health.score ?? 0;
-  const color = health.score === null ? 'var(--color-line-strong)' : score >= 80 ? 'var(--color-ok)' : score >= 50 ? 'var(--color-warn)' : 'var(--color-bad)';
+  const color =
+    health.score === null
+      ? 'var(--color-line-strong)'
+      : score >= 80
+        ? 'var(--color-ok)'
+        : score >= 50
+          ? 'var(--color-warn)'
+          : 'var(--color-bad)';
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }} title={health.score === null ? 'Not enough activity to score health yet' : `Health ${health.score}/100 (${health.status.replace('_', ' ')})`}>
+    <div
+      className="relative shrink-0"
+      style={{ width: size, height: size }}
+      title={
+        health.score === null
+          ? 'Not enough activity to score health yet'
+          : `Health ${health.score}/100 (${health.status.replace('_', ' ')})`
+      }
+    >
       <svg width={size} height={size} className="-rotate-90">
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-line)" strokeWidth={3} />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - score / 100)} />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth={3}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - score / 100)}
+        />
       </svg>
       <span className="absolute inset-0 flex items-center justify-center font-mono text-[12px] font-medium">{health.score ?? '—'}</span>
     </div>
@@ -126,11 +151,17 @@ function ProjectCard({ project: p }: { project: ProjectSummary }) {
           </div>
           <div>
             <div className="text-fg-subtle">Success</div>
-            <div className={cn('font-mono text-[13px]', (p.health.successRate ?? 1) < 0.7 && 'text-bad')}>{formatPercent(p.health.successRate)}</div>
+            <div className={cn('font-mono text-[13px]', (p.health.successRate ?? 1) < 0.7 && 'text-bad')}>
+              {formatPercent(p.health.successRate)}
+            </div>
           </div>
           <div>
             <div className="text-fg-subtle">Last QA</div>
-            <div className="truncate text-[12px]">{p.health.lastQa ? `${p.health.lastQa.passed} ✓ ${p.health.lastQa.failed ? `${p.health.lastQa.failed} ✗ ` : ''}· ${timeAgo(p.health.lastQa.createdAt)}` : '—'}</div>
+            <div className="truncate text-[12px]">
+              {p.health.lastQa
+                ? `${p.health.lastQa.passed} ✓ ${p.health.lastQa.failed ? `${p.health.lastQa.failed} ✗ ` : ''}· ${timeAgo(p.health.lastQa.createdAt)}`
+                : '—'}
+            </div>
           </div>
         </div>
       </Card>
@@ -140,9 +171,25 @@ function ProjectCard({ project: p }: { project: ProjectSummary }) {
 
 function NewProjectDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', key: '', description: '', ticketProvider: 'JIRA', jiraProjectKey: '', cicdProvider: 'GITHUB_ACTIONS', envs: true });
+  const [form, setForm] = useState({
+    name: '',
+    key: '',
+    description: '',
+    ticketProvider: 'JIRA',
+    jiraProjectKey: '',
+    cicdProvider: 'GITHUB_ACTIONS',
+    envs: true,
+  });
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
-  const keyFromName = (n: string) => n.replace(/[^A-Za-z0-9 ]/g, '').split(/\s+/).filter(Boolean).map((w) => w[0]).join('').toUpperCase().slice(0, 6) || '';
+  const keyFromName = (n: string) =>
+    n
+      .replace(/[^A-Za-z0-9 ]/g, '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => w[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 6) || '';
   const create = useAction(
     () =>
       api.post<{ id: string }>('/projects', {
@@ -150,7 +197,11 @@ function NewProjectDialog({ open, onClose }: { open: boolean; onClose: () => voi
         key: form.key,
         description: form.description || undefined,
         createDefaultEnvironments: form.envs,
-        settings: { ticketProvider: form.ticketProvider, cicdProvider: form.cicdProvider, ...(form.jiraProjectKey && { jiraProjectKey: form.jiraProjectKey }) },
+        settings: {
+          ticketProvider: form.ticketProvider,
+          cicdProvider: form.cicdProvider,
+          ...(form.jiraProjectKey && { jiraProjectKey: form.jiraProjectKey }),
+        },
       }),
     { success: 'Project created', invalidate: [qk.projects], onSuccess: (p) => (onClose(), navigate(`/projects/${p.id}`)) },
   );
@@ -166,7 +217,12 @@ function NewProjectDialog({ open, onClose }: { open: boolean; onClose: () => voi
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" loading={create.isPending} disabled={form.name.trim().length < 2 || !validKey} onClick={() => create.mutate(undefined)}>
+          <Button
+            variant="primary"
+            loading={create.isPending}
+            disabled={form.name.trim().length < 2 || !validKey}
+            onClick={() => create.mutate(undefined)}
+          >
             Create project
           </Button>
         </>
@@ -175,7 +231,18 @@ function NewProjectDialog({ open, onClose }: { open: boolean; onClose: () => voi
       <div className="space-y-4">
         <div className="grid grid-cols-[1fr_120px] gap-3">
           <Field label="Name" required>
-            <Input value={form.name} autoFocus onChange={(e) => setForm((f) => ({ ...f, name: e.target.value, key: f.key && f.key !== keyFromName(f.name) ? f.key : keyFromName(e.target.value) }))} placeholder="Authentication Service" />
+            <Input
+              value={form.name}
+              autoFocus
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  name: e.target.value,
+                  key: f.key && f.key !== keyFromName(f.name) ? f.key : keyFromName(e.target.value),
+                }))
+              }
+              placeholder="Authentication Service"
+            />
           </Field>
           <Field label="Key" required error={form.key && !validKey ? '2–10 caps' : null}>
             <Input value={form.key} className="font-mono" onChange={(e) => set('key', e.target.value.toUpperCase())} placeholder="AUTH" />
@@ -200,7 +267,12 @@ function NewProjectDialog({ open, onClose }: { open: boolean; onClose: () => voi
         </div>
         {form.ticketProvider === 'JIRA' && (
           <Field label="Jira project key" hint="Tickets are created in this Jira project.">
-            <Input value={form.jiraProjectKey} className="font-mono" onChange={(e) => set('jiraProjectKey', e.target.value.toUpperCase())} placeholder={form.key || 'AUTH'} />
+            <Input
+              value={form.jiraProjectKey}
+              className="font-mono"
+              onChange={(e) => set('jiraProjectKey', e.target.value.toUpperCase())}
+              placeholder={form.key || 'AUTH'}
+            />
           </Field>
         )}
         <label className="flex items-center justify-between rounded-md border border-line px-3 py-2.5">

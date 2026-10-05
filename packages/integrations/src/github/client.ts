@@ -133,8 +133,7 @@ export class GitHubClient {
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28',
       },
-      isRateLimited: (status, headers) =>
-        status === 403 && (headers.get('x-ratelimit-remaining') === '0' || headers.has('retry-after')),
+      isRateLimited: (status, headers) => status === 403 && (headers.get('x-ratelimit-remaining') === '0' || headers.has('retry-after')),
     });
   }
 
@@ -148,10 +147,15 @@ export class GitHubClient {
   }
   async getTokenScopes(): Promise<string[]> {
     const res = await this.http.request<GhUser>('/user');
-    return (res.headers.get('x-oauth-scopes') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+    return (res.headers.get('x-oauth-scopes') ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
   }
   listRepositories(page = 1, perPage = 50) {
-    return this.http.get<GhRepo[]>('/user/repos', { query: { per_page: perPage, page, sort: 'pushed', affiliation: 'owner,collaborator,organization_member' } });
+    return this.http.get<GhRepo[]>('/user/repos', {
+      query: { per_page: perPage, page, sort: 'pushed', affiliation: 'owner,collaborator,organization_member' },
+    });
   }
   getRepository(owner: string, repo: string) {
     return this.http.get<GhRepo>(this.repoPath(owner, repo));
@@ -167,7 +171,9 @@ export class GitHubClient {
     return ref?.object.sha ?? null;
   }
   listBranches(owner: string, repo: string) {
-    return this.http.get<{ name: string; commit: { sha: string }; protected: boolean }[]>(`${this.repoPath(owner, repo)}/branches`, { query: { per_page: 100 } });
+    return this.http.get<{ name: string; commit: { sha: string }; protected: boolean }[]>(`${this.repoPath(owner, repo)}/branches`, {
+      query: { per_page: 100 },
+    });
   }
   /** Idempotent: returns the existing branch when it already exists. */
   async createBranch(owner: string, repo: string, branch: string, fromSha: string): Promise<{ sha: string; created: boolean }> {
@@ -186,7 +192,11 @@ export class GitHubClient {
     }
   }
   async deleteBranch(owner: string, repo: string, branch: string): Promise<boolean> {
-    const res = await this.http.request(`${this.repoPath(owner, repo)}/git/refs/heads/${branch}`, { method: 'DELETE', allowStatus: [404, 422], responseType: 'none' });
+    const res = await this.http.request(`${this.repoPath(owner, repo)}/git/refs/heads/${branch}`, {
+      method: 'DELETE',
+      allowStatus: [404, 422],
+      responseType: 'none',
+    });
     return res.status === 204;
   }
 
@@ -237,10 +247,14 @@ export class GitHubClient {
     const tree = await Promise.all(
       files.map(async (f) => {
         if (f.content === null) return { path: f.path, mode: '100644', type: 'blob', sha: null };
-        const blob = await this.http.post<{ sha: string }>(`${base}/git/blobs`, {
-          content: Buffer.from(f.content, 'utf8').toString('base64'),
-          encoding: 'base64',
-        }, { retry: true });
+        const blob = await this.http.post<{ sha: string }>(
+          `${base}/git/blobs`,
+          {
+            content: Buffer.from(f.content, 'utf8').toString('base64'),
+            encoding: 'base64',
+          },
+          { retry: true },
+        );
         return { path: f.path, mode: '100644', type: 'blob', sha: blob.sha };
       }),
     );
@@ -255,13 +269,21 @@ export class GitHubClient {
   }
 
   compare(owner: string, repo: string, base: string, head: string) {
-    return this.http.get<{ status: string; ahead_by: number; behind_by: number; files?: GhPullFile[]; commits: { sha: string; commit: { message: string } }[] }>(
-      `${this.repoPath(owner, repo)}/compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}`,
-    );
+    return this.http.get<{
+      status: string;
+      ahead_by: number;
+      behind_by: number;
+      files?: GhPullFile[];
+      commits: { sha: string; commit: { message: string } }[];
+    }>(`${this.repoPath(owner, repo)}/compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}`);
   }
 
   // ── Pull requests ──
-  listPullRequests(owner: string, repo: string, params: { state?: 'open' | 'closed' | 'all'; head?: string; base?: string; perPage?: number } = {}) {
+  listPullRequests(
+    owner: string,
+    repo: string,
+    params: { state?: 'open' | 'closed' | 'all'; head?: string; base?: string; perPage?: number } = {},
+  ) {
     return this.http.get<GhPull[]>(`${this.repoPath(owner, repo)}/pulls`, {
       query: { state: params.state ?? 'open', head: params.head, base: params.base, per_page: params.perPage ?? 30 },
     });
@@ -293,7 +315,12 @@ export class GitHubClient {
   updatePullRequest(owner: string, repo: string, number: number, patch: { title?: string; body?: string; state?: 'open' | 'closed' }) {
     return this.http.patch<GhPull>(`${this.repoPath(owner, repo)}/pulls/${number}`, patch);
   }
-  mergePullRequest(owner: string, repo: string, number: number, params: { method?: 'merge' | 'squash' | 'rebase'; sha?: string; title?: string }) {
+  mergePullRequest(
+    owner: string,
+    repo: string,
+    number: number,
+    params: { method?: 'merge' | 'squash' | 'rebase'; sha?: string; title?: string },
+  ) {
     return this.http.put<{ merged: boolean; sha: string; message: string }>(`${this.repoPath(owner, repo)}/pulls/${number}/merge`, {
       merge_method: params.method ?? 'squash',
       sha: params.sha,
@@ -319,7 +346,9 @@ export class GitHubClient {
     });
   }
   listReviews(owner: string, repo: string, number: number) {
-    return this.http.get<{ id: number; body: string; state: string; user: { login: string } }[]>(`${this.repoPath(owner, repo)}/pulls/${number}/reviews`);
+    return this.http.get<{ id: number; body: string; state: string; user: { login: string } }[]>(
+      `${this.repoPath(owner, repo)}/pulls/${number}/reviews`,
+    );
   }
 
   // ── Issues & comments ──
@@ -333,23 +362,29 @@ export class GitHubClient {
     return this.http.post<{ id: number; html_url: string }>(`${this.repoPath(owner, repo)}/issues/${number}/comments`, { body });
   }
   listIssueComments(owner: string, repo: string, number: number) {
-    return this.http.get<{ id: number; body: string; html_url: string }[]>(`${this.repoPath(owner, repo)}/issues/${number}/comments`, { query: { per_page: 100 } });
+    return this.http.get<{ id: number; body: string; html_url: string }[]>(`${this.repoPath(owner, repo)}/issues/${number}/comments`, {
+      query: { per_page: 100 },
+    });
   }
 
   // ── Search ──
   searchCode(query: string, perPage = 20) {
-    return this.http.get<{ total_count: number; items: { name: string; path: string; html_url: string; repository: { full_name: string } }[] }>(
-      '/search/code',
-      { query: { q: query, per_page: perPage } },
-    );
+    return this.http.get<{
+      total_count: number;
+      items: { name: string; path: string; html_url: string; repository: { full_name: string } }[];
+    }>('/search/code', { query: { q: query, per_page: perPage } });
   }
   searchIssues(query: string, perPage = 20) {
-    return this.http.get<{ total_count: number; items: (GhIssue & { pull_request?: unknown })[] }>('/search/issues', { query: { q: query, per_page: perPage } });
+    return this.http.get<{ total_count: number; items: (GhIssue & { pull_request?: unknown })[] }>('/search/issues', {
+      query: { q: query, per_page: perPage },
+    });
   }
 
   // ── Checks ──
   listCheckRuns(owner: string, repo: string, ref: string) {
-    return this.http.get<{ total_count: number; check_runs: GhCheckRun[] }>(`${this.repoPath(owner, repo)}/commits/${ref}/check-runs`, { query: { per_page: 100 } });
+    return this.http.get<{ total_count: number; check_runs: GhCheckRun[] }>(`${this.repoPath(owner, repo)}/commits/${ref}/check-runs`, {
+      query: { per_page: 100 },
+    });
   }
 
   // ── Webhooks ──
@@ -369,7 +404,13 @@ export class GitHubClient {
   listWorkflows(owner: string, repo: string) {
     return this.http.get<{ workflows: GhWorkflow[] }>(`${this.repoPath(owner, repo)}/actions/workflows`, { query: { per_page: 100 } });
   }
-  async dispatchWorkflow(owner: string, repo: string, workflow: string | number, ref: string, inputs: Record<string, string> = {}): Promise<void> {
+  async dispatchWorkflow(
+    owner: string,
+    repo: string,
+    workflow: string | number,
+    ref: string,
+    inputs: Record<string, string> = {},
+  ): Promise<void> {
     await this.http.request(`${this.repoPath(owner, repo)}/actions/workflows/${encodeURIComponent(String(workflow))}/dispatches`, {
       method: 'POST',
       body: { ref, inputs },
@@ -398,7 +439,9 @@ export class GitHubClient {
     return this.http.get<GhWorkflowRun>(`${this.repoPath(owner, repo)}/actions/runs/${runId}`);
   }
   listJobsForRun(owner: string, repo: string, runId: number) {
-    return this.http.get<{ total_count: number; jobs: GhJob[] }>(`${this.repoPath(owner, repo)}/actions/runs/${runId}/jobs`, { query: { per_page: 100 } });
+    return this.http.get<{ total_count: number; jobs: GhJob[] }>(`${this.repoPath(owner, repo)}/actions/runs/${runId}/jobs`, {
+      query: { per_page: 100 },
+    });
   }
   async getJobLogs(owner: string, repo: string, jobId: number): Promise<string> {
     // Responds with a redirect to a short-lived log URL; fetch follows it.
@@ -415,9 +458,15 @@ export class GitHubClient {
     });
   }
   async cancelWorkflowRun(owner: string, repo: string, runId: number): Promise<void> {
-    await this.http.request(`${this.repoPath(owner, repo)}/actions/runs/${runId}/cancel`, { method: 'POST', responseType: 'none', allowStatus: [409] });
+    await this.http.request(`${this.repoPath(owner, repo)}/actions/runs/${runId}/cancel`, {
+      method: 'POST',
+      responseType: 'none',
+      allowStatus: [409],
+    });
   }
   listEnvironments(owner: string, repo: string) {
-    return this.http.get<{ environments: { id: number; name: string; html_url: string }[] }>(`${this.repoPath(owner, repo)}/environments`, { allowStatus: [404] });
+    return this.http.get<{ environments: { id: number; name: string; html_url: string }[] }>(`${this.repoPath(owner, repo)}/environments`, {
+      allowStatus: [404],
+    });
   }
 }

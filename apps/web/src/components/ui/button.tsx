@@ -3,7 +3,8 @@ import { cn } from '@/lib/cn';
 import { Spinner } from './primitives';
 
 const VARIANTS = {
-  primary: 'bg-accent text-accent-fg hover:brightness-110 active:brightness-95 shadow-[0_0_0_1px_rgb(0_0_0/0.08),0_6px_18px_-8px_var(--color-accent)]',
+  primary:
+    'bg-accent text-accent-fg hover:brightness-110 active:brightness-95 shadow-[0_0_0_1px_rgb(0_0_0/0.08),0_6px_18px_-8px_var(--color-accent)]',
   secondary: 'bg-raised text-fg border border-line hover:border-line-strong hover:bg-sunken',
   ghost: 'text-fg-muted hover:text-fg hover:bg-sunken',
   danger: 'bg-bad text-white hover:brightness-110',
@@ -26,7 +27,10 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: ReactNode;
 }
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({ variant = 'secondary', size = 'md', loading, icon, className, children, disabled, type = 'button', ...rest }, ref) {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { variant = 'secondary', size = 'md', loading, icon, className, children, disabled, type = 'button', ...rest },
+  ref,
+) {
   return (
     <button
       ref={ref}

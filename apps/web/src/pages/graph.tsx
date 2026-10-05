@@ -1,7 +1,37 @@
 import { memo, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Background, BackgroundVariant, Controls, Handle, MiniMap, Position, ReactFlow, type Edge, type Node, type NodeProps } from '@xyflow/react';
-import { BookText, Boxes, CircleDot, Container, ExternalLink, FileText, FolderKanban, GitBranch, GitCommitHorizontal, GitPullRequest, Network, Rocket, Search, ShieldCheck, Ticket, TestTubes, Zap, type LucideIcon } from 'lucide-react';
+import {
+  Background,
+  BackgroundVariant,
+  Controls,
+  Handle,
+  MiniMap,
+  Position,
+  ReactFlow,
+  type Edge,
+  type Node,
+  type NodeProps,
+} from '@xyflow/react';
+import {
+  BookText,
+  Boxes,
+  CircleDot,
+  Container,
+  ExternalLink,
+  FileText,
+  FolderKanban,
+  GitBranch,
+  GitCommitHorizontal,
+  GitPullRequest,
+  Network,
+  Rocket,
+  Search,
+  ShieldCheck,
+  Ticket,
+  TestTubes,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react';
 import { useGraph, useProjects } from '@/api/queries';
 import type { GraphNode } from '@/api/types';
 import { cn } from '@/lib/cn';
@@ -48,7 +78,10 @@ const EntityNode = memo(function EntityNode({ data }: NodeProps<Node<EntityData>
       )}
     >
       <Handle type="target" position={Position.Left} isConnectable={false} />
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-full" style={{ background: `color-mix(in oklab, ${t.color} 16%, transparent)`, color: t.color }}>
+      <span
+        className="flex size-8 shrink-0 items-center justify-center rounded-full"
+        style={{ background: `color-mix(in oklab, ${t.color} 16%, transparent)`, color: t.color }}
+      >
         <t.icon className="size-3.5" />
       </span>
       <div className="min-w-0 flex-1">
@@ -103,7 +136,11 @@ export function GraphPage() {
       position: { x: 0, y: 0 },
       width: 208,
       height: 46,
-      data: { node: n, highlighted: Boolean(matched?.has(n.id)) || n.id === focus, dimmed: (matched ? !matched.has(n.id) : false) || (focus ? !neighbours.has(n.id) : false) },
+      data: {
+        node: n,
+        highlighted: Boolean(matched?.has(n.id)) || n.id === focus,
+        dimmed: (matched ? !matched.has(n.id) : false) || (focus ? !neighbours.has(n.id) : false),
+      },
     }));
     const edgesOut: Edge[] = es.map((e) => ({
       id: e.id,
@@ -128,7 +165,12 @@ export function GraphPage() {
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <div className="w-56">
-            <Input icon={<Search className="size-3.5" />} placeholder="Find a ticket, PR, run…" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <Input
+              icon={<Search className="size-3.5" />}
+              placeholder="Find a ticket, PR, run…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
           </div>
           <Select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="w-48" aria-label="Project">
             <option value="">All projects</option>
@@ -157,7 +199,10 @@ export function GraphPage() {
                 key={type}
                 type="button"
                 onClick={() => setHidden((h) => (h.has(type) ? new Set([...h].filter((x) => x !== type)) : new Set([...h, type])))}
-                className={cn('inline-flex h-6 items-center gap-1.5 rounded-full border px-2 text-[11.5px] transition-opacity', off ? 'border-line opacity-45' : 'border-line-strong')}
+                className={cn(
+                  'inline-flex h-6 items-center gap-1.5 rounded-full border px-2 text-[11.5px] transition-opacity',
+                  off ? 'border-line opacity-45' : 'border-line-strong',
+                )}
                 aria-pressed={!off}
               >
                 <t.icon className="size-3" style={{ color: t.color }} />
@@ -177,7 +222,11 @@ export function GraphPage() {
             <Skeleton className="h-full min-h-96" />
           </div>
         ) : !nodes.length ? (
-          <EmptyState icon={<Network />} title="The graph fills as work flows" description="Each run links its ticket, branch, commits, pull request, review, CI, QA results, deployments and docs. Start a delivery to see it grow." />
+          <EmptyState
+            icon={<Network />}
+            title="The graph fills as work flows"
+            description="Each run links its ticket, branch, commits, pull request, review, CI, QA results, deployments and docs. Start a delivery to see it grow."
+          />
         ) : (
           <div className="grid-dots h-full">
             <ReactFlow
@@ -195,7 +244,15 @@ export function GraphPage() {
             >
               <Background variant={BackgroundVariant.Dots} gap={18} size={1} color="transparent" />
               <Controls position="bottom-right" showInteractive={false} />
-              <MiniMap pannable zoomable position="bottom-left" style={{ width: 168, height: 96 }} className="!rounded-md !border !border-line" maskColor="color-mix(in oklab, var(--color-canvas) 70%, transparent)" nodeColor={(n) => (TYPES[(n.data as EntityData).node.type] ?? fallback).color} />
+              <MiniMap
+                pannable
+                zoomable
+                position="bottom-left"
+                style={{ width: 168, height: 96 }}
+                className="!rounded-md !border !border-line"
+                maskColor="color-mix(in oklab, var(--color-canvas) 70%, transparent)"
+                nodeColor={(n) => (TYPES[(n.data as EntityData).node.type] ?? fallback).color}
+              />
             </ReactFlow>
           </div>
         )}
@@ -206,12 +263,21 @@ export function GraphPage() {
             {selected.sublabel && <div className="text-[12px] text-fg-muted">{selected.sublabel}</div>}
             <div className="mt-3 flex gap-2">
               {selected.link && (
-                <button type="button" onClick={() => navigate(selected.link!)} className="text-[12px] font-medium text-accent hover:underline">
+                <button
+                  type="button"
+                  onClick={() => navigate(selected.link!)}
+                  className="text-[12px] font-medium text-accent hover:underline"
+                >
                   Open in Forgeline →
                 </button>
               )}
               {selected.url && (
-                <a href={selected.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12px] text-fg-muted hover:text-fg">
+                <a
+                  href={selected.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-[12px] text-fg-muted hover:text-fg"
+                >
                   External <ExternalLink className="size-3" />
                 </a>
               )}

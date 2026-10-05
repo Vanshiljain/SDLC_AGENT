@@ -5,7 +5,11 @@ import { Button } from '@/components/ui/button';
 
 export function RouteError() {
   const error = useRouteError();
-  const message = isRouteErrorResponse(error) ? `${error.status} ${error.statusText}` : error instanceof Error ? error.message : 'Unexpected error';
+  const message = isRouteErrorResponse(error)
+    ? `${error.status} ${error.statusText}`
+    : error instanceof Error
+      ? error.message
+      : 'Unexpected error';
   return (
     <div className="flex h-full items-center justify-center">
       <EmptyState

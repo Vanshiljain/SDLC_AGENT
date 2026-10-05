@@ -27,7 +27,15 @@ interface Token {
 }
 
 const MAX_EXPRESSION_LENGTH = 2000;
-const FORBIDDEN_PROPS = new Set(['__proto__', 'prototype', 'constructor', '__defineGetter__', '__defineSetter__', '__lookupGetter__', '__lookupSetter__']);
+const FORBIDDEN_PROPS = new Set([
+  '__proto__',
+  'prototype',
+  'constructor',
+  '__defineGetter__',
+  '__defineSetter__',
+  '__lookupGetter__',
+  '__lookupSetter__',
+]);
 const TWO_CHAR_OPS = new Set(['==', '!=', '<=', '>=', '&&', '||']);
 const ONE_CHAR_OPS = new Set(['<', '>', '+', '-', '*', '/', '%', '!', '?', ':']);
 const PUNCTUATION = new Set(['(', ')', '[', ']', '.', ',']);
@@ -286,7 +294,10 @@ const FUNCTIONS: Record<string, (...args: unknown[]) => unknown> = {
   string: (v) => (v === undefined || v === null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v)),
   number: (v) => Number(v),
   json: (v) => JSON.stringify(v ?? null),
-  join: (arr, sep) => (Array.isArray(arr) ? arr.map((x) => (isObjectLike(x) ? JSON.stringify(x) : String(x))).join(sep === undefined ? ', ' : String(sep)) : ''),
+  join: (arr, sep) =>
+    Array.isArray(arr)
+      ? arr.map((x) => (isObjectLike(x) ? JSON.stringify(x) : String(x))).join(sep === undefined ? ', ' : String(sep))
+      : '',
   slugify: (v) =>
     String(v ?? '')
       .toLowerCase()
@@ -366,9 +377,7 @@ function evaluateNode(node: ExprNode, scope: Record<string, unknown>): unknown {
       return node.op === '!' ? !truthy(v) : -Number(v);
     }
     case 'ternary':
-      return truthy(evaluateNode(node.test, scope))
-        ? evaluateNode(node.consequent, scope)
-        : evaluateNode(node.alternate, scope);
+      return truthy(evaluateNode(node.test, scope)) ? evaluateNode(node.consequent, scope) : evaluateNode(node.alternate, scope);
     case 'call':
       return FUNCTIONS[node.callee]!(...node.args.map((a) => evaluateNode(a, scope)));
     case 'binary': {
@@ -401,9 +410,7 @@ function evaluateNode(node: ExprNode, scope: Record<string, unknown>): unknown {
                 ? Object.prototype.hasOwnProperty.call(r, String(l))
                 : false;
         case '+':
-          return typeof l === 'string' || typeof r === 'string'
-            ? `${l ?? ''}${r ?? ''}`
-            : Number(l) + Number(r);
+          return typeof l === 'string' || typeof r === 'string' ? `${l ?? ''}${r ?? ''}` : Number(l) + Number(r);
         case '-':
           return Number(l) - Number(r);
         case '*':

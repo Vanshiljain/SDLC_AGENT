@@ -8,7 +8,14 @@ import { AuditService } from '../audit/audit.service';
 import { ConnectionResolver } from '../integrations/connection-resolver.service';
 import type { AuthContext } from '../common/auth/auth-context';
 import { slugify } from '../organizations/organizations.service';
-import type { CreateProjectDto, EnvironmentDto, LinkRepositoryDto, UpdateEnvironmentDto, UpdateProjectDto, UpdateRepositoryDto } from './projects.dto';
+import type {
+  CreateProjectDto,
+  EnvironmentDto,
+  LinkRepositoryDto,
+  UpdateEnvironmentDto,
+  UpdateProjectDto,
+  UpdateRepositoryDto,
+} from './projects.dto';
 
 const DEFAULT_ENVIRONMENTS: { name: string; type: EnvironmentType; requiresApproval: boolean }[] = [
   { name: 'development', type: 'DEVELOPMENT', requiresApproval: false },
@@ -49,20 +56,47 @@ export class ProjectsService {
     const ids = projects.map((p) => p.id);
     const since = new Date(Date.now() - 14 * 86_400_000);
     const [runStats, lastDeploys, pendingApprovals, lastQa] = await Promise.all([
-      this.prisma.workflowExecution.groupBy({ by: ['projectId', 'status'], where: { projectId: { in: ids }, createdAt: { gte: since } }, _count: true }),
-      this.prisma.deployment.findMany({ where: { projectId: { in: ids } }, orderBy: { createdAt: 'desc' }, distinct: ['projectId', 'environmentId'], include: { environment: { select: { name: true, type: true } } } }),
+      this.prisma.workflowExecution.groupBy({
+        by: ['projectId', 'status'],
+        where: { projectId: { in: ids }, createdAt: { gte: since } },
+        _count: true,
+      }),
+      this.prisma.deployment.findMany({
+        where: { projectId: { in: ids } },
+        orderBy: { createdAt: 'desc' },
+        distinct: ['projectId', 'environmentId'],
+        include: { environment: { select: { name: true, type: true } } },
+      }),
       this.prisma.approval.groupBy({ by: ['projectId'], where: { projectId: { in: ids }, status: 'PENDING' }, _count: true }),
-      this.prisma.qATestRun.findMany({ where: { projectId: { in: ids } }, orderBy: { createdAt: 'desc' }, distinct: ['projectId'], select: { projectId: true, status: true, passed: true, failed: true, createdAt: true } }),
+      this.prisma.qATestRun.findMany({
+        where: { projectId: { in: ids } },
+        orderBy: { createdAt: 'desc' },
+        distinct: ['projectId'],
+        select: { projectId: true, status: true, passed: true, failed: true, createdAt: true },
+      }),
     ]);
     return projects.map((p) => {
       const stats = runStats.filter((r) => r.projectId === p.id);
       const total = stats.reduce((s, r) => s + r._count, 0);
       const failed = stats.filter((r) => r.status === 'FAILED').reduce((s, r) => s + r._count, 0);
       const completed = stats.filter((r) => r.status === 'COMPLETED').reduce((s, r) => s + r._count, 0);
-      const deploys = lastDeploys.filter((d) => d.projectId === p.id).map((d) => ({ environment: d.environment.name, type: d.environment.type, status: d.status, version: d.version, at: d.createdAt, simulated: d.simulated }));
+      const deploys = lastDeploys
+        .filter((d) => d.projectId === p.id)
+        .map((d) => ({
+          environment: d.environment.name,
+          type: d.environment.type,
+          status: d.status,
+          version: d.version,
+          at: d.createdAt,
+          simulated: d.simulated,
+        }));
       const qa = lastQa.find((q) => q.projectId === p.id) ?? null;
       const successRate = completed + failed ? completed / (completed + failed) : null;
-      const score = this.healthScore(successRate, deploys.map((d) => d.status), qa?.status ?? null);
+      const score = this.healthScore(
+        successRate,
+        deploys.map((d) => d.status),
+        qa?.status ?? null,
+      );
       return {
         ...p,
         health: {
@@ -125,12 +159,24 @@ export class ProjectsService {
       await tx.projectMember.create({ data: { projectId: p.id, userId: auth.userId, role: 'MAINTAINER' } });
       if (dto.createDefaultEnvironments !== false) {
         await tx.environment.createMany({
-          data: DEFAULT_ENVIRONMENTS.map((e) => ({ ...e, organizationId: auth.organizationId, projectId: p.id, smokeTests: [{ name: 'Health endpoint', path: '/health', expectStatus: 200 }] })),
+          data: DEFAULT_ENVIRONMENTS.map((e) => ({
+            ...e,
+            organizationId: auth.organizationId,
+            projectId: p.id,
+            smokeTests: [{ name: 'Health endpoint', path: '/health', expectStatus: 200 }],
+          })),
         });
       }
       return p;
     });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'project.created', resourceType: 'project', resourceId: project.id, projectId: project.id, input: { name: dto.name, key: dto.key } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'project.created',
+      resourceType: 'project',
+      resourceId: project.id,
+      projectId: project.id,
+      input: { name: dto.name, key: dto.key },
+    });
     return project;
   }
 
@@ -147,28 +193,64 @@ export class ProjectsService {
         ...(settings && { settings: settings as Prisma.InputJsonValue }),
       },
     });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'project.updated', resourceType: 'project', resourceId: id, projectId: id, input: dto });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'project.updated',
+      resourceType: 'project',
+      resourceId: id,
+      projectId: id,
+      input: dto,
+    });
     return project;
   }
 
   async remove(auth: AuthContext, id: string) {
-    const res = await this.prisma.project.updateMany({ where: { id, organizationId: auth.organizationId, deletedAt: null }, data: { deletedAt: new Date() } });
+    const res = await this.prisma.project.updateMany({
+      where: { id, organizationId: auth.organizationId, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
     if (!res.count) throw AppException.notFound('Project', id);
-    await this.audit.record({ organizationId: auth.organizationId, action: 'project.deleted', resourceType: 'project', resourceId: id, projectId: id });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'project.deleted',
+      resourceType: 'project',
+      resourceId: id,
+      projectId: id,
+    });
   }
 
   // ── Members ──
   async upsertMember(auth: AuthContext, projectId: string, userId: string, role: ProjectRole) {
-    const member = await this.prisma.membership.findUnique({ where: { organizationId_userId: { organizationId: auth.organizationId, userId } } });
+    const member = await this.prisma.membership.findUnique({
+      where: { organizationId_userId: { organizationId: auth.organizationId, userId } },
+    });
     if (!member) throw AppException.badRequest('User is not a member of this organization', 'NOT_A_MEMBER');
-    const pm = await this.prisma.projectMember.upsert({ where: { projectId_userId: { projectId, userId } }, create: { projectId, userId, role }, update: { role } });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'project.member_set', resourceType: 'project', resourceId: projectId, projectId, input: { userId, role } });
+    const pm = await this.prisma.projectMember.upsert({
+      where: { projectId_userId: { projectId, userId } },
+      create: { projectId, userId, role },
+      update: { role },
+    });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'project.member_set',
+      resourceType: 'project',
+      resourceId: projectId,
+      projectId,
+      input: { userId, role },
+    });
     return pm;
   }
 
   async removeMember(auth: AuthContext, projectId: string, userId: string) {
     await this.prisma.projectMember.deleteMany({ where: { projectId, userId } });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'project.member_removed', resourceType: 'project', resourceId: projectId, projectId, input: { userId } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'project.member_removed',
+      resourceType: 'project',
+      resourceId: projectId,
+      projectId,
+      input: { userId },
+    });
   }
 
   // ── Repositories ──
@@ -193,27 +275,61 @@ export class ProjectsService {
         language: remote.language ?? null,
         settings: { ...DEFAULT_REPOSITORY_SETTINGS, ...dto.settings } as Prisma.InputJsonValue,
       },
-      update: { deletedAt: null, defaultBranch: remote.default_branch, url: remote.html_url, language: remote.language ?? null, ...(dto.settings && { settings: { ...DEFAULT_REPOSITORY_SETTINGS, ...dto.settings } as Prisma.InputJsonValue }) },
+      update: {
+        deletedAt: null,
+        defaultBranch: remote.default_branch,
+        url: remote.html_url,
+        language: remote.language ?? null,
+        ...(dto.settings && { settings: { ...DEFAULT_REPOSITORY_SETTINGS, ...dto.settings } as Prisma.InputJsonValue }),
+      },
     });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'repository.linked', resourceType: 'repository', resourceId: repo.id, projectId, input: { fullName: remote.full_name } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'repository.linked',
+      resourceType: 'repository',
+      resourceId: repo.id,
+      projectId,
+      input: { fullName: remote.full_name },
+    });
     return repo;
   }
 
   async updateRepository(auth: AuthContext, projectId: string, repositoryId: string, dto: UpdateRepositoryDto) {
-    const repo = await this.prisma.repository.findFirst({ where: { id: repositoryId, projectId, organizationId: auth.organizationId, deletedAt: null } });
+    const repo = await this.prisma.repository.findFirst({
+      where: { id: repositoryId, projectId, organizationId: auth.organizationId, deletedAt: null },
+    });
     if (!repo) throw AppException.notFound('Repository', repositoryId);
     const updated = await this.prisma.repository.update({
       where: { id: repositoryId },
-      data: { ...(dto.defaultBranch && { defaultBranch: dto.defaultBranch }), ...(dto.settings && { settings: { ...(repo.settings as object), ...dto.settings } as Prisma.InputJsonValue }) },
+      data: {
+        ...(dto.defaultBranch && { defaultBranch: dto.defaultBranch }),
+        ...(dto.settings && { settings: { ...(repo.settings as object), ...dto.settings } as Prisma.InputJsonValue }),
+      },
     });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'repository.updated', resourceType: 'repository', resourceId: repositoryId, projectId, input: dto });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'repository.updated',
+      resourceType: 'repository',
+      resourceId: repositoryId,
+      projectId,
+      input: dto,
+    });
     return updated;
   }
 
   async unlinkRepository(auth: AuthContext, projectId: string, repositoryId: string) {
-    const res = await this.prisma.repository.updateMany({ where: { id: repositoryId, projectId, organizationId: auth.organizationId, deletedAt: null }, data: { deletedAt: new Date() } });
+    const res = await this.prisma.repository.updateMany({
+      where: { id: repositoryId, projectId, organizationId: auth.organizationId, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
     if (!res.count) throw AppException.notFound('Repository', repositoryId);
-    await this.audit.record({ organizationId: auth.organizationId, action: 'repository.unlinked', resourceType: 'repository', resourceId: repositoryId, projectId });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'repository.unlinked',
+      resourceType: 'repository',
+      resourceId: repositoryId,
+      projectId,
+    });
   }
 
   listRepositories(auth: AuthContext) {
@@ -239,7 +355,14 @@ export class ProjectsService {
         config: (dto.config ?? {}) as Prisma.InputJsonValue,
       },
     });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'environment.created', resourceType: 'environment', resourceId: env.id, projectId, input: dto });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'environment.created',
+      resourceType: 'environment',
+      resourceId: env.id,
+      projectId,
+      input: dto,
+    });
     return env;
   }
 
@@ -259,7 +382,14 @@ export class ProjectsService {
         ...(dto.config && { config: dto.config as Prisma.InputJsonValue }),
       },
     });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'environment.updated', resourceType: 'environment', resourceId: environmentId, projectId, input: dto });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'environment.updated',
+      resourceType: 'environment',
+      resourceId: environmentId,
+      projectId,
+      input: dto,
+    });
     return updated;
   }
 }
@@ -285,7 +415,15 @@ export class ProjectContextService {
       description: p.description,
       settings: (p.settings ?? {}) as ProjectSettings,
       repository: repo
-        ? { id: repo.id, owner: repo.owner, name: repo.name, fullName: repo.fullName, defaultBranch: repo.defaultBranch, url: repo.url, settings: { ...DEFAULT_REPOSITORY_SETTINGS, ...(repo.settings as RepositorySettings) } }
+        ? {
+            id: repo.id,
+            owner: repo.owner,
+            name: repo.name,
+            fullName: repo.fullName,
+            defaultBranch: repo.defaultBranch,
+            url: repo.url,
+            settings: { ...DEFAULT_REPOSITORY_SETTINGS, ...(repo.settings as RepositorySettings) },
+          }
         : null,
       environments: p.environments.map((e) => ({
         id: e.id,

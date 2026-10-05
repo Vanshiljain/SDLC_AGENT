@@ -55,7 +55,10 @@ export class BullJobQueue extends JobQueue implements OnApplicationBootstrap, On
   }
 
   async add(name: JobName, data: Record<string, unknown>, options: JobOptions = {}): Promise<void> {
-    await this.queue.add(name, data, { jobId: options.jobId?.replace(/:/g, '_'), delay: options.delayMs && options.delayMs > 0 ? options.delayMs : undefined });
+    await this.queue.add(name, data, {
+      jobId: options.jobId?.replace(/:/g, '_'),
+      delay: options.delayMs && options.delayMs > 0 ? options.delayMs : undefined,
+    });
   }
 
   onApplicationBootstrap(): void {
@@ -107,10 +110,13 @@ export class InlineJobQueue extends JobQueue implements OnModuleDestroy {
     const key = options.jobId ? `${name}:${options.jobId}` : `${name}:${Math.random()}`;
     if (options.jobId && this.pending.has(key)) return;
     this.pending.add(key);
-    const timer = setTimeout(() => {
-      this.timers.delete(timer);
-      void this.run(name, data, key);
-    }, Math.max(0, options.delayMs ?? 0));
+    const timer = setTimeout(
+      () => {
+        this.timers.delete(timer);
+        void this.run(name, data, key);
+      },
+      Math.max(0, options.delayMs ?? 0),
+    );
     this.timers.add(timer);
   }
 

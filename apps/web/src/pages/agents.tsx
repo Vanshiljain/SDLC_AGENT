@@ -20,7 +20,10 @@ export function AgentsPage() {
   const runs = useAgentRuns({ agent: agent || undefined, page, pageSize: 25 });
   return (
     <Page wide>
-      <PageHeader title="Agents" description="Specialised agents that plan, build, review, test, release and document. Each acts only through registered tools, with your permissions, under your approval policy." />
+      <PageHeader
+        title="Agents"
+        description="Specialised agents that plan, build, review, test, release and document. Each acts only through registered tools, with your permissions, under your approval policy."
+      />
       {agents.error ? (
         <ErrorState error={agents.error} />
       ) : (
@@ -31,7 +34,10 @@ export function AgentsPage() {
             return (
               <Card key={a.id} className="flex flex-col p-4">
                 <div className="flex items-start gap-3">
-                  <span className="flex size-9 items-center justify-center rounded-lg" style={{ background: `color-mix(in oklab, ${v.color} 15%, transparent)`, color: v.color }}>
+                  <span
+                    className="flex size-9 items-center justify-center rounded-lg"
+                    style={{ background: `color-mix(in oklab, ${v.color} 15%, transparent)`, color: v.color }}
+                  >
                     <v.icon className="size-4" />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -74,7 +80,12 @@ export function AgentsPage() {
         title="Activity"
         className="mt-8"
         actions={
-          <Select value={agent} onChange={(e) => (setAgent(e.target.value), setPage(1))} className="h-7 w-48 text-[12px]" aria-label="Agent">
+          <Select
+            value={agent}
+            onChange={(e) => (setAgent(e.target.value), setPage(1))}
+            className="h-7 w-48 text-[12px]"
+            aria-label="Agent"
+          >
             <option value="">All agents</option>
             {agents.data?.map((a) => (
               <option key={a.key} value={a.key}>

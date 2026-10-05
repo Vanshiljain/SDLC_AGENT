@@ -60,7 +60,11 @@ export function markdownToAdf(markdown: string): AdfDocument {
       i++;
       while (i < lines.length && !/^```\s*$/.test(lines[i]!)) code.push(lines[i++]!);
       i++;
-      content.push({ type: 'codeBlock', attrs: fence[1] ? { language: fence[1] } : {}, content: code.length ? [{ type: 'text', text: code.join('\n') }] : [] });
+      content.push({
+        type: 'codeBlock',
+        attrs: fence[1] ? { language: fence[1] } : {},
+        content: code.length ? [{ type: 'text', text: code.join('\n') }] : [],
+      });
       continue;
     }
     const heading = /^(#{1,6})\s+(.*)$/.exec(line);

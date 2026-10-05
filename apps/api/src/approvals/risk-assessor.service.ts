@@ -69,18 +69,48 @@ export class RiskAssessor {
     };
   }
 
-  async assess(organizationId: string, e: ApprovalEvidence, ctx: { executionId?: string; userId?: string | null }): Promise<RiskAssessment & { source: 'heuristic' | 'ai' }> {
+  async assess(
+    organizationId: string,
+    e: ApprovalEvidence,
+    ctx: { executionId?: string; userId?: string | null },
+  ): Promise<RiskAssessment & { source: 'heuristic' | 'ai' }> {
     const base = this.heuristic(e);
     if (!this.llm.isConfigured() || e.simulated) return { ...base, source: 'heuristic' };
     const usage = new UsageTracker();
-    const run = await this.agentRuns.start({ organizationId, agentKey: 'release', task: `Risk assessment for ${e.action}`, executionId: ctx.executionId, userId: ctx.userId });
+    const run = await this.agentRuns.start({
+      organizationId,
+      agentKey: 'release',
+      task: `Risk assessment for ${e.action}`,
+      executionId: ctx.executionId,
+      userId: ctx.userId,
+    });
     try {
-      const messages = await renderPrompt('riskAssessment', { action: e.action, evidence: JSON.stringify({ ...e, heuristic: { level: base.level, factors: base.factors } }, null, 2) });
-      const ai = await invokeStructured({ model: this.llm.chatModel('fast'), schema: riskAssessmentSchema, name: 'risk_assessment', messages, usage, modelName: this.llm.modelName('fast') });
+      const messages = await renderPrompt('riskAssessment', {
+        action: e.action,
+        evidence: JSON.stringify({ ...e, heuristic: { level: base.level, factors: base.factors } }, null, 2),
+      });
+      const ai = await invokeStructured({
+        model: this.llm.chatModel('fast'),
+        schema: riskAssessmentSchema,
+        name: 'risk_assessment',
+        messages,
+        usage,
+        modelName: this.llm.modelName('fast'),
+      });
       // The model may raise but never lower the deterministic level.
       const level = LEVELS[Math.max(LEVELS.indexOf(ai.level), LEVELS.indexOf(base.level))]!;
-      await this.agentRuns.complete(organizationId, run, { usage, output: ai, summary: `${level} risk: ${ai.summary}`, executionId: ctx.executionId });
-      return { ...ai, level, factors: [...base.factors, ...ai.factors.filter((f) => !base.factors.some((b) => b.factor === f.factor))], source: 'ai' };
+      await this.agentRuns.complete(organizationId, run, {
+        usage,
+        output: ai,
+        summary: `${level} risk: ${ai.summary}`,
+        executionId: ctx.executionId,
+      });
+      return {
+        ...ai,
+        level,
+        factors: [...base.factors, ...ai.factors.filter((f) => !base.factors.some((b) => b.factor === f.factor))],
+        source: 'ai',
+      };
     } catch (err) {
       this.logger.warn({ err: (err as Error).message }, 'AI risk assessment failed; using heuristic');
       await this.agentRuns.fail(organizationId, run, err, usage);

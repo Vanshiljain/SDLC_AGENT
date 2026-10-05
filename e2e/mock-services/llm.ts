@@ -15,7 +15,8 @@ const structured: Record<string, (ctx: { calls: number; prompt: string }) => Jso
     summary: 'Implement password reset for the authentication service',
     issueType: 'Story',
     priority: 'High',
-    description: '## Context\nUsers cannot recover their accounts without support.\n\n## Scope\n- Request a reset token\n- Consume a single-use token\n\n## Technical notes\nReuse `hashToken` from `src/auth.js`; store only token hashes.',
+    description:
+      '## Context\nUsers cannot recover their accounts without support.\n\n## Scope\n- Request a reset token\n- Consume a single-use token\n\n## Technical notes\nReuse `hashToken` from `src/auth.js`; store only token hashes.',
     acceptanceCriteria: ['Reset tokens are single use', 'Reset tokens expire after 30 minutes', 'Only token hashes are stored'],
     labels: ['auth', 'security'],
   }),
@@ -25,7 +26,8 @@ const structured: Record<string, (ctx: { calls: number; prompt: string }) => Jso
     problem: 'Users who forget passwords need support intervention.',
     goals: ['Self-service reset', 'Secure token lifecycle'],
     nonGoals: ['SMS recovery'],
-    approach: 'Add `src/password-reset.js` reusing `hashToken` from `src/auth.js`. Tokens are random 32-byte values; only SHA-256 hashes are stored with a 30 minute TTL.',
+    approach:
+      'Add `src/password-reset.js` reusing `hashToken` from `src/auth.js`. Tokens are random 32-byte values; only SHA-256 hashes are stored with a 30 minute TTL.',
     components: [{ name: 'password-reset', responsibility: 'Token lifecycle', changes: 'New module' }],
     apiChanges: [],
     dataModelChanges: [{ entity: 'ResetTokenStore', change: 'In-memory map keyed by token hash' }],
@@ -77,35 +79,124 @@ const structured: Record<string, (ctx: { calls: number; prompt: string }) => Jso
     summary: 'Solid, minimal change. Consider rate limiting reset requests at the API layer.',
     verdict: 'COMMENT',
     riskLevel: 'LOW',
-    findings: [{ severity: 'MEDIUM', category: 'SECURITY', file: 'src/password-reset.js', line: 8, title: 'Rate-limit token creation', detail: 'Token creation should be rate limited per account to prevent abuse.', suggestion: 'Apply the existing throttling middleware to the reset endpoint.' }],
+    findings: [
+      {
+        severity: 'MEDIUM',
+        category: 'SECURITY',
+        file: 'src/password-reset.js',
+        line: 8,
+        title: 'Rate-limit token creation',
+        detail: 'Token creation should be rate limited per account to prevent abuse.',
+        suggestion: 'Apply the existing throttling middleware to the reset endpoint.',
+      },
+    ],
     dimensions: { security: 'warning', performance: 'passed', architecture: 'passed', tests: 'passed', maintainability: 'passed' },
     testCoverageGaps: [],
   }),
-  pull_request_description: () => ({ title: 'feat(auth): password reset tokens', body: '## Summary\nAdds single-use, expiring password reset tokens.\n\n## Testing\n`npm test`' }),
+  pull_request_description: () => ({
+    title: 'feat(auth): password reset tokens',
+    body: '## Summary\nAdds single-use, expiring password reset tokens.\n\n## Testing\n`npm test`',
+  }),
   qa_test_plan: () => ({
     summary: 'Token format, storage and lifecycle',
     testCases: [
-      { id: 'TC-1', title: 'Token is consumed once', type: 'UNIT', priority: 'P0', preconditions: null, steps: ['Create token', 'Consume twice'], expected: 'Second consume returns null' },
-      { id: 'TC-2', title: 'Expired token rejected', type: 'UNIT', priority: 'P0', preconditions: null, steps: ['Create token', 'Advance time'], expected: 'null' },
-      { id: 'TC-3', title: 'Token stored hashed', type: 'REGRESSION', priority: 'P1', preconditions: null, steps: ['Create token'], expected: 'Raw token not a store key' },
+      {
+        id: 'TC-1',
+        title: 'Token is consumed once',
+        type: 'UNIT',
+        priority: 'P0',
+        preconditions: null,
+        steps: ['Create token', 'Consume twice'],
+        expected: 'Second consume returns null',
+      },
+      {
+        id: 'TC-2',
+        title: 'Expired token rejected',
+        type: 'UNIT',
+        priority: 'P0',
+        preconditions: null,
+        steps: ['Create token', 'Advance time'],
+        expected: 'null',
+      },
+      {
+        id: 'TC-3',
+        title: 'Token stored hashed',
+        type: 'REGRESSION',
+        priority: 'P1',
+        preconditions: null,
+        steps: ['Create token'],
+        expected: 'Raw token not a store key',
+      },
     ],
     automatedTests: [{ path: 'test/password-reset.qa.test.js', content: GENERATED_QA_TEST, description: 'Token format and hashing' }],
   }),
-  risk_assessment: () => ({ level: 'LOW', summary: 'Small, tested change with automatic rollback.', factors: [{ factor: 'Small diff', impact: 'positive' }], recommendation: 'approve', mitigations: [] }),
-  document_draft: () => ({ title: 'Password reset', type: 'GUIDE', markdown: '# Password reset\n\nTokens are single use, hashed at rest and expire after 30 minutes.\n\n## Usage\n```js\nconst token = createResetToken(store, userId);\n```' }),
+  risk_assessment: () => ({
+    level: 'LOW',
+    summary: 'Small, tested change with automatic rollback.',
+    factors: [{ factor: 'Small diff', impact: 'positive' }],
+    recommendation: 'approve',
+    mitigations: [],
+  }),
+  document_draft: () => ({
+    title: 'Password reset',
+    type: 'GUIDE',
+    markdown:
+      '# Password reset\n\nTokens are single use, hashed at rest and expire after 30 minutes.\n\n## Usage\n```js\nconst token = createResetToken(store, userId);\n```',
+  }),
   flow_plan: ({ prompt }) => {
     const request = /Request: ([\s\S]*)$/.exec(prompt)?.[1]?.trim() ?? 'Implement password reset';
-    return { title: 'Password reset for Auth Service', summary: 'Full delivery: ticket, spec, code, review, CI, QA, staging, docs and production.', template: 'feature_delivery', inputs: [{ name: 'requirement', value: request }], customSteps: [], needsConfirmation: true };
+    return {
+      title: 'Password reset for Auth Service',
+      summary: 'Full delivery: ticket, spec, code, review, CI, QA, staging, docs and production.',
+      template: 'feature_delivery',
+      inputs: [{ name: 'requirement', value: request }],
+      customSteps: [],
+      needsConfirmation: true,
+    };
   },
-  command_route: () => ({ kind: 'command', commandId: 'deploy.environment', route: null, inputs: [{ name: 'environment', value: 'staging' }], confidence: 0.9, explanation: 'Deploy to staging' }),
+  command_route: () => ({
+    kind: 'command',
+    commandId: 'deploy.environment',
+    route: null,
+    inputs: [{ name: 'environment', value: 'staging' }],
+    confidence: 0.9,
+    explanation: 'Deploy to staging',
+  }),
   generated_workflow: () => ({
     name: 'Ready for development kickoff',
     description: 'Analyse ticket, branch, plan, notify',
     trigger: { type: 'EVENT', event: 'jira.issue.transitioned', filter: "event.toStatus == 'Ready for Development'", cron: null },
     steps: [
-      { key: 'analyze', name: 'Analyze ticket', type: 'tool', tool: 'ai.draftTicket', dependsOn: [], inputJson: '{"requirement":"{{ event.issue.fields.summary }}"}', when: null, approvalTitle: null },
-      { key: 'branch', name: 'Create branch', type: 'tool', tool: 'github.createBranch', dependsOn: ['analyze'], inputJson: '{"branch":"feature/{{ slugify(steps.analyze.output.summary) }}"}', when: null, approvalTitle: null },
-      { key: 'notify', name: 'Notify developer', type: 'tool', tool: 'notify.team', dependsOn: ['branch'], inputJson: '{"title":"Ready","message":"Branch created"}', when: null, approvalTitle: null },
+      {
+        key: 'analyze',
+        name: 'Analyze ticket',
+        type: 'tool',
+        tool: 'ai.draftTicket',
+        dependsOn: [],
+        inputJson: '{"requirement":"{{ event.issue.fields.summary }}"}',
+        when: null,
+        approvalTitle: null,
+      },
+      {
+        key: 'branch',
+        name: 'Create branch',
+        type: 'tool',
+        tool: 'github.createBranch',
+        dependsOn: ['analyze'],
+        inputJson: '{"branch":"feature/{{ slugify(steps.analyze.output.summary) }}"}',
+        when: null,
+        approvalTitle: null,
+      },
+      {
+        key: 'notify',
+        name: 'Notify developer',
+        type: 'tool',
+        tool: 'notify.team',
+        dependsOn: ['branch'],
+        inputJson: '{"title":"Ready","message":"Branch created"}',
+        when: null,
+        approvalTitle: null,
+      },
     ],
   }),
 };
@@ -122,7 +213,8 @@ const calls = new Map<string, number>();
 
 function text(content: unknown): string {
   if (typeof content === 'string') return content;
-  if (Array.isArray(content)) return content.map((c) => (typeof c === 'object' && c && 'text' in c ? String((c as { text: string }).text) : '')).join('');
+  if (Array.isArray(content))
+    return content.map((c) => (typeof c === 'object' && c && 'text' in c ? String((c as { text: string }).text) : '')).join('');
   return '';
 }
 
@@ -146,11 +238,20 @@ export function respond(req: ChatRequest): ChatResult {
     if (last.role === 'tool') {
       const result = text(last.content);
       const started = /"started":true/.test(result);
-      return { content: started ? 'I started the delivery flow. You can follow every step live; I will ask for approval before staging, merging and production.' : 'I prepared a delivery plan for **Password reset**. It creates the ticket, writes the spec and code, validates and reviews it, opens a PR, runs CI and QA, and deploys to staging and production with approval gates. Start it from the card below when ready.' };
+      return {
+        content: started
+          ? 'I started the delivery flow. You can follow every step live; I will ask for approval before staging, merging and production.'
+          : 'I prepared a delivery plan for **Password reset**. It creates the ticket, writes the spec and code, validates and reviews it, opens a PR, runs CI and QA, and deploys to staging and production with approval gates. Start it from the card below when ready.',
+      };
     }
     const userMessage = text(last.content);
     if (/password reset|implement|deploy|build/i.test(userMessage)) {
-      return { content: null, toolCalls: [{ id: `call_${Date.now()}`, name: 'propose_flow', arguments: JSON.stringify({ request: userMessage, startImmediately: false }) }] };
+      return {
+        content: null,
+        toolCalls: [
+          { id: `call_${Date.now()}`, name: 'propose_flow', arguments: JSON.stringify({ request: userMessage, startImmediately: false }) },
+        ],
+      };
     }
     return { content: `Hello! I can plan and deliver engineering work. You said: "${userMessage.slice(0, 80)}"` };
   }

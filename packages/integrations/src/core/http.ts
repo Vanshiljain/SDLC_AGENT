@@ -93,7 +93,9 @@ function defaultExtractMessage(body: unknown): string | undefined {
   if (typeof b.error === 'string') return b.error;
   if (Array.isArray(b.errorMessages) && b.errorMessages.length) return b.errorMessages.join('; ');
   if (b.errors && typeof b.errors === 'object') {
-    const errs = Object.entries(b.errors as Record<string, unknown>).map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`);
+    const errs = Object.entries(b.errors as Record<string, unknown>).map(
+      ([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`,
+    );
     if (errs.length) return errs.join('; ');
   }
   return undefined;
@@ -173,7 +175,10 @@ export class HttpClient {
         throw new ToolError('cancelled', `${provider} request cancelled`, { provider, retryable: false, cause: err });
       }
       if (timeoutSignal.aborted) {
-        throw new ToolError('timeout', `${provider} request timed out after ${timeoutMs}ms (${method} ${redactUrl(url)})`, { provider, cause: err });
+        throw new ToolError('timeout', `${provider} request timed out after ${timeoutMs}ms (${method} ${redactUrl(url)})`, {
+          provider,
+          cause: err,
+        });
       }
       throw ToolError.from(err, provider);
     }

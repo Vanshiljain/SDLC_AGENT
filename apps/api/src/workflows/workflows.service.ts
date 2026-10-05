@@ -1,7 +1,21 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Prisma } from '@forgeline/database';
-import { generatedWorkflowSchema, invokeStructured, renderPrompt, TEMPLATE_SYNTAX_HELP, UsageTracker, type GeneratedWorkflow, type LlmProvider } from '@forgeline/ai';
-import { triggerConfigSchema, type TriggerConfig, type TriggerSource, type WorkflowDefinition, type WorkflowDefinitionInput } from '@forgeline/shared';
+import {
+  generatedWorkflowSchema,
+  invokeStructured,
+  renderPrompt,
+  TEMPLATE_SYNTAX_HELP,
+  UsageTracker,
+  type GeneratedWorkflow,
+  type LlmProvider,
+} from '@forgeline/ai';
+import {
+  triggerConfigSchema,
+  type TriggerConfig,
+  type TriggerSource,
+  type WorkflowDefinition,
+  type WorkflowDefinitionInput,
+} from '@forgeline/shared';
 import { assertValidWorkflowDefinition, layers, topologicalOrder, validateWorkflowDefinition } from '@forgeline/workflow-engine';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AppException } from '../common/errors';
@@ -98,7 +112,12 @@ export class WorkflowsService {
       include: { project: { select: { id: true, name: true, key: true } }, triggers: true, steps: { orderBy: { position: 'asc' } } },
     });
     if (!wf) throw AppException.notFound('Flow', id);
-    const recentRuns = await this.prisma.workflowExecution.findMany({ where: { workflowId: id }, orderBy: { createdAt: 'desc' }, take: 10, select: { id: true, title: true, status: true, createdAt: true, completedAt: true, mode: true } });
+    const recentRuns = await this.prisma.workflowExecution.findMany({
+      where: { workflowId: id },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: { id: true, title: true, status: true, createdAt: true, completedAt: true, mode: true },
+    });
     return { ...wf, recentRuns };
   }
 
@@ -106,7 +125,16 @@ export class WorkflowsService {
     const { order } = topologicalOrder(def.steps);
     await tx.workflowStep.deleteMany({ where: { workflowId } });
     await tx.workflowStep.createMany({
-      data: def.steps.map((s) => ({ workflowId, key: s.key, name: s.name, type: s.type, tool: s.tool ?? null, dependsOn: s.dependsOn, position: order.indexOf(s.key), config: { when: s.when ?? null, runIf: s.runIf, retry: s.retry ?? null } as Prisma.InputJsonValue })),
+      data: def.steps.map((s) => ({
+        workflowId,
+        key: s.key,
+        name: s.name,
+        type: s.type,
+        tool: s.tool ?? null,
+        dependsOn: s.dependsOn,
+        position: order.indexOf(s.key),
+        config: { when: s.when ?? null, runIf: s.runIf, retry: s.retry ?? null } as Prisma.InputJsonValue,
+      })),
     });
   }
 
@@ -114,7 +142,8 @@ export class WorkflowsService {
     const def = this.withLayout(this.assertValid(input.definition));
     if (input.projectId) await this.assertProject(auth, input.projectId);
     let slug = slugify(input.name);
-    if (await this.prisma.workflow.findFirst({ where: { organizationId: auth.organizationId, slug } })) slug = `${slug}-${Date.now().toString(36)}`;
+    if (await this.prisma.workflow.findFirst({ where: { organizationId: auth.organizationId, slug } }))
+      slug = `${slug}-${Date.now().toString(36)}`;
     const wf = await this.prisma.$transaction(async (tx) => {
       const created = await tx.workflow.create({
         data: {
@@ -132,7 +161,14 @@ export class WorkflowsService {
       await this.syncSteps(tx, created.id, def);
       return created;
     });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'workflow.created', resourceType: 'workflow', resourceId: wf.id, projectId: wf.projectId, input: { name: wf.name, steps: def.steps.length } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'workflow.created',
+      resourceType: 'workflow',
+      resourceId: wf.id,
+      projectId: wf.projectId,
+      input: { name: wf.name, steps: def.steps.length },
+    });
     return wf;
   }
 
@@ -157,19 +193,37 @@ export class WorkflowsService {
       if (def) await this.syncSteps(tx, id, def);
       return updated;
     });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'workflow.updated', resourceType: 'workflow', resourceId: id, projectId: wf.projectId, input: { version: wf.version, definitionChanged: Boolean(def) } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'workflow.updated',
+      resourceType: 'workflow',
+      resourceId: id,
+      projectId: wf.projectId,
+      input: { version: wf.version, definitionChanged: Boolean(def) },
+    });
     return wf;
   }
 
   async setStatus(auth: AuthContext, id: string, status: 'ACTIVE' | 'DRAFT' | 'ARCHIVED') {
-    const res = await this.prisma.workflow.updateMany({ where: { id, organizationId: auth.organizationId, deletedAt: null }, data: { status } });
+    const res = await this.prisma.workflow.updateMany({
+      where: { id, organizationId: auth.organizationId, deletedAt: null },
+      data: { status },
+    });
     if (!res.count) throw AppException.notFound('Flow', id);
-    await this.audit.record({ organizationId: auth.organizationId, action: `workflow.${status.toLowerCase()}`, resourceType: 'workflow', resourceId: id });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: `workflow.${status.toLowerCase()}`,
+      resourceType: 'workflow',
+      resourceId: id,
+    });
     return this.get(auth, id);
   }
 
   async remove(auth: AuthContext, id: string) {
-    const res = await this.prisma.workflow.updateMany({ where: { id, organizationId: auth.organizationId, deletedAt: null, isBuiltIn: false }, data: { deletedAt: new Date(), status: 'ARCHIVED' } });
+    const res = await this.prisma.workflow.updateMany({
+      where: { id, organizationId: auth.organizationId, deletedAt: null, isBuiltIn: false },
+      data: { deletedAt: new Date(), status: 'ARCHIVED' },
+    });
     if (!res.count) throw AppException.notFound('Flow', id);
     await this.prisma.workflowTrigger.updateMany({ where: { workflowId: id }, data: { isEnabled: false } });
     await this.audit.record({ organizationId: auth.organizationId, action: 'workflow.deleted', resourceType: 'workflow', resourceId: id });
@@ -178,10 +232,20 @@ export class WorkflowsService {
   async fromTemplate(auth: AuthContext, key: string, params: { name?: string; projectId?: string | null }) {
     const t = findTemplate(key);
     if (!t) throw AppException.notFound('Flow template', key);
-    return this.create(auth, { name: params.name ?? t.name, description: t.description, projectId: params.projectId ?? null, category: t.category, definition: t.definition });
+    return this.create(auth, {
+      name: params.name ?? t.name,
+      description: t.description,
+      projectId: params.projectId ?? null,
+      category: t.category,
+      definition: t.definition,
+    });
   }
 
-  async run(auth: AuthContext, id: string, params: { projectId?: string | null; input?: Record<string, unknown>; source?: TriggerSource; idempotencyKey?: string }) {
+  async run(
+    auth: AuthContext,
+    id: string,
+    params: { projectId?: string | null; input?: Record<string, unknown>; source?: TriggerSource; idempotencyKey?: string },
+  ) {
     const wf = await this.prisma.workflow.findFirst({ where: { id, organizationId: auth.organizationId, deletedAt: null } });
     if (!wf) throw AppException.notFound('Flow', id);
     if (wf.status === 'ARCHIVED') throw AppException.badRequest('Archived flows cannot be run', 'FLOW_ARCHIVED');
@@ -213,8 +277,16 @@ export class WorkflowsService {
         throw AppException.badRequest(`Invalid cron expression: ${(err as Error).message}`, 'INVALID_TRIGGER');
       }
     }
-    const trigger = await this.prisma.workflowTrigger.create({ data: { workflowId, type: parsed.data.type, config: parsed.data as unknown as Prisma.InputJsonValue, isEnabled: enabled } });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'workflow.trigger_created', resourceType: 'workflow', resourceId: workflowId, input: parsed.data });
+    const trigger = await this.prisma.workflowTrigger.create({
+      data: { workflowId, type: parsed.data.type, config: parsed.data as unknown as Prisma.InputJsonValue, isEnabled: enabled },
+    });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'workflow.trigger_created',
+      resourceType: 'workflow',
+      resourceId: workflowId,
+      input: parsed.data,
+    });
     return trigger;
   }
 
@@ -222,16 +294,50 @@ export class WorkflowsService {
     const wf = await this.prisma.workflow.findFirst({ where: { id: workflowId, organizationId: auth.organizationId } });
     if (!wf) throw AppException.notFound('Flow', workflowId);
     await this.prisma.workflowTrigger.deleteMany({ where: { id: triggerId, workflowId } });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'workflow.trigger_deleted', resourceType: 'workflow', resourceId: workflowId, input: { triggerId } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'workflow.trigger_deleted',
+      resourceType: 'workflow',
+      resourceId: workflowId,
+      input: { triggerId },
+    });
   }
 
   /** "Describe workflow": natural language → validated Flow definition + trigger (not saved). */
-  async generate(auth: AuthContext, description: string, projectId?: string | null): Promise<{ name: string; description: string; trigger: TriggerConfig; definition: WorkflowDefinition | null; issues: { path: string; message: string }[]; raw: GeneratedWorkflow }> {
+  async generate(
+    auth: AuthContext,
+    description: string,
+    projectId?: string | null,
+  ): Promise<{
+    name: string;
+    description: string;
+    trigger: TriggerConfig;
+    definition: WorkflowDefinition | null;
+    issues: { path: string; message: string }[];
+    raw: GeneratedWorkflow;
+  }> {
     const usage = new UsageTracker();
-    const run = await this.agentRuns.start({ organizationId: auth.organizationId, agentKey: 'planning', task: 'Generate flow from description', userId: auth.userId, input: { description } });
+    const run = await this.agentRuns.start({
+      organizationId: auth.organizationId,
+      agentKey: 'planning',
+      task: 'Generate flow from description',
+      userId: auth.userId,
+      input: { description },
+    });
     try {
-      const messages = await renderPrompt('workflowGenerate', { tools: this.registry.promptCatalog(), templateSyntax: TEMPLATE_SYNTAX_HELP, description });
-      const raw = await invokeStructured({ model: this.llm.chatModel('planner'), schema: generatedWorkflowSchema, name: 'generated_workflow', messages, usage, modelName: this.llm.modelName('planner') });
+      const messages = await renderPrompt('workflowGenerate', {
+        tools: this.registry.promptCatalog(),
+        templateSyntax: TEMPLATE_SYNTAX_HELP,
+        description,
+      });
+      const raw = await invokeStructured({
+        model: this.llm.chatModel('planner'),
+        schema: generatedWorkflowSchema,
+        name: 'generated_workflow',
+        messages,
+        usage,
+        modelName: this.llm.modelName('planner'),
+      });
       const candidate = this.toDefinition(raw);
       const result = this.validate(candidate);
       const trigger: TriggerConfig =
@@ -240,7 +346,11 @@ export class WorkflowsService {
           : raw.trigger.type === 'SCHEDULE' && raw.trigger.cron
             ? { type: 'SCHEDULE', cron: raw.trigger.cron, timezone: 'UTC' }
             : { type: 'MANUAL' };
-      await this.agentRuns.complete(auth.organizationId, run, { usage, output: { valid: result.valid, steps: raw.steps.length }, summary: `Generated "${raw.name}" with ${raw.steps.length} steps${result.valid ? '' : ` (${result.issues.length} issues)`}` });
+      await this.agentRuns.complete(auth.organizationId, run, {
+        usage,
+        output: { valid: result.valid, steps: raw.steps.length },
+        summary: `Generated "${raw.name}" with ${raw.steps.length} steps${result.valid ? '' : ` (${result.issues.length} issues)`}`,
+      });
       return {
         name: raw.name,
         description: raw.description,
@@ -260,7 +370,12 @@ export class WorkflowsService {
   private toDefinition(raw: GeneratedWorkflow): WorkflowDefinitionInput {
     const keys = new Set<string>();
     const norm = (k: string) => {
-      let key = k.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^[^a-z]+/, '').slice(0, 60) || 'step';
+      let key =
+        k
+          .toLowerCase()
+          .replace(/[^a-z0-9_]+/g, '_')
+          .replace(/^[^a-z]+/, '')
+          .slice(0, 60) || 'step';
       while (keys.has(key)) key = `${key}_x`;
       keys.add(key);
       return key;

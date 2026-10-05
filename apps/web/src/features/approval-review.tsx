@@ -1,6 +1,18 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { ArrowUpRight, Check, CircleMinus, CirclePlus, ExternalLink, FileDiff, GitPullRequest, Lock, RotateCcw, Ticket, X } from 'lucide-react';
+import {
+  ArrowUpRight,
+  Check,
+  CircleMinus,
+  CirclePlus,
+  ExternalLink,
+  FileDiff,
+  GitPullRequest,
+  Lock,
+  RotateCcw,
+  Ticket,
+  X,
+} from 'lucide-react';
 import { api } from '@/api/client';
 import { qk, useAction, useApproval } from '@/api/queries';
 import type { Approval } from '@/api/types';
@@ -19,11 +31,15 @@ import { ModeBadge, RiskBadge, StatusBadge } from '@/components/ui/status';
 export function ApprovalReview({ approvalId, onDecided }: { approvalId: string; onDecided?: () => void }) {
   const { data: a, isLoading } = useApproval(approvalId);
   const [comment, setComment] = useState('');
-  const decide = useAction((approve: boolean) => api.post<Approval>(`/approvals/${approvalId}/${approve ? 'approve' : 'reject'}`, { comment: comment.trim() || undefined }), {
-    success: (r) => (r.status === 'APPROVED' ? 'Approved — the run continues' : 'Rejected — the step will not run'),
-    invalidate: [['approvals'], qk.dashboard, ['executions']],
-    onSuccess: () => onDecided?.(),
-  });
+  const decide = useAction(
+    (approve: boolean) =>
+      api.post<Approval>(`/approvals/${approvalId}/${approve ? 'approve' : 'reject'}`, { comment: comment.trim() || undefined }),
+    {
+      success: (r) => (r.status === 'APPROVED' ? 'Approved — the run continues' : 'Rejected — the step will not run'),
+      invalidate: [['approvals'], qk.dashboard, ['executions']],
+      onSuccess: () => onDecided?.(),
+    },
+  );
 
   if (isLoading || !a) {
     return (
@@ -60,7 +76,10 @@ export function ApprovalReview({ approvalId, onDecided }: { approvalId: string; 
         {a.description && <p className="text-[13px] leading-relaxed text-fg-muted">{a.description}</p>}
 
         {a.execution && (
-          <Link to={`/executions/${a.execution.id}`} className="flex items-center gap-2 rounded-md border border-line bg-sunken/60 px-3 py-2 text-[12.5px] hover:border-line-strong">
+          <Link
+            to={`/executions/${a.execution.id}`}
+            className="flex items-center gap-2 rounded-md border border-line bg-sunken/60 px-3 py-2 text-[12.5px] hover:border-line-strong"
+          >
             <span className="text-fg-subtle">Run</span>
             <span className="min-w-0 flex-1 truncate font-medium">{a.execution.title}</span>
             <ArrowUpRight className="size-3.5 text-fg-subtle" />
@@ -72,7 +91,10 @@ export function ApprovalReview({ approvalId, onDecided }: { approvalId: string; 
             <div className="flex items-center justify-between gap-2 border-b border-line px-3.5 py-2.5">
               <span className="text-[12.5px] font-semibold">Risk assessment</span>
               <span className="flex items-center gap-1.5 text-[11px] text-fg-subtle">
-                {risk.source === 'ai' ? 'AI-assisted' : 'Heuristic'} · recommends <span className={cn('font-semibold', risk.recommendation === 'approve' ? 'text-ok' : 'text-warn')}>{risk.recommendation}</span>
+                {risk.source === 'ai' ? 'AI-assisted' : 'Heuristic'} · recommends{' '}
+                <span className={cn('font-semibold', risk.recommendation === 'approve' ? 'text-ok' : 'text-warn')}>
+                  {risk.recommendation}
+                </span>
               </span>
             </div>
             <div className="space-y-3 px-3.5 py-3">
@@ -80,7 +102,13 @@ export function ApprovalReview({ approvalId, onDecided }: { approvalId: string; 
               <ul className="grid gap-1.5 sm:grid-cols-2">
                 {risk.factors.map((f) => (
                   <li key={f.factor} className="flex items-start gap-1.5 text-[12px]">
-                    {f.impact === 'positive' ? <CirclePlus className="mt-0.5 size-3.5 shrink-0 text-ok" /> : f.impact === 'negative' ? <CircleMinus className="mt-0.5 size-3.5 shrink-0 text-bad" /> : <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-fg-subtle" />}
+                    {f.impact === 'positive' ? (
+                      <CirclePlus className="mt-0.5 size-3.5 shrink-0 text-ok" />
+                    ) : f.impact === 'negative' ? (
+                      <CircleMinus className="mt-0.5 size-3.5 shrink-0 text-bad" />
+                    ) : (
+                      <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-fg-subtle" />
+                    )}
                     <span>{f.factor}</span>
                   </li>
                 ))}
@@ -98,8 +126,16 @@ export function ApprovalReview({ approvalId, onDecided }: { approvalId: string; 
           <h4 className="label-caps mb-2">Evidence</h4>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <EvidenceTile label="CI" value={ev.ci?.status} />
-            <EvidenceTile label="QA" value={ev.qa?.status} detail={ev.qa?.passed !== undefined ? `${ev.qa.passed} passed${ev.qa.failed ? ` · ${ev.qa.failed} failed` : ''}` : undefined} />
-            <EvidenceTile label="Review" value={ev.review?.status} detail={ev.review ? `${ev.review.critical ?? 0} critical · ${ev.review.high ?? 0} high` : undefined} />
+            <EvidenceTile
+              label="QA"
+              value={ev.qa?.status}
+              detail={ev.qa?.passed !== undefined ? `${ev.qa.passed} passed${ev.qa.failed ? ` · ${ev.qa.failed} failed` : ''}` : undefined}
+            />
+            <EvidenceTile
+              label="Review"
+              value={ev.review?.status}
+              detail={ev.review ? `${ev.review.critical ?? 0} critical · ${ev.review.high ?? 0} high` : undefined}
+            />
             <EvidenceTile label="Rollback" value={ev.rollbackReady === undefined ? undefined : ev.rollbackReady ? 'ready' : 'manual'} />
           </div>
           {ev.simulated && <p className="mt-2 text-[11.5px] text-warn">Evidence comes from a simulated (demo) run.</p>}
@@ -134,7 +170,10 @@ export function ApprovalReview({ approvalId, onDecided }: { approvalId: string; 
             <ul className="space-y-1 rounded-md border border-line bg-sunken/60 p-2.5 font-mono text-[11.5px]">
               {ev.changes.items.map((c) => (
                 <li key={c} className="truncate">
-                  <span className={c.startsWith('create') ? 'text-ok' : c.startsWith('delete') ? 'text-bad' : 'text-warn'}>{c.split(' ')[0]}</span> {c.split(' ').slice(1).join(' ')}
+                  <span className={c.startsWith('create') ? 'text-ok' : c.startsWith('delete') ? 'text-bad' : 'text-warn'}>
+                    {c.split(' ')[0]}
+                  </span>{' '}
+                  {c.split(' ').slice(1).join(' ')}
                 </li>
               ))}
             </ul>
@@ -170,12 +209,30 @@ export function ApprovalReview({ approvalId, onDecided }: { approvalId: string; 
         <div className="border-t border-line bg-surface p-4">
           {a.canDecide ? (
             <>
-              <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Add a comment (optional, recorded in the audit log)" rows={2} className="min-h-0" />
+              <Textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Add a comment (optional, recorded in the audit log)"
+                rows={2}
+                className="min-h-0"
+              />
               <div className="mt-3 flex items-center justify-end gap-2">
-                <Button variant="danger-ghost" icon={<X className="size-3.5" />} loading={decide.isPending && decide.variables === false} disabled={decide.isPending} onClick={() => decide.mutate(false)}>
+                <Button
+                  variant="danger-ghost"
+                  icon={<X className="size-3.5" />}
+                  loading={decide.isPending && decide.variables === false}
+                  disabled={decide.isPending}
+                  onClick={() => decide.mutate(false)}
+                >
                   Reject
                 </Button>
-                <Button variant="ok" icon={<Check className="size-3.5" />} loading={decide.isPending && decide.variables === true} disabled={decide.isPending} onClick={() => decide.mutate(true)}>
+                <Button
+                  variant="ok"
+                  icon={<Check className="size-3.5" />}
+                  loading={decide.isPending && decide.variables === true}
+                  disabled={decide.isPending}
+                  onClick={() => decide.mutate(true)}
+                >
                   Approve
                 </Button>
               </div>
@@ -193,7 +250,13 @@ export function ApprovalReview({ approvalId, onDecided }: { approvalId: string; 
 }
 
 function EvidenceTile({ label, value, detail }: { label: string; value?: string | null; detail?: string }) {
-  const tone = !value ? 'text-fg-subtle' : ['passed', 'success', 'ready', 'approve'].includes(value) ? 'text-ok' : ['failed', 'failure'].includes(value) ? 'text-bad' : 'text-warn';
+  const tone = !value
+    ? 'text-fg-subtle'
+    : ['passed', 'success', 'ready', 'approve'].includes(value)
+      ? 'text-ok'
+      : ['failed', 'failure'].includes(value)
+        ? 'text-bad'
+        : 'text-warn';
   return (
     <div className="rounded-md border border-line bg-raised px-3 py-2">
       <div className="text-[11px] text-fg-subtle">{label}</div>
@@ -203,7 +266,17 @@ function EvidenceTile({ label, value, detail }: { label: string; value?: string 
   );
 }
 
-function LinkTile({ icon, label, href, children }: { icon: React.ReactNode; label: string; href: string | null | undefined; children: React.ReactNode }) {
+function LinkTile({
+  icon,
+  label,
+  href,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  href: string | null | undefined;
+  children: React.ReactNode;
+}) {
   const inner = (
     <>
       <span className="text-fg-subtle [&>svg]:size-3.5">{icon}</span>
@@ -215,7 +288,12 @@ function LinkTile({ icon, label, href, children }: { icon: React.ReactNode; labe
     </>
   );
   return href ? (
-    <a href={href} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-md border border-line px-3 py-2 hover:border-line-strong">
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="flex items-center gap-2 rounded-md border border-line px-3 py-2 hover:border-line-strong"
+    >
       {inner}
     </a>
   ) : (

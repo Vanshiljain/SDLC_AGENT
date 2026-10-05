@@ -17,7 +17,10 @@ class UpdateConversationDto {
 }
 class SendMessageDto {
   @ApiProperty() @IsString() @MinLength(1) @MaxLength(20_000) content!: string;
-  @ApiPropertyOptional({ description: 'What the user is looking at (global assistant)' }) @IsOptional() @IsObject() pageContext?: PageContext;
+  @ApiPropertyOptional({ description: 'What the user is looking at (global assistant)' })
+  @IsOptional()
+  @IsObject()
+  pageContext?: PageContext;
 }
 class StartProposalDto {
   @ApiPropertyOptional() @IsOptional() @IsObject() inputs?: Record<string, unknown>;
@@ -69,20 +72,33 @@ export class ConversationsController {
 
   @Get(':id/proposals/:proposalId')
   @RequirePermissions('agent:use')
-  proposal(@CurrentAuth() auth: AuthContext, @Param('id', ParseUUIDPipe) id: string, @Param('proposalId', ParseUUIDPipe) proposalId: string) {
+  proposal(
+    @CurrentAuth() auth: AuthContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('proposalId', ParseUUIDPipe) proposalId: string,
+  ) {
     return this.conversations.proposal(auth, id, proposalId);
   }
 
   @Post(':id/proposals/:proposalId/start')
   @ApiOperation({ summary: 'Start a proposed flow (server-stored definitions only)' })
   @RequirePermissions('workflow:execute')
-  start(@CurrentAuth() auth: AuthContext, @Param('id', ParseUUIDPipe) id: string, @Param('proposalId', ParseUUIDPipe) proposalId: string, @Body() dto: StartProposalDto) {
+  start(
+    @CurrentAuth() auth: AuthContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('proposalId', ParseUUIDPipe) proposalId: string,
+    @Body() dto: StartProposalDto,
+  ) {
     return this.conversations.startProposal(auth, id, proposalId, dto.inputs);
   }
 
   @Post(':id/proposals/:proposalId/dismiss')
   @RequirePermissions('agent:use')
-  dismiss(@CurrentAuth() auth: AuthContext, @Param('id', ParseUUIDPipe) id: string, @Param('proposalId', ParseUUIDPipe) proposalId: string) {
+  dismiss(
+    @CurrentAuth() auth: AuthContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('proposalId', ParseUUIDPipe) proposalId: string,
+  ) {
     return this.conversations.dismissProposal(auth, id, proposalId);
   }
 }

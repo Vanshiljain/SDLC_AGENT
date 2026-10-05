@@ -57,7 +57,11 @@ export class RealtimeGateway implements OnGatewayConnection, OnModuleInit {
       if (payload.typ !== 'access') throw new Error('bad token type');
       const requestedOrg = socket.handshake.auth?.organizationId as string | undefined;
       const membership = await this.prisma.membership.findFirst({
-        where: { userId: payload.sub, ...(requestedOrg && UUID_RE.test(requestedOrg) ? { organizationId: requestedOrg } : {}), user: { isActive: true, deletedAt: null } },
+        where: {
+          userId: payload.sub,
+          ...(requestedOrg && UUID_RE.test(requestedOrg) ? { organizationId: requestedOrg } : {}),
+          user: { isActive: true, deletedAt: null },
+        },
         orderBy: { createdAt: 'asc' },
       });
       if (!membership) throw new Error('no membership');
@@ -82,7 +86,9 @@ export class RealtimeGateway implements OnGatewayConnection, OnModuleInit {
       await socket.join(rooms.execution(body.executionId));
     }
     if (body?.conversationId && UUID_RE.test(body.conversationId)) {
-      const exists = await this.prisma.conversation.count({ where: { id: body.conversationId, organizationId: data.organizationId, userId: data.userId } });
+      const exists = await this.prisma.conversation.count({
+        where: { id: body.conversationId, organizationId: data.organizationId, userId: data.userId },
+      });
       if (!exists) return { ok: false, error: 'not_found' };
       await socket.join(rooms.conversation(body.conversationId));
     }

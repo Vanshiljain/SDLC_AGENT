@@ -3,9 +3,13 @@ import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
-const field = 'w-full rounded-md border border-line bg-surface px-2.5 text-[13px] text-fg placeholder:text-fg-subtle transition-colors hover:border-line-strong focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:opacity-60';
+const field =
+  'w-full rounded-md border border-line bg-surface px-2.5 text-[13px] text-fg placeholder:text-fg-subtle transition-colors hover:border-line-strong focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:opacity-60';
 
-export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { icon?: ReactNode }>(function Input({ className, icon, ...rest }, ref) {
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { icon?: ReactNode }>(function Input(
+  { className, icon, ...rest },
+  ref,
+) {
   if (!icon) return <input ref={ref} className={cn(field, 'h-8', className)} {...rest} />;
   return (
     <div className="relative">
@@ -15,11 +19,17 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
   );
 });
 
-export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea({ className, ...rest }, ref) {
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea(
+  { className, ...rest },
+  ref,
+) {
   return <textarea ref={ref} className={cn(field, 'min-h-20 py-2 leading-relaxed', className)} {...rest} />;
 });
 
-export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(function Select({ className, children, ...rest }, ref) {
+export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(function Select(
+  { className, children, ...rest },
+  ref,
+) {
   return (
     <div className="relative">
       <select ref={ref} className={cn(field, 'h-8 appearance-none pr-8', className)} {...rest}>
@@ -30,7 +40,21 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
   );
 });
 
-export function Field({ label, hint, error, children, className, required }: { label: ReactNode; hint?: ReactNode; error?: string | null; children: ReactNode; className?: string; required?: boolean }) {
+export function Field({
+  label,
+  hint,
+  error,
+  children,
+  className,
+  required,
+}: {
+  label: ReactNode;
+  hint?: ReactNode;
+  error?: string | null;
+  children: ReactNode;
+  className?: string;
+  required?: boolean;
+}) {
   return (
     <label className={cn('block space-y-1.5', className)}>
       <span className="block text-[12px] font-medium text-fg-muted">
@@ -38,12 +62,26 @@ export function Field({ label, hint, error, children, className, required }: { l
         {required && <span className="ml-0.5 text-accent">*</span>}
       </span>
       {children}
-      {error ? <span className="block text-[11.5px] text-bad">{error}</span> : hint ? <span className="block text-[11.5px] text-fg-subtle">{hint}</span> : null}
+      {error ? (
+        <span className="block text-[11.5px] text-bad">{error}</span>
+      ) : hint ? (
+        <span className="block text-[11.5px] text-fg-subtle">{hint}</span>
+      ) : null}
     </label>
   );
 }
 
-export function Switch({ checked, onCheckedChange, disabled, label }: { checked: boolean; onCheckedChange: (v: boolean) => void; disabled?: boolean; label?: string }) {
+export function Switch({
+  checked,
+  onCheckedChange,
+  disabled,
+  label,
+}: {
+  checked: boolean;
+  onCheckedChange: (v: boolean) => void;
+  disabled?: boolean;
+  label?: string;
+}) {
   return (
     <SwitchPrimitive.Root
       checked={checked}

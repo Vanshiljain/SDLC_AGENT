@@ -60,20 +60,38 @@ function escapeHtml(s: string): string {
 }
 
 export function highlightJson(json: string): string {
-  return escapeHtml(json).replace(/("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, (m) => {
-    let cls = 'text-arc';
-    if (m.startsWith('"')) cls = m.endsWith(':') ? 'text-fg-muted' : 'text-ok';
-    else if (m === 'true' || m === 'false') cls = 'text-ai';
-    else if (m === 'null') cls = 'text-fg-subtle';
-    return `<span class="${cls}">${m}</span>`;
-  });
+  return escapeHtml(json).replace(
+    /("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g,
+    (m) => {
+      let cls = 'text-arc';
+      if (m.startsWith('"')) cls = m.endsWith(':') ? 'text-fg-muted' : 'text-ok';
+      else if (m === 'true' || m === 'false') cls = 'text-ai';
+      else if (m === 'null') cls = 'text-fg-subtle';
+      return `<span class="${cls}">${m}</span>`;
+    },
+  );
 }
 
-export function Disclosure({ title, children, defaultOpen = false, className }: { title: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean; className?: string }) {
+export function Disclosure({
+  title,
+  children,
+  defaultOpen = false,
+  className,
+}: {
+  title: React.ReactNode;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+  className?: string;
+}) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className={className}>
-      <button type="button" onClick={() => setOpen(!open)} className="flex w-full items-center gap-1.5 py-1 text-left text-[12px] font-medium text-fg-muted hover:text-fg" aria-expanded={open}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-1.5 py-1 text-left text-[12px] font-medium text-fg-muted hover:text-fg"
+        aria-expanded={open}
+      >
         <ChevronRight className={cn('size-3.5 transition-transform', open && 'rotate-90')} />
         {title}
       </button>

@@ -75,7 +75,10 @@ export class ToolExecutor {
     const parsed = tool.inputSchema.safeParse(inv.input ?? {});
     if (!parsed.success) {
       const issues = parsed.error.issues.map((i) => `${i.path.join('.') || 'input'}: ${i.message}`).join('; ');
-      throw new ToolError('validation', `Invalid input for ${tool.name}: ${issues}`, { retryable: false, details: { issues: parsed.error.issues } });
+      throw new ToolError('validation', `Invalid input for ${tool.name}: ${issues}`, {
+        retryable: false,
+        details: { issues: parsed.error.issues },
+      });
     }
     const input = parsed.data;
     const project = await this.projects.load(inv.organizationId, inv.projectId);
@@ -105,7 +108,12 @@ export class ToolExecutor {
     const ledger = await this.openLedger(tool, inv, input);
     if (ledger.cached) {
       logger.info(`Idempotent replay: returning recorded result of ${tool.name}`);
-      return { result: { ...ledger.cached, summary: `${ledger.cached.summary} (recorded result)` }, cached: true, toolExecutionId: ledger.id, durationMs: 0 };
+      return {
+        result: { ...ledger.cached, summary: `${ledger.cached.summary} (recorded result)` },
+        cached: true,
+        toolExecutionId: ledger.id,
+        durationMs: 0,
+      };
     }
 
     RequestContext.set({ toolExecutionId: ledger.id });
@@ -119,11 +127,16 @@ export class ToolExecutor {
       const error = ToolError.from(err, tool.provider?.toLowerCase());
       const durationMs = Date.now() - started;
       await this.prisma.toolExecution
-        .update({ where: { id: ledger.id }, data: { status: 'FAILED', error: error.toJSON() as unknown as Prisma.InputJsonValue, durationMs, completedAt: new Date() } })
+        .update({
+          where: { id: ledger.id },
+          data: { status: 'FAILED', error: error.toJSON() as unknown as Prisma.InputJsonValue, durationMs, completedAt: new Date() },
+        })
         .catch((e: unknown) => this.logger.error({ err: e }, 'Failed to update tool ledger'));
       this.metrics.toolExecutions.inc({ tool: tool.name, status: 'failed', error_kind: error.kind });
       if (error.kind === 'auth' && tool.provider) {
-        await this.integrations.markAuthFailure(inv.organizationId, tool.provider as IntegrationProvider, error.message).catch(() => undefined);
+        await this.integrations
+          .markAuthFailure(inv.organizationId, tool.provider as IntegrationProvider, error.message)
+          .catch(() => undefined);
       }
       if (tool.sideEffects) {
         await this.audit.record({
@@ -225,12 +238,22 @@ export class ToolExecutor {
       attempt: inv.attempt ?? 1,
     };
     if (useLedger) {
-      const existing = await this.prisma.toolExecution.findUnique({ where: { organizationId_idempotencyKey: { organizationId: inv.organizationId, idempotencyKey: key } } });
+      const existing = await this.prisma.toolExecution.findUnique({
+        where: { organizationId_idempotencyKey: { organizationId: inv.organizationId, idempotencyKey: key } },
+      });
       if (existing?.status === 'SUCCEEDED' && existing.output) {
         return { id: existing.id, cached: existing.output as unknown as ToolExecutionResult };
       }
       if (existing) {
-        await this.prisma.toolExecution.update({ where: { id: existing.id }, data: { status: 'RUNNING', attempt: { increment: 1 }, error: undefined, startedAt: existing.status === 'FAILED' ? new Date() : existing.startedAt } });
+        await this.prisma.toolExecution.update({
+          where: { id: existing.id },
+          data: {
+            status: 'RUNNING',
+            attempt: { increment: 1 },
+            error: undefined,
+            startedAt: existing.status === 'FAILED' ? new Date() : existing.startedAt,
+          },
+        });
         return { id: existing.id };
       }
     }
@@ -245,7 +268,13 @@ export class ToolExecutor {
     }
   }
 
-  private async run(tool: AnySdlcTool, input: unknown, ctx: ToolExecutionContext, timeoutMs: number, abort: AbortController): Promise<ToolExecutionResult> {
+  private async run(
+    tool: AnySdlcTool,
+    input: unknown,
+    ctx: ToolExecutionContext,
+    timeoutMs: number,
+    abort: AbortController,
+  ): Promise<ToolExecutionResult> {
     let timer: NodeJS.Timeout | undefined;
     const timeout = new Promise<never>((_, reject) => {
       timer = setTimeout(() => {
@@ -261,7 +290,9 @@ export class ToolExecutor {
       let work: Promise<ToolExecutionResult>;
       if (ctx.mode === 'DEMO') {
         if (!tool.simulate) {
-          throw new ToolError('not_configured', `${tool.title} has no demo simulation; it is only available with real integrations`, { retryable: false });
+          throw new ToolError('not_configured', `${tool.title} has no demo simulation; it is only available with real integrations`, {
+            retryable: false,
+          });
         }
         work = tool.simulate(input, ctx).then((r) => ({ ...r, simulated: true }));
       } else {
@@ -277,7 +308,14 @@ export class ToolExecutor {
     }
   }
 
-  private async persistSuccess(tool: AnySdlcTool, inv: ToolInvocation, ledgerId: string, result: ToolExecutionResult, durationMs: number, project: ProjectContext | null): Promise<void> {
+  private async persistSuccess(
+    tool: AnySdlcTool,
+    inv: ToolInvocation,
+    ledgerId: string,
+    result: ToolExecutionResult,
+    durationMs: number,
+    project: ProjectContext | null,
+  ): Promise<void> {
     const primary = result.externalResources?.[0];
     const done = !result.continuation;
     await this.prisma.toolExecution.update({
@@ -297,7 +335,14 @@ export class ToolExecutor {
     for (const r of result.externalResources ?? []) {
       const parentId = r.parentExternalId ? resourceIds.get(r.parentExternalId) : undefined;
       const row = await this.prisma.externalResource.upsert({
-        where: { organizationId_provider_type_externalId: { organizationId: inv.organizationId, provider: r.provider, type: r.type, externalId: r.externalId } },
+        where: {
+          organizationId_provider_type_externalId: {
+            organizationId: inv.organizationId,
+            provider: r.provider,
+            type: r.type,
+            externalId: r.externalId,
+          },
+        },
         create: {
           organizationId: inv.organizationId,
           projectId: project?.id ?? null,
@@ -314,7 +359,13 @@ export class ToolExecutor {
           data: (r.data ?? {}) as Prisma.InputJsonValue,
           parentId,
         },
-        update: { key: r.key, title: r.title, url: r.url, status: r.status, ...(inv.executionId && { executionId: inv.executionId, stepKey: inv.stepKey }) },
+        update: {
+          key: r.key,
+          title: r.title,
+          url: r.url,
+          status: r.status,
+          ...(inv.executionId && { executionId: inv.executionId, stepKey: inv.stepKey }),
+        },
       });
       resourceIds.set(r.externalId, row.id);
     }

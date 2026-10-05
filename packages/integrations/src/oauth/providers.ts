@@ -125,11 +125,25 @@ export async function exchangeCode(
     case 'GITHUB':
     case 'GITHUB_ACTIONS': {
       const http = new HttpClient({ baseUrl: endpoints.githubWebUrl, provider: 'github-oauth', fetchImpl });
-      const res = await http.post<{ access_token?: string; refresh_token?: string; expires_in?: number; scope?: string; token_type?: string; error?: string; error_description?: string }>(
-        '/login/oauth/access_token',
-        { client_id: params.config.clientId, client_secret: params.config.clientSecret, code: params.code, redirect_uri: params.redirectUri, ...(params.codeVerifier && { code_verifier: params.codeVerifier }) },
-      );
-      if (!res.access_token) throw new ToolError('auth', `GitHub OAuth failed: ${res.error_description ?? res.error ?? 'no token returned'}`, { retryable: false });
+      const res = await http.post<{
+        access_token?: string;
+        refresh_token?: string;
+        expires_in?: number;
+        scope?: string;
+        token_type?: string;
+        error?: string;
+        error_description?: string;
+      }>('/login/oauth/access_token', {
+        client_id: params.config.clientId,
+        client_secret: params.config.clientSecret,
+        code: params.code,
+        redirect_uri: params.redirectUri,
+        ...(params.codeVerifier && { code_verifier: params.codeVerifier }),
+      });
+      if (!res.access_token)
+        throw new ToolError('auth', `GitHub OAuth failed: ${res.error_description ?? res.error ?? 'no token returned'}`, {
+          retryable: false,
+        });
       return {
         accessToken: res.access_token,
         refreshToken: res.refresh_token,
@@ -147,7 +161,12 @@ export async function exchangeCode(
         code: params.code,
         redirect_uri: params.redirectUri,
       });
-      const api = new HttpClient({ baseUrl: endpoints.atlassianApiUrl, provider: 'atlassian', fetchImpl, defaultHeaders: { Authorization: `Bearer ${res.access_token}` } });
+      const api = new HttpClient({
+        baseUrl: endpoints.atlassianApiUrl,
+        provider: 'atlassian',
+        fetchImpl,
+        defaultHeaders: { Authorization: `Bearer ${res.access_token}` },
+      });
       const resources = await api.get<{ id: string; url: string; name: string; scopes: string[] }[]>('/oauth/token/accessible-resources');
       const site = resources[0];
       if (!site) throw new ToolError('auth', 'The Atlassian account has no accessible Jira sites', { retryable: false });
@@ -156,13 +175,25 @@ export async function exchangeCode(
         refreshToken: res.refresh_token,
         expiresAt: new Date(Date.now() + res.expires_in * 1000),
         scopes: res.scope.split(' ').filter(Boolean),
-        extra: { cloudId: site.id, siteUrl: site.url, siteName: site.name, sites: resources.map((r) => ({ id: r.id, url: r.url, name: r.name })) },
+        extra: {
+          cloudId: site.id,
+          siteUrl: site.url,
+          siteName: site.name,
+          sites: resources.map((r) => ({ id: r.id, url: r.url, name: r.name })),
+        },
       };
     }
     case 'NOTION': {
       const http = new HttpClient({ baseUrl: endpoints.notionApiUrl, provider: 'notion-oauth', fetchImpl });
       const basic = Buffer.from(`${params.config.clientId}:${params.config.clientSecret}`).toString('base64');
-      const res = await http.post<{ access_token: string; refresh_token?: string; expires_in?: number; workspace_id: string; workspace_name?: string; bot_id: string }>(
+      const res = await http.post<{
+        access_token: string;
+        refresh_token?: string;
+        expires_in?: number;
+        workspace_id: string;
+        workspace_name?: string;
+        bot_id: string;
+      }>(
         '/oauth/token',
         { grant_type: 'authorization_code', code: params.code, redirect_uri: params.redirectUri },
         { headers: { Authorization: `Basic ${basic}` } },
@@ -190,25 +221,42 @@ export async function refreshAccessToken(
     case 'GITHUB':
     case 'GITHUB_ACTIONS': {
       const http = new HttpClient({ baseUrl: endpoints.githubWebUrl, provider: 'github-oauth', fetchImpl });
-      const res = await http.post<{ access_token?: string; refresh_token?: string; expires_in?: number; scope?: string; error?: string }>('/login/oauth/access_token', {
-        client_id: params.config.clientId,
-        client_secret: params.config.clientSecret,
-        grant_type: 'refresh_token',
-        refresh_token: params.refreshToken,
-      });
+      const res = await http.post<{ access_token?: string; refresh_token?: string; expires_in?: number; scope?: string; error?: string }>(
+        '/login/oauth/access_token',
+        {
+          client_id: params.config.clientId,
+          client_secret: params.config.clientSecret,
+          grant_type: 'refresh_token',
+          refresh_token: params.refreshToken,
+        },
+      );
       if (!res.access_token) throw new ToolError('auth', `GitHub token refresh failed: ${res.error ?? 'unknown'}`, { retryable: false });
-      return { accessToken: res.access_token, refreshToken: res.refresh_token ?? params.refreshToken, expiresAt: res.expires_in ? new Date(Date.now() + res.expires_in * 1000) : undefined, scopes: (res.scope ?? '').split(/[ ,]/).filter(Boolean) };
+      return {
+        accessToken: res.access_token,
+        refreshToken: res.refresh_token ?? params.refreshToken,
+        expiresAt: res.expires_in ? new Date(Date.now() + res.expires_in * 1000) : undefined,
+        scopes: (res.scope ?? '').split(/[ ,]/).filter(Boolean),
+      };
     }
     case 'JIRA': {
       const http = new HttpClient({ baseUrl: endpoints.atlassianAuthUrl, provider: 'atlassian-oauth', fetchImpl });
       // Atlassian rotates refresh tokens: always persist the returned one.
-      const res = await http.post<{ access_token: string; refresh_token?: string; expires_in: number; scope: string }>('/oauth/token', {
-        grant_type: 'refresh_token',
-        client_id: params.config.clientId,
-        client_secret: params.config.clientSecret,
-        refresh_token: params.refreshToken,
-      }, { retry: true });
-      return { accessToken: res.access_token, refreshToken: res.refresh_token ?? params.refreshToken, expiresAt: new Date(Date.now() + res.expires_in * 1000), scopes: res.scope.split(' ').filter(Boolean) };
+      const res = await http.post<{ access_token: string; refresh_token?: string; expires_in: number; scope: string }>(
+        '/oauth/token',
+        {
+          grant_type: 'refresh_token',
+          client_id: params.config.clientId,
+          client_secret: params.config.clientSecret,
+          refresh_token: params.refreshToken,
+        },
+        { retry: true },
+      );
+      return {
+        accessToken: res.access_token,
+        refreshToken: res.refresh_token ?? params.refreshToken,
+        expiresAt: new Date(Date.now() + res.expires_in * 1000),
+        scopes: res.scope.split(' ').filter(Boolean),
+      };
     }
     case 'NOTION': {
       const http = new HttpClient({ baseUrl: endpoints.notionApiUrl, provider: 'notion-oauth', fetchImpl });
@@ -218,7 +266,12 @@ export async function refreshAccessToken(
         { grant_type: 'refresh_token', refresh_token: params.refreshToken },
         { headers: { Authorization: `Basic ${basic}` } },
       );
-      return { accessToken: res.access_token, refreshToken: res.refresh_token ?? params.refreshToken, expiresAt: res.expires_in ? new Date(Date.now() + res.expires_in * 1000) : undefined, scopes: [] };
+      return {
+        accessToken: res.access_token,
+        refreshToken: res.refresh_token ?? params.refreshToken,
+        expiresAt: res.expires_in ? new Date(Date.now() + res.expires_in * 1000) : undefined,
+        scopes: [],
+      };
     }
     default:
       throw new ToolError('validation', `${provider} tokens cannot be refreshed`, { retryable: false });

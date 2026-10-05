@@ -29,7 +29,12 @@ export async function createAcceptanceWorkspace(apiUrl: string, mockUrl: string)
   const anon = new ApiClient(apiUrl);
   const suffix = randomBytes(4).toString('hex');
   const ownerEmail = `owner-${suffix}@acme.test`;
-  const owner = await anon.post<Session>('/auth/register', { email: ownerEmail, name: 'Olive Owner', password: ACCEPTANCE_PASSWORD, organizationName: `Acme ${suffix}` });
+  const owner = await anon.post<Session>('/auth/register', {
+    email: ownerEmail,
+    name: 'Olive Owner',
+    password: ACCEPTANCE_PASSWORD,
+    organizationName: `Acme ${suffix}`,
+  });
   const orgId = owner.memberships[0]!.organizationId;
   const o = anon.as(owner.accessToken, orgId);
 
@@ -62,10 +67,24 @@ export async function createAcceptanceWorkspace(apiUrl: string, mockUrl: string)
   });
   await o.put(`/projects/${project.id}/members`, { userId: engineer.user.id, role: 'DEVELOPER' });
   await o.put(`/projects/${project.id}/members`, { userId: lead.user.id, role: 'MAINTAINER' });
-  await o.post(`/projects/${project.id}/repositories`, { fullName: 'acme/auth-service', settings: { installCommand: 'npm ci --no-audit --no-fund', lintCommand: 'npm run lint', testCommand: 'npm test' } });
+  await o.post(`/projects/${project.id}/repositories`, {
+    fullName: 'acme/auth-service',
+    settings: { installCommand: 'npm ci --no-audit --no-fund', lintCommand: 'npm run lint', testCommand: 'npm test' },
+  });
   const detail = await o.get<{ environments: { id: string; name: string }[] }>(`/projects/${project.id}`);
   for (const env of detail.environments) {
-    await o.patch(`/projects/${project.id}/environments/${env.id}`, { url: `${mockUrl}/env/${env.name}`, healthCheckPath: '/health', smokeTests: [{ name: 'Login page', path: '/login', expectStatus: 200 }] });
+    await o.patch(`/projects/${project.id}/environments/${env.id}`, {
+      url: `${mockUrl}/env/${env.name}`,
+      healthCheckPath: '/health',
+      smokeTests: [{ name: 'Login page', path: '/login', expectStatus: 200 }],
+    });
   }
-  return { orgId, projectId: project.id, password: ACCEPTANCE_PASSWORD, owner: { email: ownerEmail }, lead: { email: leadEmail }, engineer: { email: engineerEmail } };
+  return {
+    orgId,
+    projectId: project.id,
+    password: ACCEPTANCE_PASSWORD,
+    owner: { email: ownerEmail },
+    lead: { email: leadEmail },
+    engineer: { email: engineerEmail },
+  };
 }

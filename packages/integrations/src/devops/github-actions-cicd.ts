@@ -56,7 +56,10 @@ export class GitHubActionsCiCdProvider implements CiCdProvider {
     const { workflows } = await this.gh.listWorkflows(this.options.owner, this.options.repo);
     const names = workflows.map((w) => w.path.split('/').pop());
     const missing = [this.ci, this.deployWf].filter((w) => !names.includes(w));
-    return { ok: missing.length === 0, message: missing.length ? `Missing workflows: ${missing.join(', ')}` : `${workflows.length} workflows available` };
+    return {
+      ok: missing.length === 0,
+      message: missing.length ? `Missing workflows: ${missing.join(', ')}` : `${workflows.length} workflows available`,
+    };
   }
 
   /** Dispatch and resolve the run created by this dispatch (bounded wait). */
@@ -65,7 +68,11 @@ export class GitHubActionsCiCdProvider implements CiCdProvider {
     await this.gh.dispatchWorkflow(this.options.owner, this.options.repo, workflow, ref, inputs);
     for (let i = 0; i < 20; i++) {
       await new Promise((r) => setTimeout(r, i === 0 ? 1_000 : 3_000));
-      const { workflow_runs } = await this.gh.listWorkflowRuns(this.options.owner, this.options.repo, { workflow, event: 'workflow_dispatch', createdAfter: since.slice(0, 19) + 'Z' });
+      const { workflow_runs } = await this.gh.listWorkflowRuns(this.options.owner, this.options.repo, {
+        workflow,
+        event: 'workflow_dispatch',
+        createdAfter: since.slice(0, 19) + 'Z',
+      });
       const match = workflow_runs.find((r) => r.created_at >= since);
       if (match) return match;
     }
@@ -76,7 +83,16 @@ export class GitHubActionsCiCdProvider implements CiCdProvider {
     const { jobs } = await this.gh.listJobsForRun(this.options.owner, this.options.repo, run.id);
     const stages: StageResult[] = jobs.map((j) => ({
       stage: j.name,
-      status: j.status !== 'completed' ? (j.status === 'in_progress' ? 'running' : 'queued') : j.conclusion === 'success' || j.conclusion === 'skipped' ? 'succeeded' : j.conclusion === 'cancelled' ? 'cancelled' : 'failed',
+      status:
+        j.status !== 'completed'
+          ? j.status === 'in_progress'
+            ? 'running'
+            : 'queued'
+          : j.conclusion === 'success' || j.conclusion === 'skipped'
+            ? 'succeeded'
+            : j.conclusion === 'cancelled'
+              ? 'cancelled'
+              : 'failed',
       startedAt: j.started_at ?? null,
       completedAt: j.completed_at ?? null,
       url: j.html_url,
@@ -94,7 +110,9 @@ export class GitHubActionsCiCdProvider implements CiCdProvider {
   async getPipelineLogs(id: string, stage?: string) {
     const { jobs } = await this.gh.listJobsForRun(this.options.owner, this.options.repo, Number(id));
     const selected = stage ? jobs.filter((j) => j.name === stage) : jobs.filter((j) => j.conclusion && j.conclusion !== 'success');
-    const logs = await Promise.all(selected.slice(0, 5).map(async (j) => `### ${j.name}\n${await this.gh.getJobLogs(this.options.owner, this.options.repo, j.id)}`));
+    const logs = await Promise.all(
+      selected.slice(0, 5).map(async (j) => `### ${j.name}\n${await this.gh.getJobLogs(this.options.owner, this.options.repo, j.id)}`),
+    );
     return logs.join('\n\n');
   }
   async cancelPipeline(id: string) {
@@ -130,7 +148,13 @@ export class GitHubActionsCiCdProvider implements CiCdProvider {
       forgeline_ref: req.idempotencyKey,
       rollback: 'true',
     });
-    return { id: String(run.id), status: mapStatus(run), environment: req.environment, version: req.targetVersion ?? req.targetRef ?? '', url: run.html_url };
+    return {
+      id: String(run.id),
+      status: mapStatus(run),
+      environment: req.environment,
+      version: req.targetVersion ?? req.targetRef ?? '',
+      url: run.html_url,
+    };
   }
   async listEnvironments(): Promise<CiCdEnvironment[]> {
     const res = await this.gh.listEnvironments(this.options.owner, this.options.repo);

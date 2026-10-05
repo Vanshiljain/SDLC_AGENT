@@ -21,7 +21,16 @@ const proposal = (overrides: Partial<FlowProposalPart> = {}): FlowProposalPart =
   ...overrides,
 });
 
-const message = (parts: Message['parts']): Message => ({ id: 'm1', conversationId: 'c1', role: 'ASSISTANT', content: '', parts, status: 'complete', executionId: null, createdAt: new Date().toISOString() });
+const message = (parts: Message['parts']): Message => ({
+  id: 'm1',
+  conversationId: 'c1',
+  role: 'ASSISTANT',
+  content: '',
+  parts,
+  status: 'complete',
+  executionId: null,
+  createdAt: new Date().toISOString(),
+});
 
 describe('assistant message parts', () => {
   it('shows the plan, the approvals it needs, and lets the user start it', () => {

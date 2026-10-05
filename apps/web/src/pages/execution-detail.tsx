@@ -1,7 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ArrowUpRight, Ban, Bot, Clock, Coins, ExternalLink, FileText, GitBranch, Hand, Pause, Play, Repeat2, RotateCcw, Rows3, TriangleAlert, Undo2, Workflow } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  Ban,
+  Bot,
+  Clock,
+  Coins,
+  ExternalLink,
+  FileText,
+  GitBranch,
+  Hand,
+  Pause,
+  Play,
+  Repeat2,
+  RotateCcw,
+  Rows3,
+  TriangleAlert,
+  Undo2,
+  Workflow,
+} from 'lucide-react';
 import { TERMINAL_EXECUTION_STATUSES } from '@forgeline/shared';
 import { api } from '@/api/client';
 import { qk, useAction, useAudit, useExecution, useExecutionLogs } from '@/api/queries';
@@ -33,7 +52,10 @@ export function ExecutionDetailPage() {
   const [tab, setTab] = useState('timeline');
   const canAudit = useAuth().can('audit:read');
   useDocumentTitle(run?.title ?? 'Run');
-  usePageContext(run ? { title: run.title, entity: { kind: 'execution', id: run.id, label: run.title }, projectId: run.projectId ?? undefined } : null, [run?.id]);
+  usePageContext(
+    run ? { title: run.title, entity: { kind: 'execution', id: run.id, label: run.title }, projectId: run.projectId ?? undefined } : null,
+    [run?.id],
+  );
 
   // Live: join the run's room; append streamed log lines to the cache.
   useEffect(() => {
@@ -42,8 +64,25 @@ export function ExecutionDetailPage() {
     const off = realtime.on(
       (e) => {
         if (e.executionId !== id) return;
-        const d = e.data as unknown as { stepId?: string | null; level: ExecutionLog['level']; message: string; data?: Record<string, unknown> | null; createdAt: string };
-        qc.setQueryData<ExecutionLog[]>(qk.executionLogs(id), (old) => [...(old ?? []), { id: e.id, executionId: id, stepId: d.stepId ?? null, level: d.level, message: d.message, data: d.data ?? null, createdAt: d.createdAt ?? e.occurredAt }]);
+        const d = e.data as unknown as {
+          stepId?: string | null;
+          level: ExecutionLog['level'];
+          message: string;
+          data?: Record<string, unknown> | null;
+          createdAt: string;
+        };
+        qc.setQueryData<ExecutionLog[]>(qk.executionLogs(id), (old) => [
+          ...(old ?? []),
+          {
+            id: e.id,
+            executionId: id,
+            stepId: d.stepId ?? null,
+            level: d.level,
+            message: d.message,
+            data: d.data ?? null,
+            createdAt: d.createdAt ?? e.occurredAt,
+          },
+        ]);
       },
       ['workflow.log'],
     );
@@ -53,22 +92,33 @@ export function ExecutionDetailPage() {
     };
   }, [id, qc]);
 
-  if (error) return <Page><ErrorState error={error} onRetry={() => void refetch()} /></Page>;
+  if (error)
+    return (
+      <Page>
+        <ErrorState error={error} onRetry={() => void refetch()} />
+      </Page>
+    );
   if (isLoading || !run) return <DetailSkeleton />;
 
   const pendingApprovals = run.approvals.filter((a) => a.status === 'PENDING');
-  const step = selectedStep ? latestSteps(run.steps).get(selectedStep)?.run ?? null : null;
+  const step = selectedStep ? (latestSteps(run.steps).get(selectedStep)?.run ?? null) : null;
 
   return (
     <Page wide>
       <Header run={run} />
       {run.mode === 'DEMO' && (
         <div className="demo-stripes mb-4 rounded-lg border border-warn/30 px-4 py-2.5 text-[12.5px] text-warn">
-          <span className="font-semibold">Simulated run.</span> This run executed in a demo workspace: every output is labelled as simulated and nothing was created in GitHub, Jira, Notion or your CI/CD.
+          <span className="font-semibold">Simulated run.</span> This run executed in a demo workspace: every output is labelled as simulated
+          and nothing was created in GitHub, Jira, Notion or your CI/CD.
         </div>
       )}
       {pendingApprovals.map((a) => (
-        <button key={a.id} type="button" onClick={() => setApprovalId(a.id)} className="mb-4 flex w-full items-center gap-3 rounded-lg border border-accent/40 bg-accent-soft px-4 py-3 text-left transition-colors hover:border-accent">
+        <button
+          key={a.id}
+          type="button"
+          onClick={() => setApprovalId(a.id)}
+          className="mb-4 flex w-full items-center gap-3 rounded-lg border border-accent/40 bg-accent-soft px-4 py-3 text-left transition-colors hover:border-accent"
+        >
           <span className="flex size-8 items-center justify-center rounded-md bg-accent text-accent-fg">
             <Hand className="size-4" />
           </span>
@@ -88,10 +138,23 @@ export function ExecutionDetailPage() {
             <Workflow className="size-4 text-fg-subtle" /> Flow
             <span className="text-[11.5px] font-normal text-fg-subtle">· click a step for details</span>
           </div>
-          <Segmented value={direction} onChange={setDirection} options={[{ value: 'LR', label: 'Horizontal' }, { value: 'TB', label: 'Vertical' }]} />
+          <Segmented
+            value={direction}
+            onChange={setDirection}
+            options={[
+              { value: 'LR', label: 'Horizontal' },
+              { value: 'TB', label: 'Vertical' },
+            ]}
+          />
         </div>
         <div className={direction === 'LR' ? 'h-[420px]' : 'h-[640px]'}>
-          <RunGraph definition={run.definition} steps={run.steps} direction={direction} selectedKey={selectedStep} onSelect={setSelectedStep} />
+          <RunGraph
+            definition={run.definition}
+            steps={run.steps}
+            direction={direction}
+            selectedKey={selectedStep}
+            onSelect={setSelectedStep}
+          />
         </div>
       </Card>
 
@@ -133,7 +196,13 @@ export function ExecutionDetailPage() {
       </TabsRoot>
 
       <StepSheet run={run} step={step} open={Boolean(step)} onClose={() => setSelectedStep(null)} onApproval={setApprovalId} />
-      <Sheet open={Boolean(approvalId)} onOpenChange={(o) => !o && setApprovalId(null)} title="Approval" subtitle={run.approvals.find((a) => a.id === approvalId)?.title} width={600}>
+      <Sheet
+        open={Boolean(approvalId)}
+        onOpenChange={(o) => !o && setApprovalId(null)}
+        title="Approval"
+        subtitle={run.approvals.find((a) => a.id === approvalId)?.title}
+        width={600}
+      >
         {approvalId && <ApprovalReview approvalId={approvalId} onDecided={() => void refetch()} />}
       </Sheet>
       <ArtifactDialog artifactId={artifactId} onClose={() => setArtifactId(null)} />
@@ -218,8 +287,16 @@ function RunActions({ run }: { run: ExecutionDetail }) {
   const inv = [qk.execution(run.id), ['executions', 'list']];
   const pause = useAction(() => api.post(`/workflow-executions/${run.id}/pause`), { success: 'Run paused', invalidate: inv });
   const resume = useAction(() => api.post(`/workflow-executions/${run.id}/resume`), { success: 'Run resumed', invalidate: inv });
-  const cancel = useAction((rollback: boolean) => api.post(`/workflow-executions/${run.id}/cancel`, { rollback }), { success: 'Run cancelled', invalidate: inv, onSuccess: () => setConfirm(null) });
-  const rollback = useAction(() => api.post(`/workflow-executions/${run.id}/rollback`), { success: 'Rollback started', invalidate: inv, onSuccess: () => setConfirm(null) });
+  const cancel = useAction((rollback: boolean) => api.post(`/workflow-executions/${run.id}/cancel`, { rollback }), {
+    success: 'Run cancelled',
+    invalidate: inv,
+    onSuccess: () => setConfirm(null),
+  });
+  const rollback = useAction(() => api.post(`/workflow-executions/${run.id}/rollback`), {
+    success: 'Rollback started',
+    invalidate: inv,
+    onSuccess: () => setConfirm(null),
+  });
   const active = ['RUNNING', 'WAITING_APPROVAL', 'PENDING'].includes(run.status);
   const compensable = run.definition.steps.some((s) => s.compensate) && ['COMPLETED', 'FAILED', 'CANCELLED'].includes(run.status);
   return (
@@ -265,7 +342,9 @@ function RunActions({ run }: { run: ExecutionDetail }) {
           </>
         }
       >
-        <p className="text-[13px] text-fg-muted">“Cancel & roll back” also runs the compensation actions of completed steps in reverse order (for example reverting a deployment).</p>
+        <p className="text-[13px] text-fg-muted">
+          “Cancel & roll back” also runs the compensation actions of completed steps in reverse order (for example reverting a deployment).
+        </p>
       </Dialog>
       <Dialog
         open={confirm === 'rollback'}
@@ -321,7 +400,8 @@ function Timeline({ run, onSelect }: { run: ExecutionDetail; onSelect: (k: strin
   const executed = run.steps
     .filter((s) => s.status !== 'PENDING' || s.startedAt)
     .sort((a, b) => (a.startedAt ?? '\uffff').localeCompare(b.startedAt ?? '\uffff') || a.position - b.position);
-  if (!executed.length) return <EmptyState compact icon={<Clock />} title="Waiting to start" description="Steps appear here as soon as they are scheduled." />;
+  if (!executed.length)
+    return <EmptyState compact icon={<Clock />} title="Waiting to start" description="Steps appear here as soon as they are scheduled." />;
   return (
     <Card>
       <ol className="divide-y divide-line">
@@ -329,8 +409,15 @@ function Timeline({ run, onSelect }: { run: ExecutionDetail; onSelect: (k: strin
           const a = agentOf(s);
           return (
             <li key={s.id}>
-              <button type="button" onClick={() => onSelect(s.stepKey)} className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-sunken/60">
-                <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md" style={{ background: `color-mix(in oklab, ${a.color} 14%, transparent)`, color: a.color }}>
+              <button
+                type="button"
+                onClick={() => onSelect(s.stepKey)}
+                className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-sunken/60"
+              >
+                <span
+                  className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md"
+                  style={{ background: `color-mix(in oklab, ${a.color} 14%, transparent)`, color: a.color }}
+                >
                   <a.icon className="size-3.5" />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -348,7 +435,13 @@ function Timeline({ run, onSelect }: { run: ExecutionDetail; onSelect: (k: strin
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <StatusBadge status={s.status} />
-                  <span className="font-mono text-[11px] text-fg-subtle">{s.durationMs ? formatDuration(s.durationMs) : isLive(s.status) ? formatDuration(durationBetween(s.startedAt, null)) : ''}</span>
+                  <span className="font-mono text-[11px] text-fg-subtle">
+                    {s.durationMs
+                      ? formatDuration(s.durationMs)
+                      : isLive(s.status)
+                        ? formatDuration(durationBetween(s.startedAt, null))
+                        : ''}
+                  </span>
                 </div>
               </button>
             </li>
@@ -368,8 +461,20 @@ function Logs({ run }: { run: ExecutionDetail }) {
   return (
     <Card>
       <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-2">
-        <Segmented value={level} onChange={setLevel} options={[{ value: 'ALL', label: 'All' }, { value: 'WARN', label: 'Warnings & errors' }]} />
-        <select value={step} onChange={(e) => setStep(e.target.value)} className="h-7 rounded-md border border-line bg-surface px-2 text-[12px]" aria-label="Filter by step">
+        <Segmented
+          value={level}
+          onChange={setLevel}
+          options={[
+            { value: 'ALL', label: 'All' },
+            { value: 'WARN', label: 'Warnings & errors' },
+          ]}
+        />
+        <select
+          value={step}
+          onChange={(e) => setStep(e.target.value)}
+          className="h-7 rounded-md border border-line bg-surface px-2 text-[12px]"
+          aria-label="Filter by step"
+        >
           <option value="">All steps</option>
           {run.steps.map((s) => (
             <option key={s.id} value={s.id}>
@@ -390,7 +495,14 @@ function Logs({ run }: { run: ExecutionDetail }) {
         {rows.map((l) => (
           <div key={l.id} className="flex gap-3 px-4 hover:bg-sunken">
             <span className="shrink-0 text-fg-subtle">{new Date(l.createdAt).toLocaleTimeString(undefined, { hour12: false })}</span>
-            <span className={cn('w-10 shrink-0', l.level === 'ERROR' ? 'text-bad' : l.level === 'WARN' ? 'text-warn' : l.level === 'DEBUG' ? 'text-fg-subtle' : 'text-arc')}>{l.level}</span>
+            <span
+              className={cn(
+                'w-10 shrink-0',
+                l.level === 'ERROR' ? 'text-bad' : l.level === 'WARN' ? 'text-warn' : l.level === 'DEBUG' ? 'text-fg-subtle' : 'text-arc',
+              )}
+            >
+              {l.level}
+            </span>
             <span className="w-40 shrink-0 truncate text-fg-muted">{l.stepId ? (byId.get(l.stepId)?.name ?? '') : 'run'}</span>
             <span className="min-w-0 flex-1 break-words whitespace-pre-wrap">{l.message}</span>
           </div>
@@ -402,7 +514,15 @@ function Logs({ run }: { run: ExecutionDetail }) {
 
 function Outputs({ run, onArtifact }: { run: ExecutionDetail; onArtifact: (id: string) => void }) {
   const empty = !run.artifacts.length && !run.codeGenerations.length && !run.codeReviews.length && !run.qaRuns.length;
-  if (empty) return <EmptyState compact icon={<FileText />} title="No outputs yet" description="Tickets, specs, plans, code, reviews, test reports and docs produced by this run appear here." />;
+  if (empty)
+    return (
+      <EmptyState
+        compact
+        icon={<FileText />}
+        title="No outputs yet"
+        description="Tickets, specs, plans, code, reviews, test reports and docs produced by this run appear here."
+      />
+    );
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       {run.artifacts.length > 0 && (
@@ -411,7 +531,11 @@ function Outputs({ run, onArtifact }: { run: ExecutionDetail; onArtifact: (id: s
           <ul className="divide-y divide-line">
             {run.artifacts.map((a) => (
               <li key={a.id}>
-                <button type="button" onClick={() => onArtifact(a.id)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-sunken/60">
+                <button
+                  type="button"
+                  onClick={() => onArtifact(a.id)}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-sunken/60"
+                >
                   <FileText className="size-4 text-fg-subtle" />
                   <span className="min-w-0 flex-1 truncate text-[13px]">{a.title}</span>
                   <Badge>{titleCase(a.type)}</Badge>
@@ -438,13 +562,21 @@ function Outputs({ run, onArtifact }: { run: ExecutionDetail; onArtifact: (id: s
             <ul className="space-y-1 font-mono text-[11.5px]">
               {cg.files.map((f) => (
                 <li key={f.path} className="truncate">
-                  <span className={f.action === 'create' ? 'text-ok' : f.action === 'delete' ? 'text-bad' : 'text-warn'}>{f.action}</span> {f.path}
+                  <span className={f.action === 'create' ? 'text-ok' : f.action === 'delete' ? 'text-bad' : 'text-warn'}>{f.action}</span>{' '}
+                  {f.path}
                 </li>
               ))}
             </ul>
             {cg.validation && (
               <div className="rounded-md border border-line">
-                <div className={cn('border-b border-line px-3 py-1.5 text-[12px] font-medium', cg.validation.passed ? 'text-ok' : cg.validation.passed === false ? 'text-bad' : 'text-fg-muted')}>{cg.validation.summary}</div>
+                <div
+                  className={cn(
+                    'border-b border-line px-3 py-1.5 text-[12px] font-medium',
+                    cg.validation.passed ? 'text-ok' : cg.validation.passed === false ? 'text-bad' : 'text-fg-muted',
+                  )}
+                >
+                  {cg.validation.summary}
+                </div>
                 <ul className="divide-y divide-line">
                   {cg.validation.checks.map((c) => (
                     <li key={c.name} className="flex items-center gap-2 px-3 py-1.5 text-[12px]">
@@ -474,7 +606,9 @@ function Outputs({ run, onArtifact }: { run: ExecutionDetail; onArtifact: (id: s
           <Link to={`/code-reviews/${r.id}`} className="flex items-center gap-2 border-b border-line px-4 py-2.5 hover:bg-sunken/60">
             <span className="flex-1 text-[12.5px] font-semibold">AI code review</span>
             <RiskBadge level={r.riskLevel} />
-            <Badge tone={r.verdict === 'APPROVE' ? 'ok' : r.verdict === 'REQUEST_CHANGES' ? 'bad' : 'neutral'}>{titleCase(r.verdict ?? 'pending')}</Badge>
+            <Badge tone={r.verdict === 'APPROVE' ? 'ok' : r.verdict === 'REQUEST_CHANGES' ? 'bad' : 'neutral'}>
+              {titleCase(r.verdict ?? 'pending')}
+            </Badge>
             <ArrowUpRight className="size-3.5 text-fg-subtle" />
           </Link>
           <div className="px-4 py-3 text-[12.5px] text-fg-muted">
@@ -498,7 +632,9 @@ function Outputs({ run, onArtifact }: { run: ExecutionDetail; onArtifact: (id: s
             <span className="text-ok">{q.passed} passed</span>
             <span className={q.failed ? 'text-bad' : 'text-fg-subtle'}>{q.failed} failed</span>
             <span className="text-fg-subtle">{q.skipped} skipped</span>
-            <span className="ml-auto text-fg-subtle">{titleCase(q.type)} · {formatDuration(q.durationMs)}</span>
+            <span className="ml-auto text-fg-subtle">
+              {titleCase(q.type)} · {formatDuration(q.durationMs)}
+            </span>
           </div>
           {q.total > 0 && (
             <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-sunken">
@@ -513,7 +649,15 @@ function Outputs({ run, onArtifact }: { run: ExecutionDetail; onArtifact: (id: s
 }
 
 function SideEffects({ run }: { run: ExecutionDetail }) {
-  if (!run.externalResources.length && !run.deployments.length) return <EmptyState compact icon={<ExternalLink />} title="No external changes" description="Tickets, branches, pull requests, pages and deployments created by this run are listed here with links." />;
+  if (!run.externalResources.length && !run.deployments.length)
+    return (
+      <EmptyState
+        compact
+        icon={<ExternalLink />}
+        title="No external changes"
+        description="Tickets, branches, pull requests, pages and deployments created by this run are listed here with links."
+      />
+    );
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       {run.externalResources.length > 0 && (
@@ -553,7 +697,9 @@ function SideEffects({ run }: { run: ExecutionDetail }) {
                 <StatusDot status={p.status === 'passed' ? 'COMPLETED' : 'FAILED'} />
                 <span className="w-32 truncate">{p.name}</span>
                 <span className="flex-1 truncate text-fg-subtle">{p.detail}</span>
-                <span className="font-mono text-[11px] text-fg-subtle">{p.httpStatus ?? '—'} · {p.latencyMs ?? '—'}ms</span>
+                <span className="font-mono text-[11px] text-fg-subtle">
+                  {p.httpStatus ?? '—'} · {p.latencyMs ?? '—'}ms
+                </span>
               </div>
             ))}
             {d.error?.message && <div className="text-bad">{d.error.message}</div>}
@@ -565,13 +711,25 @@ function SideEffects({ run }: { run: ExecutionDetail }) {
 }
 
 function ApprovalList({ run, onOpen }: { run: ExecutionDetail; onOpen: (id: string) => void }) {
-  if (!run.approvals.length) return <EmptyState compact icon={<Hand />} title="No approvals in this run" description="Gated actions such as production deploys and merges pause here for a human decision." />;
+  if (!run.approvals.length)
+    return (
+      <EmptyState
+        compact
+        icon={<Hand />}
+        title="No approvals in this run"
+        description="Gated actions such as production deploys and merges pause here for a human decision."
+      />
+    );
   return (
     <Card>
       <ul className="divide-y divide-line">
         {run.approvals.map((a) => (
           <li key={a.id}>
-            <button type="button" onClick={() => onOpen(a.id)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-sunken/60">
+            <button
+              type="button"
+              onClick={() => onOpen(a.id)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-sunken/60"
+            >
               <Hand className={cn('size-4', a.status === 'PENDING' ? 'text-accent' : 'text-fg-subtle')} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] font-medium">{a.title}</span>
@@ -612,7 +770,8 @@ function AgentsAndTools({ run }: { run: ExecutionDetail }) {
                       <span className="font-medium">{r.agent.name}</span> <span className="text-fg-muted">· {r.summary ?? r.task}</span>
                     </div>
                     <div className="mt-0.5 font-mono text-[11px] text-fg-subtle">
-                      {r.model ?? '—'} · {formatNumber(r.totalTokens)} tok · {r.llmCalls} call{r.llmCalls === 1 ? '' : 's'} · {formatDuration(r.durationMs)}
+                      {r.model ?? '—'} · {formatNumber(r.totalTokens)} tok · {r.llmCalls} call{r.llmCalls === 1 ? '' : 's'} ·{' '}
+                      {formatDuration(r.durationMs)}
                     </div>
                   </div>
                   <StatusDot status={r.status} />
@@ -651,7 +810,10 @@ function RunAudit({ executionId }: { executionId: string }) {
         {data?.items.map((e) => (
           <li key={e.id} className="flex items-center gap-3 px-4 py-2 text-[12px]">
             <span className="w-36 shrink-0 font-mono text-[11px] text-fg-subtle">{formatDateTime(e.createdAt)}</span>
-            <StatusDot status={e.status === 'SUCCESS' ? 'COMPLETED' : e.status === 'DENIED' ? 'WAITING_APPROVAL' : 'FAILED'} title={e.status} />
+            <StatusDot
+              status={e.status === 'SUCCESS' ? 'COMPLETED' : e.status === 'DENIED' ? 'WAITING_APPROVAL' : 'FAILED'}
+              title={e.status}
+            />
             <Mono className="w-52 truncate text-fg">{e.action}</Mono>
             <span className="min-w-0 flex-1 truncate text-fg-muted">{e.actor?.name ?? e.actorLabel ?? titleCase(e.actorType)}</span>
             {e.status !== 'SUCCESS' && <Badge tone={e.status === 'DENIED' ? 'accent' : 'bad'}>{e.status.toLowerCase()}</Badge>}
@@ -670,8 +832,24 @@ function RunAudit({ executionId }: { executionId: string }) {
   );
 }
 
-function StepSheet({ run, step, open, onClose, onApproval }: { run: ExecutionDetail; step: ExecutionStep | null; open: boolean; onClose: () => void; onApproval: (id: string) => void }) {
-  const retry = useAction((s: ExecutionStep) => api.post(`/workflow-executions/${run.id}/steps/${s.id}/retry`), { success: 'Step queued for retry', invalidate: [qk.execution(run.id)], onSuccess: onClose });
+function StepSheet({
+  run,
+  step,
+  open,
+  onClose,
+  onApproval,
+}: {
+  run: ExecutionDetail;
+  step: ExecutionStep | null;
+  open: boolean;
+  onClose: () => void;
+  onApproval: (id: string) => void;
+}) {
+  const retry = useAction((s: ExecutionStep) => api.post(`/workflow-executions/${run.id}/steps/${s.id}/retry`), {
+    success: 'Step queued for retry',
+    invalidate: [qk.execution(run.id)],
+    onSuccess: onClose,
+  });
   const history = step ? run.steps.filter((s) => s.stepKey === step.stepKey).sort((a, b) => a.iteration - b.iteration) : [];
   const def = step ? run.definition.steps.find((s) => s.key === step.stepKey) : undefined;
   const approval = step ? run.approvals.find((a) => a.executionStepId === step.id) : undefined;
@@ -705,9 +883,15 @@ function StepSheet({ run, step, open, onClose, onApproval }: { run: ExecutionDet
         <div className="space-y-5 p-5">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={step.status} />
-            {step.attempt > 0 && <Badge>attempt {step.attempt}/{step.maxAttempts}</Badge>}
+            {step.attempt > 0 && (
+              <Badge>
+                attempt {step.attempt}/{step.maxAttempts}
+              </Badge>
+            )}
             {step.iteration > 0 && <Badge tone="ai">iteration {step.iteration + 1}</Badge>}
-            <span className="ml-auto font-mono text-[11.5px] text-fg-subtle">{formatDuration(step.durationMs ?? durationBetween(step.startedAt, step.completedAt))}</span>
+            <span className="ml-auto font-mono text-[11.5px] text-fg-subtle">
+              {formatDuration(step.durationMs ?? durationBetween(step.startedAt, step.completedAt))}
+            </span>
           </div>
           {step.summary && <p className="text-[13px]">{step.summary}</p>}
           {step.error && (
@@ -717,7 +901,11 @@ function StepSheet({ run, step, open, onClose, onApproval }: { run: ExecutionDet
             </div>
           )}
           {approval && (
-            <button type="button" onClick={() => onApproval(approval.id)} className="flex w-full items-center gap-2 rounded-md border border-accent/30 bg-accent-soft px-3 py-2 text-left text-[12.5px]">
+            <button
+              type="button"
+              onClick={() => onApproval(approval.id)}
+              className="flex w-full items-center gap-2 rounded-md border border-accent/30 bg-accent-soft px-3 py-2 text-left text-[12.5px]"
+            >
               <Hand className="size-4 text-accent" />
               <span className="flex-1">
                 Gate: {approval.title} · <span className="font-medium">{titleCase(approval.status)}</span>
@@ -755,7 +943,8 @@ function StepSheet({ run, step, open, onClose, onApproval }: { run: ExecutionDet
               )}
               {def.repair && (
                 <div>
-                  <span className="text-fg-subtle">On failure, repair with</span> <Mono className="text-fg">{def.repair.step}</Mono> <span className="text-fg-subtle">up to {def.repair.maxIterations}×</span>
+                  <span className="text-fg-subtle">On failure, repair with</span> <Mono className="text-fg">{def.repair.step}</Mono>{' '}
+                  <span className="text-fg-subtle">up to {def.repair.maxIterations}×</span>
                 </div>
               )}
               {def.runIf !== 'all_success' && (
@@ -791,12 +980,22 @@ function StepSheet({ run, step, open, onClose, onApproval }: { run: ExecutionDet
 }
 
 function ArtifactDialog({ artifactId, onClose }: { artifactId: string | null; onClose: () => void }) {
-  const { data, isLoading } = useQuery({ queryKey: ['artifacts', artifactId], queryFn: () => api.get<Artifact>(`/artifacts/${artifactId}`), enabled: Boolean(artifactId) });
+  const { data, isLoading } = useQuery({
+    queryKey: ['artifacts', artifactId],
+    queryFn: () => api.get<Artifact>(`/artifacts/${artifactId}`),
+    enabled: Boolean(artifactId),
+  });
   const content = data?.content ?? '';
   const isDiff = data?.contentType === 'text/x-diff' || /^diff --git/m.test(content);
   const isJson = data?.contentType === 'application/json';
   return (
-    <Dialog open={Boolean(artifactId)} onOpenChange={(o) => !o && onClose()} title={data?.title ?? 'Artifact'} description={data ? `${titleCase(data.type)} · v${data.version}` : undefined} wide>
+    <Dialog
+      open={Boolean(artifactId)}
+      onOpenChange={(o) => !o && onClose()}
+      title={data?.title ?? 'Artifact'}
+      description={data ? `${titleCase(data.type)} · v${data.version}` : undefined}
+      wide
+    >
       {isLoading || !data ? (
         <Skeleton className="h-48" />
       ) : isDiff ? (

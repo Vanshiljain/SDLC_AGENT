@@ -24,7 +24,14 @@ describe('api client', () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(json(401, { message: 'expired' }))
-      .mockResolvedValueOnce(json(200, { accessToken: 'new', expiresIn: 900, user: { id: 'u', email: 'e', name: 'n', avatarUrl: null }, memberships: [{ organizationId: 'org-1', organizationName: 'O', organizationSlug: 'o', role: 'OWNER', isDemo: false }] }))
+      .mockResolvedValueOnce(
+        json(200, {
+          accessToken: 'new',
+          expiresIn: 900,
+          user: { id: 'u', email: 'e', name: 'n', avatarUrl: null },
+          memberships: [{ organizationId: 'org-1', organizationName: 'O', organizationSlug: 'o', role: 'OWNER', isDemo: false }],
+        }),
+      )
       .mockResolvedValueOnce(json(200, [{ id: 'p1' }]));
     const res = await api.get<{ id: string }[]>('/projects');
     expect(res[0]!.id).toBe('p1');
@@ -35,7 +42,9 @@ describe('api client', () => {
   });
 
   it('surfaces API errors with their message and code', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(403, { statusCode: 403, error: 'Forbidden', message: 'Missing permission "deploy:production"', code: 'PERMISSION_DENIED' }));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      json(403, { statusCode: 403, error: 'Forbidden', message: 'Missing permission "deploy:production"', code: 'PERMISSION_DENIED' }),
+    );
     const err = await api.post('/approvals/x/approve').catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).code).toBe('PERMISSION_DENIED');

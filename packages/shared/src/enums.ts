@@ -12,15 +12,7 @@ export type OrgRole = (typeof ORG_ROLES)[number];
 export const PROJECT_ROLES = tuple('MAINTAINER', 'DEVELOPER', 'VIEWER');
 export type ProjectRole = (typeof PROJECT_ROLES)[number];
 
-export const INTEGRATION_PROVIDERS = tuple(
-  'GITHUB',
-  'GITHUB_ACTIONS',
-  'JIRA',
-  'TRELLO',
-  'NOTION',
-  'CUSTOM_DEVOPS',
-  'SLACK',
-);
+export const INTEGRATION_PROVIDERS = tuple('GITHUB', 'GITHUB_ACTIONS', 'JIRA', 'TRELLO', 'NOTION', 'CUSTOM_DEVOPS', 'SLACK');
 export type IntegrationProvider = (typeof INTEGRATION_PROVIDERS)[number];
 
 export const INTEGRATION_STATUSES = tuple('CONNECTED', 'DISCONNECTED', 'ERROR', 'EXPIRED', 'PENDING');
@@ -44,12 +36,7 @@ export const EXECUTION_STATUSES = tuple(
   'COMPENSATED',
 );
 export type ExecutionStatus = (typeof EXECUTION_STATUSES)[number];
-export const TERMINAL_EXECUTION_STATUSES: readonly ExecutionStatus[] = [
-  'COMPLETED',
-  'FAILED',
-  'CANCELLED',
-  'COMPENSATED',
-];
+export const TERMINAL_EXECUTION_STATUSES: readonly ExecutionStatus[] = ['COMPLETED', 'FAILED', 'CANCELLED', 'COMPENSATED'];
 
 export const STEP_STATUSES = tuple(
   'PENDING',
@@ -65,26 +52,12 @@ export const STEP_STATUSES = tuple(
   'COMPENSATED',
 );
 export type StepStatus = (typeof STEP_STATUSES)[number];
-export const TERMINAL_STEP_STATUSES: readonly StepStatus[] = [
-  'COMPLETED',
-  'FAILED',
-  'SKIPPED',
-  'CANCELLED',
-  'COMPENSATED',
-];
+export const TERMINAL_STEP_STATUSES: readonly StepStatus[] = ['COMPLETED', 'FAILED', 'SKIPPED', 'CANCELLED', 'COMPENSATED'];
 
 export const EXECUTION_MODES = tuple('LIVE', 'DEMO');
 export type ExecutionMode = (typeof EXECUTION_MODES)[number];
 
-export const TRIGGER_SOURCES = tuple(
-  'CHAT',
-  'MANUAL',
-  'COMMAND_PALETTE',
-  'WEBHOOK',
-  'SCHEDULE',
-  'API',
-  'ASSISTANT',
-);
+export const TRIGGER_SOURCES = tuple('CHAT', 'MANUAL', 'COMMAND_PALETTE', 'WEBHOOK', 'SCHEDULE', 'API', 'ASSISTANT');
 export type TriggerSource = (typeof TRIGGER_SOURCES)[number];
 
 export const TRIGGER_TYPES = tuple('MANUAL', 'WEBHOOK', 'SCHEDULE', 'EVENT');
@@ -120,14 +93,7 @@ export type QATestType = (typeof QA_TEST_TYPES)[number];
 export const QA_RUN_STATUSES = tuple('QUEUED', 'RUNNING', 'PASSED', 'FAILED', 'ERROR', 'SKIPPED');
 export type QARunStatus = (typeof QA_RUN_STATUSES)[number];
 
-export const CODE_GENERATION_STATUSES = tuple(
-  'PLANNING',
-  'GENERATING',
-  'VALIDATING',
-  'READY',
-  'COMMITTED',
-  'FAILED',
-);
+export const CODE_GENERATION_STATUSES = tuple('PLANNING', 'GENERATING', 'VALIDATING', 'READY', 'COMMITTED', 'FAILED');
 export type CodeGenerationStatus = (typeof CODE_GENERATION_STATUSES)[number];
 
 export const REVIEW_VERDICTS = tuple('APPROVE', 'REQUEST_CHANGES', 'COMMENT');
@@ -202,16 +168,7 @@ export type KnowledgeStatus = (typeof KNOWLEDGE_STATUSES)[number];
 export const MESSAGE_ROLES = tuple('USER', 'ASSISTANT', 'SYSTEM', 'TOOL');
 export type MessageRole = (typeof MESSAGE_ROLES)[number];
 
-export const AGENT_KINDS = tuple(
-  'ORCHESTRATOR',
-  'PLANNER',
-  'ARCHITECT',
-  'CODER',
-  'REVIEWER',
-  'QA',
-  'DOCS',
-  'RELEASE',
-);
+export const AGENT_KINDS = tuple('ORCHESTRATOR', 'PLANNER', 'ARCHITECT', 'CODER', 'REVIEWER', 'QA', 'DOCS', 'RELEASE');
 export type AgentKind = (typeof AGENT_KINDS)[number];
 
 export const AGENT_RUN_STATUSES = tuple('RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED');

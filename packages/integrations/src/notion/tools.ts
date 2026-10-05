@@ -24,7 +24,9 @@ export const notionCreatePage = defineTool({
     const notion = await ctx.clients.notion();
     const parentPageId = input.parentPageId ?? (input.parentDatabaseId ? undefined : ctx.project?.settings.notionParentPageId);
     if (!parentPageId && !input.parentDatabaseId) {
-      throw new ToolError('not_configured', 'No Notion parent page configured (project settings → notionParentPageId)', { retryable: false });
+      throw new ToolError('not_configured', 'No Notion parent page configured (project settings → notionParentPageId)', {
+        retryable: false,
+      });
     }
     const marker = idempotencyMarker(ctx);
     // Find-before-create: our pages end with a marker paragraph; search by title then verify.
@@ -105,7 +107,8 @@ export const notionAppendToPage = defineTool({
     const notion = await ctx.clients.notion();
     const marker = idempotencyMarker(ctx);
     const blocks = await notion.listBlocks(input.pageId);
-    if (JSON.stringify(blocks).includes(marker)) return { output: { pageId: input.pageId, appended: false }, summary: 'Content already appended' };
+    if (JSON.stringify(blocks).includes(marker))
+      return { output: { pageId: input.pageId, appended: false }, summary: 'Content already appended' };
     await notion.appendMarkdown(input.pageId, `${input.markdown}\n\n_${marker}_`);
     return { output: { pageId: input.pageId, appended: true }, summary: 'Appended content to Notion page' };
   },

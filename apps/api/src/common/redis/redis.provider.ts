@@ -41,4 +41,3 @@ export class RedisService implements OnModuleDestroy {
     await Promise.all(this.connections.map((c) => c.quit().catch(() => c.disconnect())));
   }
 }
-

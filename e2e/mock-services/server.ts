@@ -14,7 +14,14 @@ import { INITIAL_REPO } from './repo-fixture';
  * TEST INFRASTRUCTURE ONLY — never used by the product at runtime.
  */
 
-type Handler = (ctx: { req: IncomingMessage; res: ServerResponse; params: string[]; query: URLSearchParams; body: unknown; raw: Buffer }) => unknown;
+type Handler = (ctx: {
+  req: IncomingMessage;
+  res: ServerResponse;
+  params: string[];
+  query: URLSearchParams;
+  body: unknown;
+  raw: Buffer;
+}) => unknown;
 
 interface Commit {
   sha: string;
@@ -31,14 +38,39 @@ export interface MockState {
     trees: Map<string, Map<string, string>>;
     commits: Map<string, Commit>;
     refs: Map<string, string>;
-    pulls: { number: number; title: string; body: string; head: string; base: string; state: 'open' | 'closed'; merged: boolean; mergeSha?: string }[];
+    pulls: {
+      number: number;
+      title: string;
+      body: string;
+      head: string;
+      base: string;
+      state: 'open' | 'closed';
+      merged: boolean;
+      mergeSha?: string;
+    }[];
     reviews: { pull: number; id: number; body: string; event: string; comments: number }[];
     comments: { issue: number; id: number; body: string }[];
     runs: { id: number; headSha: string; branch: string; polls: number; conclusion: 'success' | 'failure' }[];
   };
-  jira: { issues: { id: string; key: string; summary: string; description: unknown; labels: string[]; status: string; comments: { id: string; body: unknown }[]; links: string[]; attachments: string[] }[] };
+  jira: {
+    issues: {
+      id: string;
+      key: string;
+      summary: string;
+      description: unknown;
+      labels: string[];
+      status: string;
+      comments: { id: string; body: unknown }[];
+      links: string[];
+      attachments: string[];
+    }[];
+  };
   notion: { pages: { id: string; title: string; blocks: unknown[]; archived: boolean; parent: unknown }[] };
-  devops: { pipelines: { id: string; polls: number; stages: string[] }[]; deployments: { id: string; environment: string; version: string; polls: number; rollback: boolean }[]; signatureFailures: number };
+  devops: {
+    pipelines: { id: string; polls: number; stages: string[] }[];
+    deployments: { id: string; environment: string; version: string; polls: number; rollback: boolean }[];
+    signatureFailures: number;
+  };
   slack: { messages: unknown[] };
   envHits: Record<string, number>;
   llm: { chatCalls: number; embeddingCalls: number };
@@ -59,7 +91,18 @@ function newState(owner = 'acme', repo = 'auth-service'): MockState {
   const treeSha = sha1(`tree:${[...tree.entries()].join('|')}`);
   const commit: Commit = { sha: sha1('initial'), treeSha, parents: [], message: 'Initial commit' };
   return {
-    github: { owner, repo, blobs, trees: new Map([[treeSha, tree]]), commits: new Map([[commit.sha, commit]]), refs: new Map([['heads/main', commit.sha]]), pulls: [], reviews: [], comments: [], runs: [] },
+    github: {
+      owner,
+      repo,
+      blobs,
+      trees: new Map([[treeSha, tree]]),
+      commits: new Map([[commit.sha, commit]]),
+      refs: new Map([['heads/main', commit.sha]]),
+      pulls: [],
+      reviews: [],
+      comments: [],
+      runs: [],
+    },
     jira: { issues: [] },
     notion: { pages: [] },
     devops: { pipelines: [], deployments: [], signatureFailures: 0 },
@@ -71,7 +114,10 @@ function newState(owner = 'acme', repo = 'auth-service'): MockState {
 
 function send(res: ServerResponse, status: number, body?: unknown, headers: Record<string, string> = {}) {
   const payload = body === undefined ? '' : typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body);
-  res.writeHead(status, { 'content-type': typeof body === 'string' ? 'text/plain' : Buffer.isBuffer(body) ? 'application/gzip' : 'application/json', ...headers });
+  res.writeHead(status, {
+    'content-type': typeof body === 'string' ? 'text/plain' : Buffer.isBuffer(body) ? 'application/gzip' : 'application/json',
+    ...headers,
+  });
   res.end(payload);
 }
 
@@ -129,16 +175,59 @@ export async function startMockServices(port = 0): Promise<MockServices> {
       if (a === b) continue;
       const aLines = a ? a.split('\n') : [];
       const bLines = b ? b.split('\n') : [];
-      out.push(`diff --git a/${path} b/${path}`, `--- ${a ? `a/${path}` : '/dev/null'}`, `+++ ${b ? `b/${path}` : '/dev/null'}`, `@@ -${a ? 1 : 0},${aLines.length} +${b ? 1 : 0},${bLines.length} @@`, ...aLines.map((l) => `-${l}`), ...bLines.map((l) => `+${l}`));
-      files.push({ filename: path, status: !a ? 'added' : !b ? 'removed' : 'modified', additions: bLines.length, deletions: aLines.length, changes: aLines.length + bLines.length });
+      out.push(
+        `diff --git a/${path} b/${path}`,
+        `--- ${a ? `a/${path}` : '/dev/null'}`,
+        `+++ ${b ? `b/${path}` : '/dev/null'}`,
+        `@@ -${a ? 1 : 0},${aLines.length} +${b ? 1 : 0},${bLines.length} @@`,
+        ...aLines.map((l) => `-${l}`),
+        ...bLines.map((l) => `+${l}`),
+      );
+      files.push({
+        filename: path,
+        status: !a ? 'added' : !b ? 'removed' : 'modified',
+        additions: bLines.length,
+        deletions: aLines.length,
+        changes: aLines.length + bLines.length,
+      });
     }
     return { diff: out.join('\n'), files };
   };
 
-  on('GET', '/github/user', ({ res }) => send(res, 200, { id: 42, login: 'forgeline-bot', name: 'Forgeline Bot' }, { 'x-oauth-scopes': 'repo, workflow, read:user' }));
+  on('GET', '/github/user', ({ res }) =>
+    send(res, 200, { id: 42, login: 'forgeline-bot', name: 'Forgeline Bot' }, { 'x-oauth-scopes': 'repo, workflow, read:user' }),
+  );
   on('GET', '/github/rate_limit', ({ res }) => send(res, 200, { rate: { remaining: 4999 } }, { 'x-ratelimit-remaining': '4999' }));
-  on('GET', '/github/user/repos', ({ res }) => send(res, 200, [{ id: 1, name: gh().repo, full_name: `${gh().owner}/${gh().repo}`, private: true, default_branch: 'main', html_url: `https://github.mock/${gh().owner}/${gh().repo}`, owner: { login: gh().owner }, language: 'JavaScript' }]));
-  on('GET', repoBase, ({ res, params }) => ensureRepo(params, res) && send(res, 200, { id: 1, name: gh().repo, full_name: `${gh().owner}/${gh().repo}`, private: true, default_branch: 'main', html_url: `https://github.mock/${gh().owner}/${gh().repo}`, owner: { login: gh().owner }, language: 'JavaScript' }));
+  on('GET', '/github/user/repos', ({ res }) =>
+    send(res, 200, [
+      {
+        id: 1,
+        name: gh().repo,
+        full_name: `${gh().owner}/${gh().repo}`,
+        private: true,
+        default_branch: 'main',
+        html_url: `https://github.mock/${gh().owner}/${gh().repo}`,
+        owner: { login: gh().owner },
+        language: 'JavaScript',
+      },
+    ]),
+  );
+  on(
+    'GET',
+    repoBase,
+    ({ res, params }) =>
+      ensureRepo(params, res) &&
+      send(res, 200, {
+        id: 1,
+        name: gh().repo,
+        full_name: `${gh().owner}/${gh().repo}`,
+        private: true,
+        default_branch: 'main',
+        html_url: `https://github.mock/${gh().owner}/${gh().repo}`,
+        owner: { login: gh().owner },
+        language: 'JavaScript',
+      }),
+  );
   on('GET', `${repoBase}/git/ref/:rest`, ({ res, params }) => {
     if (!ensureRepo(params, res)) return;
     const sha = gh().refs.get(params[2]!);
@@ -171,7 +260,13 @@ export async function startMockServices(port = 0): Promise<MockServices> {
     if (!ensureRepo(params, res)) return;
     const c = gh().commits.get(params[2]!);
     if (!c) return send(res, 404, { message: 'Not Found' });
-    send(res, 200, { sha: c.sha, message: c.message, html_url: commitUrl(c.sha), tree: { sha: c.treeSha }, parents: c.parents.map((sha) => ({ sha })) });
+    send(res, 200, {
+      sha: c.sha,
+      message: c.message,
+      html_url: commitUrl(c.sha),
+      tree: { sha: c.treeSha },
+      parents: c.parents.map((sha) => ({ sha })),
+    });
   });
   on('POST', `${repoBase}/git/blobs`, ({ res, params, body }) => {
     if (!ensureRepo(params, res)) return;
@@ -203,12 +298,20 @@ export async function startMockServices(port = 0): Promise<MockServices> {
     const commit = gh().commits.get(params[2]!);
     const tree = gh().trees.get(commit ? commit.treeSha : params[2]!);
     if (!tree) return send(res, 404, { message: 'Not Found' });
-    send(res, 200, { tree: [...tree.entries()].map(([path, sha]) => ({ path, mode: '100644', type: 'blob', sha, size: gh().blobs.get(sha)!.length })), truncated: false });
+    send(res, 200, {
+      tree: [...tree.entries()].map(([path, sha]) => ({ path, mode: '100644', type: 'blob', sha, size: gh().blobs.get(sha)!.length })),
+      truncated: false,
+    });
   });
   on('POST', `${repoBase}/git/commits`, ({ res, params, body }) => {
     if (!ensureRepo(params, res)) return;
     const b = body as { message: string; tree: string; parents: string[] };
-    const c: Commit = { sha: sha1(`commit:${b.tree}:${b.parents.join(',')}:${b.message}:${randomUUID()}`), treeSha: b.tree, parents: b.parents, message: b.message };
+    const c: Commit = {
+      sha: sha1(`commit:${b.tree}:${b.parents.join(',')}:${b.message}:${randomUUID()}`),
+      treeSha: b.tree,
+      parents: b.parents,
+      message: b.message,
+    };
     gh().commits.set(c.sha, c);
     send(res, 201, { sha: c.sha, html_url: commitUrl(c.sha) });
   });
@@ -247,13 +350,27 @@ export async function startMockServices(port = 0): Promise<MockServices> {
     if (!ensureRepo(params, res)) return;
     const head = query.get('head')?.split(':').pop();
     const st = query.get('state') ?? 'open';
-    send(res, 200, gh().pulls.filter((p) => (st === 'all' || p.state === st) && (!head || p.head === head)).map(pullJson));
+    send(
+      res,
+      200,
+      gh()
+        .pulls.filter((p) => (st === 'all' || p.state === st) && (!head || p.head === head))
+        .map(pullJson),
+    );
   });
   on('POST', `${repoBase}/pulls`, ({ res, params, body }) => {
     if (!ensureRepo(params, res)) return;
     const b = body as { title: string; body: string; head: string; base: string };
     if (!gh().refs.has(`heads/${b.head}`)) return send(res, 422, { message: 'head branch not found' });
-    const p = { number: 100 + gh().pulls.length + 1, title: b.title, body: b.body, head: b.head, base: b.base, state: 'open' as const, merged: false };
+    const p = {
+      number: 100 + gh().pulls.length + 1,
+      title: b.title,
+      body: b.body,
+      head: b.head,
+      base: b.base,
+      state: 'open' as const,
+      merged: false,
+    };
     gh().pulls.push(p);
     send(res, 201, pullJson(p));
   });
@@ -284,7 +401,12 @@ export async function startMockServices(port = 0): Promise<MockServices> {
     if (!p) return send(res, 404, { message: 'Not Found' });
     if (p.merged) return send(res, 405, { message: 'Pull Request is not mergeable' });
     const headSha = gh().refs.get(`heads/${p.head}`)!;
-    const c: Commit = { sha: sha1(`merge:${headSha}:${randomUUID()}`), treeSha: gh().commits.get(headSha)!.treeSha, parents: [gh().refs.get(`heads/${p.base}`)!, headSha], message: `${p.title} (#${p.number})` };
+    const c: Commit = {
+      sha: sha1(`merge:${headSha}:${randomUUID()}`),
+      treeSha: gh().commits.get(headSha)!.treeSha,
+      parents: [gh().refs.get(`heads/${p.base}`)!, headSha],
+      message: `${p.title} (#${p.number})`,
+    };
     gh().commits.set(c.sha, c);
     gh().refs.set(`heads/${p.base}`, c.sha);
     p.merged = true;
@@ -292,15 +414,43 @@ export async function startMockServices(port = 0): Promise<MockServices> {
     p.mergeSha = c.sha;
     send(res, 200, { merged: true, sha: c.sha, message: 'Pull Request successfully merged' });
   });
-  on('GET', `${repoBase}/pulls/:n/reviews`, ({ res, params }) => ensureRepo(params, res) && send(res, 200, gh().reviews.filter((r) => r.pull === Number(params[2])).map((r) => ({ id: r.id, body: r.body, state: 'COMMENTED', user: { login: 'forgeline-bot' } }))));
+  on(
+    'GET',
+    `${repoBase}/pulls/:n/reviews`,
+    ({ res, params }) =>
+      ensureRepo(params, res) &&
+      send(
+        res,
+        200,
+        gh()
+          .reviews.filter((r) => r.pull === Number(params[2]))
+          .map((r) => ({ id: r.id, body: r.body, state: 'COMMENTED', user: { login: 'forgeline-bot' } })),
+      ),
+  );
   on('POST', `${repoBase}/pulls/:n/reviews`, ({ res, params, body }) => {
     if (!ensureRepo(params, res)) return;
     const b = body as { body: string; event: string; comments?: unknown[] };
     const r = { pull: Number(params[2]), id: 5000 + gh().reviews.length, body: b.body, event: b.event, comments: b.comments?.length ?? 0 };
     gh().reviews.push(r);
-    send(res, 200, { id: r.id, html_url: `https://github.mock/${gh().owner}/${gh().repo}/pull/${r.pull}#review-${r.id}`, state: 'COMMENTED' });
+    send(res, 200, {
+      id: r.id,
+      html_url: `https://github.mock/${gh().owner}/${gh().repo}/pull/${r.pull}#review-${r.id}`,
+      state: 'COMMENTED',
+    });
   });
-  on('GET', `${repoBase}/issues/:n/comments`, ({ res, params }) => ensureRepo(params, res) && send(res, 200, gh().comments.filter((c) => c.issue === Number(params[2])).map((c) => ({ id: c.id, body: c.body, html_url: `https://github.mock/c/${c.id}` }))));
+  on(
+    'GET',
+    `${repoBase}/issues/:n/comments`,
+    ({ res, params }) =>
+      ensureRepo(params, res) &&
+      send(
+        res,
+        200,
+        gh()
+          .comments.filter((c) => c.issue === Number(params[2]))
+          .map((c) => ({ id: c.id, body: c.body, html_url: `https://github.mock/c/${c.id}` })),
+      ),
+  );
   on('POST', `${repoBase}/issues/:n/comments`, ({ res, params, body }) => {
     if (!ensureRepo(params, res)) return;
     const c = { issue: Number(params[2]), id: 9000 + gh().comments.length, body: (body as { body: string }).body };
@@ -336,14 +486,50 @@ export async function startMockServices(port = 0): Promise<MockServices> {
     r.polls++;
     send(res, 200, runJson(r));
   });
-  on('GET', `${repoBase}/actions/runs/:id/jobs`, ({ res, params }) => ensureRepo(params, res) && send(res, 200, { total_count: 1, jobs: [{ id: Number(params[2]) * 10, name: 'test', status: 'completed', conclusion: 'success', html_url: 'https://github.mock/job' }] }));
-  on('GET', `${repoBase}/actions/workflows`, ({ res, params }) => ensureRepo(params, res) && send(res, 200, { workflows: [{ id: 1, name: 'CI', path: '.github/workflows/ci.yml', state: 'active' }, { id: 2, name: 'Deploy', path: '.github/workflows/deploy.yml', state: 'active' }] }));
+  on(
+    'GET',
+    `${repoBase}/actions/runs/:id/jobs`,
+    ({ res, params }) =>
+      ensureRepo(params, res) &&
+      send(res, 200, {
+        total_count: 1,
+        jobs: [
+          { id: Number(params[2]) * 10, name: 'test', status: 'completed', conclusion: 'success', html_url: 'https://github.mock/job' },
+        ],
+      }),
+  );
+  on(
+    'GET',
+    `${repoBase}/actions/workflows`,
+    ({ res, params }) =>
+      ensureRepo(params, res) &&
+      send(res, 200, {
+        workflows: [
+          { id: 1, name: 'CI', path: '.github/workflows/ci.yml', state: 'active' },
+          { id: 2, name: 'Deploy', path: '.github/workflows/deploy.yml', state: 'active' },
+        ],
+      }),
+  );
   on('GET', `${repoBase}/environments`, ({ res, params }) => ensureRepo(params, res) && send(res, 200, { environments: [] }));
 
   // ───────────── Jira ─────────────
   const jiraBase = '/jira/rest/api/3';
-  const issueJson = (i: MockState['jira']['issues'][number]) => ({ id: i.id, key: i.key, self: `${jiraBase}/issue/${i.id}`, fields: { summary: i.summary, description: i.description, status: { name: i.status }, issuetype: { name: 'Story' }, labels: i.labels, project: { key: i.key.split('-')[0], name: 'Auth' } } });
-  on('GET', `${jiraBase}/myself`, ({ res }) => send(res, 200, { accountId: 'acc-1', displayName: 'Forgeline Bot', emailAddress: 'bot@acme.test' }));
+  const issueJson = (i: MockState['jira']['issues'][number]) => ({
+    id: i.id,
+    key: i.key,
+    self: `${jiraBase}/issue/${i.id}`,
+    fields: {
+      summary: i.summary,
+      description: i.description,
+      status: { name: i.status },
+      issuetype: { name: 'Story' },
+      labels: i.labels,
+      project: { key: i.key.split('-')[0], name: 'Auth' },
+    },
+  });
+  on('GET', `${jiraBase}/myself`, ({ res }) =>
+    send(res, 200, { accountId: 'acc-1', displayName: 'Forgeline Bot', emailAddress: 'bot@acme.test' }),
+  );
   on('POST', `${jiraBase}/search/jql`, ({ res, body }) => {
     const jql = String((body as { jql: string }).jql);
     const label = /labels = "([^"]+)"/.exec(jql)?.[1];
@@ -351,7 +537,17 @@ export async function startMockServices(port = 0): Promise<MockServices> {
   });
   on('POST', `${jiraBase}/issue`, ({ res, body }) => {
     const f = (body as { fields: { project: { key: string }; summary: string; description?: unknown; labels?: string[] } }).fields;
-    const i = { id: String(10000 + state.jira.issues.length), key: `${f.project.key}-${142 + state.jira.issues.length}`, summary: f.summary, description: f.description ?? null, labels: f.labels ?? [], status: 'To Do', comments: [], links: [], attachments: [] };
+    const i = {
+      id: String(10000 + state.jira.issues.length),
+      key: `${f.project.key}-${142 + state.jira.issues.length}`,
+      summary: f.summary,
+      description: f.description ?? null,
+      labels: f.labels ?? [],
+      status: 'To Do',
+      comments: [],
+      links: [],
+      attachments: [],
+    };
     state.jira.issues.push(i);
     send(res, 201, { id: i.id, key: i.key });
   });
@@ -380,7 +576,9 @@ export async function startMockServices(port = 0): Promise<MockServices> {
   const WORKFLOW = ['To Do', 'In Progress', 'In Review', 'Done'];
   on('GET', `${jiraBase}/issue/:key/transitions`, ({ res, params }) => {
     const i = findIssue(params[0]!);
-    send(res, 200, { transitions: WORKFLOW.filter((s) => s !== i?.status).map((s, idx) => ({ id: String(11 + idx), name: s, to: { name: s } })) });
+    send(res, 200, {
+      transitions: WORKFLOW.filter((s) => s !== i?.status).map((s, idx) => ({ id: String(11 + idx), name: s, to: { name: s } })),
+    });
   });
   on('POST', `${jiraBase}/issue/:key/transitions`, ({ res, params, body }) => {
     const i = findIssue(params[0]!);
@@ -397,8 +595,16 @@ export async function startMockServices(port = 0): Promise<MockServices> {
 
   // ───────────── Notion ─────────────
   const notionBase = '/notion/v1';
-  const pageJson = (p: MockState['notion']['pages'][number]) => ({ object: 'page', id: p.id, url: `https://notion.mock/${p.id}`, archived: p.archived, properties: { title: { type: 'title', title: [{ plain_text: p.title }] } } });
-  on('GET', `${notionBase}/users/me`, ({ res }) => send(res, 200, { id: 'bot-1', name: 'Forgeline', bot: { workspace_name: 'Acme Docs' } }));
+  const pageJson = (p: MockState['notion']['pages'][number]) => ({
+    object: 'page',
+    id: p.id,
+    url: `https://notion.mock/${p.id}`,
+    archived: p.archived,
+    properties: { title: { type: 'title', title: [{ plain_text: p.title }] } },
+  });
+  on('GET', `${notionBase}/users/me`, ({ res }) =>
+    send(res, 200, { id: 'bot-1', name: 'Forgeline', bot: { workspace_name: 'Acme Docs' } }),
+  );
   on('POST', `${notionBase}/search`, ({ res, body }) => {
     const q = String((body as { query?: string }).query ?? '').toLowerCase();
     send(res, 200, { results: state.notion.pages.filter((p) => p.title.toLowerCase().includes(q)).map(pageJson) });
@@ -406,7 +612,13 @@ export async function startMockServices(port = 0): Promise<MockServices> {
   on('POST', `${notionBase}/pages`, ({ res, body }) => {
     const b = body as { parent: unknown; properties: Record<string, { title: { text: { content: string } }[] }>; children?: unknown[] };
     const titleProp = Object.values(b.properties)[0]!;
-    const p = { id: randomUUID(), title: titleProp.title.map((t) => t.text.content).join(''), blocks: (b.children ?? []).map((c) => ({ ...(c as object), id: randomUUID() })), archived: false, parent: b.parent };
+    const p = {
+      id: randomUUID(),
+      title: titleProp.title.map((t) => t.text.content).join(''),
+      blocks: (b.children ?? []).map((c) => ({ ...(c as object), id: randomUUID() })),
+      archived: false,
+      parent: b.parent,
+    };
     state.notion.pages.push(p);
     send(res, 200, pageJson(p));
   });
@@ -421,7 +633,9 @@ export async function startMockServices(port = 0): Promise<MockServices> {
     if ((body as { archived?: boolean }).archived) p.archived = true;
     send(res, 200, pageJson(p));
   });
-  on('GET', `${notionBase}/blocks/:id/children`, ({ res, params }) => send(res, 200, { results: state.notion.pages.find((x) => x.id === params[0])?.blocks ?? [], has_more: false, next_cursor: null }));
+  on('GET', `${notionBase}/blocks/:id/children`, ({ res, params }) =>
+    send(res, 200, { results: state.notion.pages.find((x) => x.id === params[0])?.blocks ?? [], has_more: false, next_cursor: null }),
+  );
   on('PATCH', `${notionBase}/blocks/:id/children`, ({ res, params, body }) => {
     const p = state.notion.pages.find((x) => x.id === params[0]);
     if (!p) return send(res, 404, {});
@@ -433,7 +647,9 @@ export async function startMockServices(port = 0): Promise<MockServices> {
   const verifyDevOps = (req: IncomingMessage, raw: Buffer): boolean => {
     const ts = String(req.headers['x-forgeline-timestamp'] ?? '');
     const sig = String(req.headers['x-forgeline-signature'] ?? '');
-    const expected = `v1=${createHmac('sha256', DEVOPS_SIGNING_SECRET).update(`${ts}.${raw.toString('utf8')}`).digest('hex')}`;
+    const expected = `v1=${createHmac('sha256', DEVOPS_SIGNING_SECRET)
+      .update(`${ts}.${raw.toString('utf8')}`)
+      .digest('hex')}`;
     const ok = sig === expected && req.headers.authorization === 'Bearer e2e-devops-token';
     if (!ok) state.devops.signatureFailures++;
     return ok;
@@ -443,38 +659,84 @@ export async function startMockServices(port = 0): Promise<MockServices> {
     if (!verifyDevOps(req, raw)) return send(res, 401, { message: 'bad signature' });
     const p = { id: `pl-${state.devops.pipelines.length + 1}`, polls: 0, stages: (body as { stages: string[] }).stages };
     state.devops.pipelines.push(p);
-    send(res, 201, { id: p.id, status: 'running', url: `https://devops.mock/pipelines/${p.id}`, stages: p.stages.map((s) => ({ stage: s, status: 'queued' })) });
+    send(res, 201, {
+      id: p.id,
+      status: 'running',
+      url: `https://devops.mock/pipelines/${p.id}`,
+      stages: p.stages.map((s) => ({ stage: s, status: 'queued' })),
+    });
   });
   on('GET', '/devops/v1/pipelines/:id', ({ res, params }) => {
     const p = state.devops.pipelines.find((x) => x.id === params[0]);
     if (!p) return send(res, 404, {});
     p.polls++;
     const done = p.polls >= 2;
-    send(res, 200, { id: p.id, status: done ? 'succeeded' : 'running', url: `https://devops.mock/pipelines/${p.id}`, stages: p.stages.map((s) => ({ stage: s, status: done ? 'succeeded' : 'running' })), artifact: done ? { ref: `registry.mock/auth:${p.id}` } : null });
+    send(res, 200, {
+      id: p.id,
+      status: done ? 'succeeded' : 'running',
+      url: `https://devops.mock/pipelines/${p.id}`,
+      stages: p.stages.map((s) => ({ stage: s, status: done ? 'succeeded' : 'running' })),
+      artifact: done ? { ref: `registry.mock/auth:${p.id}` } : null,
+    });
   });
   on('POST', '/devops/v1/deployments', ({ req, res, raw, body }) => {
     if (!verifyDevOps(req, raw)) return send(res, 401, { message: 'bad signature' });
     const b = body as { environment: string; version: string; idempotencyKey: string };
-    const existing = state.devops.deployments.find((d) => d.id === `dep-${createHash('md5').update(b.idempotencyKey).digest('hex').slice(0, 8)}`);
-    if (existing) return send(res, 200, { id: existing.id, status: 'running', environment: existing.environment, version: existing.version });
-    const d = { id: `dep-${createHash('md5').update(b.idempotencyKey).digest('hex').slice(0, 8)}`, environment: b.environment, version: b.version, polls: 0, rollback: false };
+    const existing = state.devops.deployments.find(
+      (d) => d.id === `dep-${createHash('md5').update(b.idempotencyKey).digest('hex').slice(0, 8)}`,
+    );
+    if (existing)
+      return send(res, 200, { id: existing.id, status: 'running', environment: existing.environment, version: existing.version });
+    const d = {
+      id: `dep-${createHash('md5').update(b.idempotencyKey).digest('hex').slice(0, 8)}`,
+      environment: b.environment,
+      version: b.version,
+      polls: 0,
+      rollback: false,
+    };
     state.devops.deployments.push(d);
-    send(res, 201, { id: d.id, status: 'running', environment: d.environment, version: d.version, url: `https://devops.mock/deployments/${d.id}` });
+    send(res, 201, {
+      id: d.id,
+      status: 'running',
+      environment: d.environment,
+      version: d.version,
+      url: `https://devops.mock/deployments/${d.id}`,
+    });
   });
   on('GET', '/devops/v1/deployments/:id', ({ res, params }) => {
     const d = state.devops.deployments.find((x) => x.id === params[0]);
     if (!d) return send(res, 404, {});
     d.polls++;
-    send(res, 200, { id: d.id, status: d.polls >= 2 ? 'succeeded' : 'running', environment: d.environment, version: d.version, url: `https://devops.mock/deployments/${d.id}`, message: d.polls >= 2 ? 'Rollout complete' : 'Rolling out' });
+    send(res, 200, {
+      id: d.id,
+      status: d.polls >= 2 ? 'succeeded' : 'running',
+      environment: d.environment,
+      version: d.version,
+      url: `https://devops.mock/deployments/${d.id}`,
+      message: d.polls >= 2 ? 'Rollout complete' : 'Rolling out',
+    });
   });
   on('POST', '/devops/v1/deployments/:id/rollback', ({ req, res, raw, params }) => {
     if (!verifyDevOps(req, raw)) return send(res, 401, { message: 'bad signature' });
     const src = state.devops.deployments.find((x) => x.id === params[0]);
-    const d = { id: `rb-${state.devops.deployments.length}`, environment: src?.environment ?? 'unknown', version: 'previous', polls: 0, rollback: true };
+    const d = {
+      id: `rb-${state.devops.deployments.length}`,
+      environment: src?.environment ?? 'unknown',
+      version: 'previous',
+      polls: 0,
+      rollback: true,
+    };
     state.devops.deployments.push(d);
     send(res, 201, { id: d.id, status: 'running', environment: d.environment, version: d.version });
   });
-  on('GET', '/devops/v1/environments', ({ res }) => send(res, 200, { environments: [{ name: 'staging', type: 'STAGING' }, { name: 'production', type: 'PRODUCTION' }] }));
+  on('GET', '/devops/v1/environments', ({ res }) =>
+    send(res, 200, {
+      environments: [
+        { name: 'staging', type: 'STAGING' },
+        { name: 'production', type: 'PRODUCTION' },
+      ],
+    }),
+  );
 
   // ───────────── Deployed environments (health + smoke) ─────────────
   on('GET', '/env/:name/:rest', ({ res, params }) => {
@@ -494,7 +756,12 @@ export async function startMockServices(port = 0): Promise<MockServices> {
     state.llm.embeddingCalls++;
     const b = body as { input: string | string[]; dimensions?: number };
     const inputs = Array.isArray(b.input) ? b.input : [b.input];
-    send(res, 200, { object: 'list', data: inputs.map((t, index) => ({ object: 'embedding', index, embedding: embed(String(t), b.dimensions ?? 1536) })), model: 'mock-embedding', usage: { prompt_tokens: 10, total_tokens: 10 } });
+    send(res, 200, {
+      object: 'list',
+      data: inputs.map((t, index) => ({ object: 'embedding', index, embedding: embed(String(t), b.dimensions ?? 1536) })),
+      model: 'mock-embedding',
+      usage: { prompt_tokens: 10, total_tokens: 10 },
+    });
   });
   on('POST', '/openai/v1/chat/completions', ({ res, body }) => {
     state.llm.chatCalls++;
@@ -508,21 +775,40 @@ export async function startMockServices(port = 0): Promise<MockServices> {
         object: 'chat.completion',
         created,
         model: req.model,
-        choices: [{ index: 0, finish_reason: out.toolCalls ? 'tool_calls' : 'stop', message: { role: 'assistant', content: out.content, ...(out.toolCalls && { tool_calls: out.toolCalls.map((t) => ({ id: t.id, type: 'function', function: { name: t.name, arguments: t.arguments } })) }) } }],
+        choices: [
+          {
+            index: 0,
+            finish_reason: out.toolCalls ? 'tool_calls' : 'stop',
+            message: {
+              role: 'assistant',
+              content: out.content,
+              ...(out.toolCalls && {
+                tool_calls: out.toolCalls.map((t) => ({ id: t.id, type: 'function', function: { name: t.name, arguments: t.arguments } })),
+              }),
+            },
+          },
+        ],
         usage: usage(),
       });
     }
     res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' });
-    const chunk = (delta: unknown, finish: string | null = null) => res.write(`data: ${JSON.stringify({ id, object: 'chat.completion.chunk', created, model: req.model, choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`);
+    const chunk = (delta: unknown, finish: string | null = null) =>
+      res.write(
+        `data: ${JSON.stringify({ id, object: 'chat.completion.chunk', created, model: req.model, choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`,
+      );
     chunk({ role: 'assistant', content: '' });
     if (out.toolCalls) {
-      out.toolCalls.forEach((t, index) => chunk({ tool_calls: [{ index, id: t.id, type: 'function', function: { name: t.name, arguments: t.arguments } }] }));
+      out.toolCalls.forEach((t, index) =>
+        chunk({ tool_calls: [{ index, id: t.id, type: 'function', function: { name: t.name, arguments: t.arguments } }] }),
+      );
       chunk({}, 'tool_calls');
     } else {
       for (const word of (out.content ?? '').split(/(?<= )/)) chunk({ content: word });
       chunk({}, 'stop');
     }
-    res.write(`data: ${JSON.stringify({ id, object: 'chat.completion.chunk', created, model: req.model, choices: [], usage: usage() })}\n\n`);
+    res.write(
+      `data: ${JSON.stringify({ id, object: 'chat.completion.chunk', created, model: req.model, choices: [], usage: usage() })}\n\n`,
+    );
     res.write('data: [DONE]\n\n');
     res.end();
   });
@@ -530,10 +816,21 @@ export async function startMockServices(port = 0): Promise<MockServices> {
   // ───────────── Inspection ─────────────
   on('GET', '/__state', ({ res }) =>
     send(res, 200, {
-      github: { refs: Object.fromEntries(gh().refs), pulls: gh().pulls, reviews: gh().reviews, comments: gh().comments.length, runs: gh().runs.length, mainFiles: [...contentAt('main').keys()] },
+      github: {
+        refs: Object.fromEntries(gh().refs),
+        pulls: gh().pulls,
+        reviews: gh().reviews,
+        comments: gh().comments.length,
+        runs: gh().runs.length,
+        mainFiles: [...contentAt('main').keys()],
+      },
       jira: state.jira.issues.map((i) => ({ key: i.key, status: i.status, comments: i.comments.length, labels: i.labels })),
       notion: state.notion.pages.map((p) => ({ id: p.id, title: p.title, blocks: p.blocks.length })),
-      devops: { pipelines: state.devops.pipelines.length, deployments: state.devops.deployments.map((d) => ({ environment: d.environment, version: d.version, rollback: d.rollback })), signatureFailures: state.devops.signatureFailures },
+      devops: {
+        pipelines: state.devops.pipelines.length,
+        deployments: state.devops.deployments.map((d) => ({ environment: d.environment, version: d.version, rollback: d.rollback })),
+        signatureFailures: state.devops.signatureFailures,
+      },
       slack: state.slack.messages.length,
       envHits: state.envHits,
       llm: state.llm,
@@ -562,7 +859,10 @@ export async function startMockServices(port = 0): Promise<MockServices> {
         }
         const route = routes.find((r) => r.method === req.method && r.re.test(url.pathname));
         if (!route) return send(res, 404, { message: `mock: no route for ${req.method} ${url.pathname}` });
-        const params = route.re.exec(url.pathname)!.slice(1).map((p) => decodeURIComponent(p));
+        const params = route.re
+          .exec(url.pathname)!
+          .slice(1)
+          .map((p) => decodeURIComponent(p));
         try {
           await route.handler({ req, res, params, query: url.searchParams, body, raw });
         } catch (err) {

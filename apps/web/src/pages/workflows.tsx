@@ -1,6 +1,26 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { BookText, CalendarClock, ClipboardList, CloudUpload, FileSearch, FlaskConical, GitPullRequestArrow, ListChecks, Megaphone, Play, Plus, Rocket, ScanSearch, Sparkles, Ticket, Webhook, Workflow as WorkflowIcon, Zap, type LucideIcon } from 'lucide-react';
+import {
+  BookText,
+  CalendarClock,
+  ClipboardList,
+  CloudUpload,
+  FileSearch,
+  FlaskConical,
+  GitPullRequestArrow,
+  ListChecks,
+  Megaphone,
+  Play,
+  Plus,
+  Rocket,
+  ScanSearch,
+  Sparkles,
+  Ticket,
+  Webhook,
+  Workflow as WorkflowIcon,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react';
 import { api } from '@/api/client';
 import { qk, useAction, useCommands, useProjects, useTemplates, useWorkflows } from '@/api/queries';
 import type { FlowTemplate, Workflow } from '@/api/types';
@@ -108,10 +128,7 @@ export function WorkflowsPage() {
 
       <Section title="Templates" className="mt-10">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {templates.isLoading &&
-            Array.from({ length: 6 }, (_, i) => (
-              <Skeleton key={i} className="h-40" />
-            ))}
+          {templates.isLoading && Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-40" />)}
           {templates.data?.map((t) => {
             const Icon = TEMPLATE_ICONS[t.icon] ?? WorkflowIcon;
             return (
@@ -138,7 +155,12 @@ export function WorkflowsPage() {
                     Run
                   </Button>
                   {can('workflow:manage') && (
-                    <Button size="sm" variant="ghost" loading={clone.isPending && clone.variables?.key === t.key} onClick={() => clone.mutate(t)}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      loading={clone.isPending && clone.variables?.key === t.key}
+                      onClick={() => clone.mutate(t)}
+                    >
                       Customize
                     </Button>
                   )}
@@ -196,7 +218,14 @@ function FlowCard({ wf }: { wf: Workflow }) {
         </span>
       </div>
       <div className="mt-3 flex items-center gap-2 border-t border-line pt-3">
-        <Button size="sm" variant="primary" icon={<Play className="size-3" />} loading={run.isPending} disabled={wf.status === 'ARCHIVED'} onClick={() => run.mutate(undefined)}>
+        <Button
+          size="sm"
+          variant="primary"
+          icon={<Play className="size-3" />}
+          loading={run.isPending}
+          disabled={wf.status === 'ARCHIVED'}
+          onClick={() => run.mutate(undefined)}
+        >
           Run
         </Button>
         <Link to={`/workflows/${wf.id}`}>
@@ -222,13 +251,26 @@ function GenerateDialog({ open, onClose }: { open: boolean; onClose: () => void 
   const [projectId, setProjectId] = useState('');
   const generate = useAction(
     () =>
-      api.post<{ name: string; description: string; trigger: Record<string, unknown>; definition: FlowTemplate['definition'] | null; issues: { path: string; message: string }[] }>('/workflows/generate', {
+      api.post<{
+        name: string;
+        description: string;
+        trigger: Record<string, unknown>;
+        definition: FlowTemplate['definition'] | null;
+        issues: { path: string; message: string }[];
+      }>('/workflows/generate', {
         description,
         projectId: projectId || undefined,
       }),
     {
       onSuccess: (draft) => {
-        setBuilderDraft({ name: draft.name, description: draft.description, definition: draft.definition, trigger: draft.trigger, issues: draft.issues, projectId: projectId || null });
+        setBuilderDraft({
+          name: draft.name,
+          description: draft.description,
+          definition: draft.definition,
+          trigger: draft.trigger,
+          issues: draft.issues,
+          projectId: projectId || null,
+        });
         onClose();
         navigate('/workflows/new?draft=1');
       },
@@ -245,7 +287,13 @@ function GenerateDialog({ open, onClose }: { open: boolean; onClose: () => void 
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" icon={<Sparkles className="size-3.5" />} loading={generate.isPending} disabled={description.trim().length < 10} onClick={() => generate.mutate(undefined)}>
+          <Button
+            variant="primary"
+            icon={<Sparkles className="size-3.5" />}
+            loading={generate.isPending}
+            disabled={description.trim().length < 10}
+            onClick={() => generate.mutate(undefined)}
+          >
             Draft flow
           </Button>
         </>
@@ -257,7 +305,12 @@ function GenerateDialog({ open, onClose }: { open: boolean; onClose: () => void 
         </Field>
         <div className="flex flex-wrap gap-1.5">
           {EXAMPLES.map((e) => (
-            <button key={e} type="button" onClick={() => setDescription(e)} className="rounded-md border border-line px-2 py-1 text-left text-[11.5px] text-fg-muted hover:border-line-strong hover:text-fg">
+            <button
+              key={e}
+              type="button"
+              onClick={() => setDescription(e)}
+              className="rounded-md border border-line px-2 py-1 text-left text-[11.5px] text-fg-muted hover:border-line-strong hover:text-fg"
+            >
               {e.slice(0, 64)}…
             </button>
           ))}

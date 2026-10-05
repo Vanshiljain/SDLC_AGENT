@@ -54,25 +54,35 @@ export class CommandsService {
     return { commands: COMMANDS, pages: PAGES };
   }
 
-  async execute(auth: AuthContext, commandId: string, params: { projectId?: string | null; inputs?: Record<string, unknown>; source?: TriggerSource; idempotencyKey?: string }) {
+  async execute(
+    auth: AuthContext,
+    commandId: string,
+    params: { projectId?: string | null; inputs?: Record<string, unknown>; source?: TriggerSource; idempotencyKey?: string },
+  ) {
     const command = findCommand(commandId);
     if (!command) throw AppException.notFound('Command', commandId);
     const projectId = params.projectId ?? (typeof params.inputs?.projectId === 'string' ? params.inputs.projectId : null);
-    if (command.inputs.some((i) => i.type === 'project') && !projectId) throw AppException.badRequest('A project is required for this command', 'PROJECT_REQUIRED');
+    if (command.inputs.some((i) => i.type === 'project') && !projectId)
+      throw AppException.badRequest('A project is required for this command', 'PROJECT_REQUIRED');
     const inputs = { ...(params.inputs ?? {}) };
     delete inputs.projectId;
     let permission = command.permission;
     if (command.id.startsWith('deploy.') && typeof inputs.environment === 'string' && projectId) {
-      const env = await this.prisma.environment.findFirst({ where: { projectId, name: inputs.environment, organizationId: auth.organizationId } });
+      const env = await this.prisma.environment.findFirst({
+        where: { projectId, name: inputs.environment, organizationId: auth.organizationId },
+      });
       if (!env) throw AppException.badRequest(`Unknown environment "${inputs.environment}"`, 'UNKNOWN_ENVIRONMENT');
       permission = deployPermissionFor(env.type);
     }
     await this.authz.assertPermission(auth, permission, projectId);
     for (const spec of command.inputs.filter((i) => i.required && i.type !== 'project')) {
-      if (inputs[spec.name] === undefined || inputs[spec.name] === '') throw AppException.badRequest(`"${spec.label}" is required`, 'INPUT_REQUIRED');
+      if (inputs[spec.name] === undefined || inputs[spec.name] === '')
+        throw AppException.badRequest(`"${spec.label}" is required`, 'INPUT_REQUIRED');
     }
     const template = findTemplate(command.template)!;
-    const subject = String(inputs.requirement ?? inputs.topic ?? inputs.message ?? inputs.environment ?? (inputs.pullNumber ? `PR #${inputs.pullNumber}` : '')).slice(0, 80);
+    const subject = String(
+      inputs.requirement ?? inputs.topic ?? inputs.message ?? inputs.environment ?? (inputs.pullNumber ? `PR #${inputs.pullNumber}` : ''),
+    ).slice(0, 80);
     return this.executions.start({
       organizationId: auth.organizationId,
       projectId,
@@ -87,10 +97,25 @@ export class CommandsService {
   }
 
   /** Natural-language command palette routing ("deploy auth service to staging"). */
-  async route(auth: AuthContext, query: string, pageContext?: PageContext): Promise<CommandRoute & { projectId: string | null; source: 'ai' | 'keyword' }> {
-    const projects = await this.prisma.project.findMany({ where: { organizationId: auth.organizationId, deletedAt: null }, select: { id: true, name: true, key: true, environments: { select: { name: true } } } });
+  async route(
+    auth: AuthContext,
+    query: string,
+    pageContext?: PageContext,
+  ): Promise<CommandRoute & { projectId: string | null; source: 'ai' | 'keyword' }> {
+    const projects = await this.prisma.project.findMany({
+      where: { organizationId: auth.organizationId, deletedAt: null },
+      select: { id: true, name: true, key: true, environments: { select: { name: true } } },
+    });
     const lower = query.toLowerCase();
-    const mentioned = projects.find((p) => lower.includes(p.name.toLowerCase()) || lower.includes(p.key.toLowerCase()) || p.name.toLowerCase().split(/\s+/).some((w) => w.length > 3 && lower.includes(w)));
+    const mentioned = projects.find(
+      (p) =>
+        lower.includes(p.name.toLowerCase()) ||
+        lower.includes(p.key.toLowerCase()) ||
+        p.name
+          .toLowerCase()
+          .split(/\s+/)
+          .some((w) => w.length > 3 && lower.includes(w)),
+    );
     const projectId = mentioned?.id ?? pageContext?.projectId ?? null;
     if (this.llm.isConfigured()) {
       try {
@@ -101,25 +126,63 @@ export class CommandsService {
           projects: projects.map((p) => `- ${p.name} (${p.key}) envs: ${p.environments.map((e) => e.name).join(', ')}`).join('\n'),
           query,
         });
-        const r = await invokeStructured({ model: this.llm.chatModel('fast'), schema: commandRouteSchema, name: 'command_route', messages, usage, modelName: this.llm.modelName('fast') });
+        const r = await invokeStructured({
+          model: this.llm.chatModel('fast'),
+          schema: commandRouteSchema,
+          name: 'command_route',
+          messages,
+          usage,
+          modelName: this.llm.modelName('fast'),
+        });
         if (r.kind !== 'command' || (r.commandId && findCommand(r.commandId))) return { ...r, projectId, source: 'ai' };
       } catch {
         /* fall through to keyword routing */
       }
     }
     const page = PAGES.find((p) => p.keywords.some((k) => lower === k || lower === `go to ${k}` || lower === `open ${k}`));
-    if (page) return { kind: 'navigate', commandId: null, route: page.route, inputs: [], confidence: 0.8, explanation: `Open ${page.title}`, projectId, source: 'keyword' };
+    if (page)
+      return {
+        kind: 'navigate',
+        commandId: null,
+        route: page.route,
+        inputs: [],
+        confidence: 0.8,
+        explanation: `Open ${page.title}`,
+        projectId,
+        source: 'keyword',
+      };
     const { template, score } = this.planner.heuristicTemplate(query);
     const command = COMMANDS.find((c) => c.template === template);
-    if (!command || score === 0) return { kind: 'chat', commandId: null, route: null, inputs: [{ name: 'message', value: query }], confidence: 0.3, explanation: 'Ask Forge in chat', projectId, source: 'keyword' };
-    const env = mentioned?.environments.find((e) => lower.includes(e.name)) ?? projects.flatMap((p) => p.environments).find((e) => lower.includes(e.name));
+    if (!command || score === 0)
+      return {
+        kind: 'chat',
+        commandId: null,
+        route: null,
+        inputs: [{ name: 'message', value: query }],
+        confidence: 0.3,
+        explanation: 'Ask Forge in chat',
+        projectId,
+        source: 'keyword',
+      };
+    const env =
+      mentioned?.environments.find((e) => lower.includes(e.name)) ??
+      projects.flatMap((p) => p.environments).find((e) => lower.includes(e.name));
     const inputs = [
       ...(command.inputs.some((i) => i.name === 'requirement') ? [{ name: 'requirement', value: query }] : []),
       ...(command.inputs.some((i) => i.name === 'topic') ? [{ name: 'topic', value: query }] : []),
       ...(command.inputs.some((i) => i.name === 'message') ? [{ name: 'message', value: query }] : []),
       ...(env && command.inputs.some((i) => i.name === 'environment') ? [{ name: 'environment', value: env.name }] : []),
     ];
-    return { kind: 'command', commandId: command.id, route: null, inputs, confidence: Math.min(0.9, 0.4 + score / 40), explanation: `${command.title}${mentioned ? ` · ${mentioned.name}` : ''}`, projectId, source: 'keyword' };
+    return {
+      kind: 'command',
+      commandId: command.id,
+      route: null,
+      inputs,
+      confidence: Math.min(0.9, 0.4 + score / 40),
+      explanation: `${command.title}${mentioned ? ` · ${mentioned.name}` : ''}`,
+      projectId,
+      source: 'keyword',
+    };
   }
 }
 

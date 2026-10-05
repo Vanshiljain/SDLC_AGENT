@@ -20,7 +20,8 @@ export class UsageTracker {
       this.completionTokens += usage.output_tokens ?? 0;
       return;
     }
-    const legacy = (message?.response_metadata as { tokenUsage?: { promptTokens?: number; completionTokens?: number } } | undefined)?.tokenUsage;
+    const legacy = (message?.response_metadata as { tokenUsage?: { promptTokens?: number; completionTokens?: number } } | undefined)
+      ?.tokenUsage;
     if (legacy) {
       this.promptTokens += legacy.promptTokens ?? 0;
       this.completionTokens += legacy.completionTokens ?? 0;

@@ -45,7 +45,9 @@ function BrandPanel() {
       </div>
       <div className="relative max-w-md">
         <div className="label-caps mb-3 text-accent">The AI engineering control plane</div>
-        <h2 className="text-[30px] leading-[1.15] font-semibold tracking-[-0.025em]">From request to production — with every step visible and every risky action approved.</h2>
+        <h2 className="text-[30px] leading-[1.15] font-semibold tracking-[-0.025em]">
+          From request to production — with every step visible and every risky action approved.
+        </h2>
         <div className="mt-8 rounded-xl border border-line bg-raised/90 p-4 shadow-pop backdrop-blur">
           <div className="mb-3 flex items-center justify-between text-[12px]">
             <span className="font-medium">“Implement password reset”</span>
@@ -58,7 +60,9 @@ function BrandPanel() {
                 {state === 'live' && <Loader2 className="size-3.5 animate-spin text-arc" />}
                 {state === 'gate' && <Hand className="size-3.5 text-accent" />}
                 <span className={state === 'gate' ? 'text-accent' : state === 'live' ? 'text-fg' : 'text-fg-muted'}>{label}</span>
-                {state === 'gate' && <span className="ml-auto rounded-sm bg-accent-soft px-1.5 text-[10.5px] font-medium text-accent">needs approval</span>}
+                {state === 'gate' && (
+                  <span className="ml-auto rounded-sm bg-accent-soft px-1.5 text-[10.5px] font-medium text-accent">needs approval</span>
+                )}
               </li>
             ))}
           </ul>
@@ -105,7 +109,11 @@ export function LoginPage() {
         <Field label="Password">
           <Input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
-        {error && <p role="alert" className="rounded-md bg-bad-soft px-3 py-2 text-[12.5px] text-bad">{error}</p>}
+        {error && (
+          <p role="alert" className="rounded-md bg-bad-soft px-3 py-2 text-[12.5px] text-bad">
+            {error}
+          </p>
+        )}
         <Button type="submit" variant="primary" size="lg" className="w-full justify-center" loading={loading}>
           Sign in
         </Button>
@@ -119,7 +127,8 @@ export function LoginPage() {
           }}
           className="mt-4 w-full rounded-md border border-dashed border-line px-3 py-2 text-left text-[12px] text-fg-muted hover:border-line-strong"
         >
-          <span className="font-medium text-fg">Seeded demo accounts</span> — engineer@ / lead@ / admin@forgeline.dev · password <span className="font-mono">Forgeline!2026</span>. Click to fill.
+          <span className="font-medium text-fg">Seeded demo accounts</span> — engineer@ / lead@ / admin@forgeline.dev · password{' '}
+          <span className="font-mono">Forgeline!2026</span>. Click to fill.
         </button>
       )}
       <p className="mt-6 text-[12.5px] text-fg-muted">
@@ -153,7 +162,11 @@ export function RegisterPage() {
         <Field label="Workspace name" hint="Usually your company or team.">
           <Input value={form.organizationName} onChange={set('organizationName')} placeholder="Acme Engineering" />
         </Field>
-        {error && <p role="alert" className="rounded-md bg-bad-soft px-3 py-2 text-[12.5px] text-bad">{error}</p>}
+        {error && (
+          <p role="alert" className="rounded-md bg-bad-soft px-3 py-2 text-[12.5px] text-bad">
+            {error}
+          </p>
+        )}
         <Button type="submit" variant="primary" size="lg" className="w-full justify-center" loading={loading}>
           Create workspace
         </Button>
@@ -183,16 +196,29 @@ export function AcceptInvitePage() {
   return (
     <AuthLayout title="Join your team" subtitle="You’ve been invited to a Forgeline workspace. Set up your account to continue.">
       {!token ? (
-        <p className="rounded-md bg-bad-soft px-3 py-2 text-[12.5px] text-bad">This invitation link is missing its token. Ask your admin for a new link.</p>
+        <p className="rounded-md bg-bad-soft px-3 py-2 text-[12.5px] text-bad">
+          This invitation link is missing its token. Ask your admin for a new link.
+        </p>
       ) : (
         <form onSubmit={(e) => void onSubmit(e)} className="space-y-4">
           <Field label="Your name">
             <Input required value={name} onChange={(e) => setName(e.target.value)} autoFocus />
           </Field>
           <Field label="Password" hint="At least 10 characters with upper-case, lower-case and a digit.">
-            <Input type="password" autoComplete="new-password" required minLength={10} value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={10}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </Field>
-          {error && <p role="alert" className="rounded-md bg-bad-soft px-3 py-2 text-[12.5px] text-bad">{error}</p>}
+          {error && (
+            <p role="alert" className="rounded-md bg-bad-soft px-3 py-2 text-[12.5px] text-bad">
+              {error}
+            </p>
+          )}
           <Button type="submit" variant="primary" size="lg" className="w-full justify-center" loading={loading}>
             Accept invitation
           </Button>

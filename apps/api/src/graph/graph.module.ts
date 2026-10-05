@@ -7,7 +7,24 @@ import { PrismaService } from '../common/prisma/prisma.service';
 
 export interface GraphNode {
   id: string;
-  type: 'project' | 'repository' | 'environment' | 'run' | 'ticket' | 'pull_request' | 'branch' | 'commit' | 'ci_run' | 'notion_page' | 'deployment' | 'document' | 'qa_run' | 'review' | 'trello_card' | 'issue' | 'artifact';
+  type:
+    | 'project'
+    | 'repository'
+    | 'environment'
+    | 'run'
+    | 'ticket'
+    | 'pull_request'
+    | 'branch'
+    | 'commit'
+    | 'ci_run'
+    | 'notion_page'
+    | 'deployment'
+    | 'document'
+    | 'qa_run'
+    | 'review'
+    | 'trello_card'
+    | 'issue'
+    | 'artifact';
   label: string;
   sublabel?: string | null;
   status?: string | null;
@@ -82,22 +99,56 @@ export class GraphService {
     });
     const runIds = runs.map((r) => r.id);
     for (const r of runs) {
-      add({ id: `run:${r.id}`, type: 'run', label: r.title, status: r.status, link: `/executions/${r.id}`, simulated: r.mode === 'DEMO', createdAt: r.createdAt.toISOString() });
+      add({
+        id: `run:${r.id}`,
+        type: 'run',
+        label: r.title,
+        status: r.status,
+        link: `/executions/${r.id}`,
+        simulated: r.mode === 'DEMO',
+        createdAt: r.createdAt.toISOString(),
+      });
       if (r.projectId) link(`project:${r.projectId}`, `run:${r.id}`, 'run');
     }
 
     const [resources, deployments, documents, qaRuns, reviews] = await Promise.all([
-      this.prisma.externalResource.findMany({ where: { organizationId, OR: [{ executionId: { in: runIds } }, { ...projectFilter, executionId: null }] }, take: 500 }),
-      this.prisma.deployment.findMany({ where: { organizationId, ...projectFilter }, orderBy: { createdAt: 'desc' }, take: 60, include: { environment: { select: { name: true } } } }),
-      this.prisma.document.findMany({ where: { organizationId, deletedAt: null, ...projectFilter }, orderBy: { updatedAt: 'desc' }, take: 40 }),
-      this.prisma.qATestRun.findMany({ where: { organizationId, executionId: { in: runIds } }, select: { id: true, title: true, status: true, executionId: true, passed: true, total: true, simulated: true } }),
-      this.prisma.codeReview.findMany({ where: { organizationId, executionId: { in: runIds } }, select: { id: true, title: true, verdict: true, executionId: true, criticalCount: true, highCount: true, simulated: true } }),
+      this.prisma.externalResource.findMany({
+        where: { organizationId, OR: [{ executionId: { in: runIds } }, { ...projectFilter, executionId: null }] },
+        take: 500,
+      }),
+      this.prisma.deployment.findMany({
+        where: { organizationId, ...projectFilter },
+        orderBy: { createdAt: 'desc' },
+        take: 60,
+        include: { environment: { select: { name: true } } },
+      }),
+      this.prisma.document.findMany({
+        where: { organizationId, deletedAt: null, ...projectFilter },
+        orderBy: { updatedAt: 'desc' },
+        take: 40,
+      }),
+      this.prisma.qATestRun.findMany({
+        where: { organizationId, executionId: { in: runIds } },
+        select: { id: true, title: true, status: true, executionId: true, passed: true, total: true, simulated: true },
+      }),
+      this.prisma.codeReview.findMany({
+        where: { organizationId, executionId: { in: runIds } },
+        select: { id: true, title: true, verdict: true, executionId: true, criticalCount: true, highCount: true, simulated: true },
+      }),
     ]);
 
     for (const res of resources) {
       const type = RESOURCE_TYPE[res.type] ?? 'artifact';
       if (type === 'deployment') continue; // represented by Deployment rows
-      add({ id: `res:${res.id}`, type, label: res.key ?? res.title ?? res.externalId, sublabel: res.title, status: res.status, url: res.url, simulated: res.simulated });
+      add({
+        id: `res:${res.id}`,
+        type,
+        label: res.key ?? res.title ?? res.externalId,
+        sublabel: res.title,
+        status: res.status,
+        url: res.url,
+        simulated: res.simulated,
+      });
     }
     for (const res of resources) {
       if (!nodes.has(`res:${res.id}`)) continue;
@@ -116,21 +167,52 @@ export class GraphService {
     }
 
     for (const d of deployments) {
-      add({ id: `deploy:${d.id}`, type: 'deployment', label: `${d.environment.name} · ${d.version}`, status: d.status, link: d.executionId ? `/executions/${d.executionId}` : '/deployments', simulated: d.simulated, createdAt: d.createdAt.toISOString() });
+      add({
+        id: `deploy:${d.id}`,
+        type: 'deployment',
+        label: `${d.environment.name} · ${d.version}`,
+        status: d.status,
+        link: d.executionId ? `/executions/${d.executionId}` : '/deployments',
+        simulated: d.simulated,
+        createdAt: d.createdAt.toISOString(),
+      });
       link(`env:${d.environmentId}`, `deploy:${d.id}`, 'deployed');
       if (d.executionId) link(`run:${d.executionId}`, `deploy:${d.id}`, 'deploys');
     }
     for (const doc of documents) {
-      add({ id: `doc:${doc.id}`, type: 'document', label: doc.title, sublabel: doc.type.toLowerCase(), url: doc.externalUrl, link: `/documents?focus=${doc.id}` });
+      add({
+        id: `doc:${doc.id}`,
+        type: 'document',
+        label: doc.title,
+        sublabel: doc.type.toLowerCase(),
+        url: doc.externalUrl,
+        link: `/documents?focus=${doc.id}`,
+      });
       if (doc.executionId) link(`run:${doc.executionId}`, `doc:${doc.id}`, 'documents');
       else if (doc.projectId) link(`project:${doc.projectId}`, `doc:${doc.id}`);
     }
     for (const q of qaRuns) {
-      add({ id: `qa:${q.id}`, type: 'qa_run', label: q.title, sublabel: q.total ? `${q.passed}/${q.total}` : null, status: q.status, simulated: q.simulated, link: '/qa' });
+      add({
+        id: `qa:${q.id}`,
+        type: 'qa_run',
+        label: q.title,
+        sublabel: q.total ? `${q.passed}/${q.total}` : null,
+        status: q.status,
+        simulated: q.simulated,
+        link: '/qa',
+      });
       if (q.executionId) link(`run:${q.executionId}`, `qa:${q.id}`, 'tested');
     }
     for (const r of reviews) {
-      add({ id: `review:${r.id}`, type: 'review', label: r.title, sublabel: r.verdict, status: r.criticalCount ? 'FAILED' : r.highCount ? 'WARNING' : 'COMPLETED', simulated: r.simulated, link: '/code-reviews' });
+      add({
+        id: `review:${r.id}`,
+        type: 'review',
+        label: r.title,
+        sublabel: r.verdict,
+        status: r.criticalCount ? 'FAILED' : r.highCount ? 'WARNING' : 'COMPLETED',
+        simulated: r.simulated,
+        link: '/code-reviews',
+      });
       if (r.executionId) link(`run:${r.executionId}`, `review:${r.id}`, 'reviewed');
     }
     return { nodes: [...nodes.values()], edges: [...edges.values()] };

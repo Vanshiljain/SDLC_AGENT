@@ -29,8 +29,7 @@ export const COMMANDS: readonly CommandDefinition[] = [
   {
     id: 'feature.deliver',
     title: 'Deliver a feature end-to-end',
-    description:
-      'Ticket → spec → plan → branch → code → tests → review → PR → CI → QA → staging → production, with gates.',
+    description: 'Ticket → spec → plan → branch → code → tests → review → PR → CI → QA → staging → production, with gates.',
     category: 'deliver',
     template: 'feature_delivery',
     permission: 'workflow:execute',

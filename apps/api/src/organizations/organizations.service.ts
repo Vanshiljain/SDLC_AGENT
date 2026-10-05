@@ -47,7 +47,9 @@ export class OrganizationsService {
   async createWithOwner(tx: Prisma.TransactionClient, params: { name: string; ownerId: string; isDemo?: boolean }) {
     let slug = slugify(params.name);
     for (let i = 0; await tx.organization.findUnique({ where: { slug } }); i++) {
-      slug = `${slugify(params.name).slice(0, 40)}-${EncryptionService.randomToken(3).toLowerCase().replace(/[^a-z0-9]/g, '')}${i}`;
+      slug = `${slugify(params.name).slice(0, 40)}-${EncryptionService.randomToken(3)
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')}${i}`;
     }
     const org = await tx.organization.create({
       data: { name: params.name, slug, isDemo: params.isDemo ?? false, settings: DEFAULT_ORG_SETTINGS as unknown as Prisma.InputJsonValue },
@@ -72,7 +74,13 @@ export class OrganizationsService {
       where: { id: auth.organizationId },
       data: { ...(patch.name && { name: patch.name }), settings: settings as unknown as Prisma.InputJsonValue },
     });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'organization.updated', resourceType: 'organization', resourceId: org.id, input: patch });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'organization.updated',
+      resourceType: 'organization',
+      resourceId: org.id,
+      input: patch,
+    });
     return { ...org, settings };
   }
 
@@ -91,13 +99,16 @@ export class OrganizationsService {
   }
 
   private assertCanAssign(auth: AuthContext, role: OrgRole): void {
-    if (ROLE_RANK[role] > ROLE_RANK[auth.orgRole]) throw AppException.forbidden('You cannot grant a role higher than your own', 'ROLE_ESCALATION');
+    if (ROLE_RANK[role] > ROLE_RANK[auth.orgRole])
+      throw AppException.forbidden('You cannot grant a role higher than your own', 'ROLE_ESCALATION');
   }
 
   async invite(auth: AuthContext, email: string, role: OrgRole) {
     this.assertCanAssign(auth, role);
     const normalized = email.trim().toLowerCase();
-    const existingMember = await this.prisma.membership.findFirst({ where: { organizationId: auth.organizationId, user: { email: normalized } } });
+    const existingMember = await this.prisma.membership.findFirst({
+      where: { organizationId: auth.organizationId, user: { email: normalized } },
+    });
     if (existingMember) throw AppException.conflict('This person is already a member', 'ALREADY_MEMBER');
     const token = EncryptionService.randomToken(32);
     const invitation = await this.prisma.invitation.create({
@@ -110,25 +121,52 @@ export class OrganizationsService {
         expiresAt: new Date(Date.now() + 7 * 86_400_000),
       },
     });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'member.invited', resourceType: 'invitation', resourceId: invitation.id, input: { email: normalized, role } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'member.invited',
+      resourceType: 'invitation',
+      resourceId: invitation.id,
+      input: { email: normalized, role },
+    });
     // The raw token is shown exactly once to the inviting admin (no email infrastructure dependency).
-    return { id: invitation.id, email: normalized, role, expiresAt: invitation.expiresAt, inviteUrl: `${this.config.webAppUrl}/accept-invite?token=${token}` };
+    return {
+      id: invitation.id,
+      email: normalized,
+      role,
+      expiresAt: invitation.expiresAt,
+      inviteUrl: `${this.config.webAppUrl}/accept-invite?token=${token}`,
+    };
   }
 
   async revokeInvitation(auth: AuthContext, id: string) {
-    const res = await this.prisma.invitation.updateMany({ where: { id, organizationId: auth.organizationId, acceptedAt: null }, data: { revokedAt: new Date() } });
+    const res = await this.prisma.invitation.updateMany({
+      where: { id, organizationId: auth.organizationId, acceptedAt: null },
+      data: { revokedAt: new Date() },
+    });
     if (!res.count) throw AppException.notFound('Invitation', id);
-    await this.audit.record({ organizationId: auth.organizationId, action: 'member.invitation_revoked', resourceType: 'invitation', resourceId: id });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'member.invitation_revoked',
+      resourceType: 'invitation',
+      resourceId: id,
+    });
   }
 
   async updateMemberRole(auth: AuthContext, membershipId: string, role: OrgRole) {
     const m = await this.prisma.membership.findFirst({ where: { id: membershipId, organizationId: auth.organizationId } });
     if (!m) throw AppException.notFound('Member', membershipId);
     this.assertCanAssign(auth, role);
-    if (ROLE_RANK[m.role as OrgRole] > ROLE_RANK[auth.orgRole]) throw AppException.forbidden('You cannot change the role of a more privileged member');
+    if (ROLE_RANK[m.role as OrgRole] > ROLE_RANK[auth.orgRole])
+      throw AppException.forbidden('You cannot change the role of a more privileged member');
     if (m.role === 'OWNER' && role !== 'OWNER') await this.assertAnotherOwner(auth.organizationId, m.userId);
     const updated = await this.prisma.membership.update({ where: { id: m.id }, data: { role: role as DbOrgRole } });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'member.role_changed', resourceType: 'membership', resourceId: m.id, input: { from: m.role, to: role, userId: m.userId } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'member.role_changed',
+      resourceType: 'membership',
+      resourceId: m.id,
+      input: { from: m.role, to: role, userId: m.userId },
+    });
     return updated;
   }
 
@@ -142,7 +180,13 @@ export class OrganizationsService {
       this.prisma.teamMember.deleteMany({ where: { userId: m.userId, team: { organizationId: auth.organizationId } } }),
       this.prisma.membership.delete({ where: { id: m.id } }),
     ]);
-    await this.audit.record({ organizationId: auth.organizationId, action: 'member.removed', resourceType: 'membership', resourceId: m.id, input: { userId: m.userId } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'member.removed',
+      resourceType: 'membership',
+      resourceId: m.id,
+      input: { userId: m.userId },
+    });
   }
 
   private async assertAnotherOwner(organizationId: string, excludingUserId: string) {
@@ -154,31 +198,55 @@ export class OrganizationsService {
   listTeams(auth: AuthContext) {
     return this.prisma.team.findMany({
       where: { organizationId: auth.organizationId, deletedAt: null },
-      include: { members: { include: { user: { select: { id: true, name: true, email: true } } } }, _count: { select: { projects: true } } },
+      include: {
+        members: { include: { user: { select: { id: true, name: true, email: true } } } },
+        _count: { select: { projects: true } },
+      },
       orderBy: { name: 'asc' },
     });
   }
 
   async createTeam(auth: AuthContext, name: string, description?: string) {
     const team = await this.prisma.team.create({ data: { organizationId: auth.organizationId, name, slug: slugify(name), description } });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'team.created', resourceType: 'team', resourceId: team.id, input: { name } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'team.created',
+      resourceType: 'team',
+      resourceId: team.id,
+      input: { name },
+    });
     return team;
   }
 
   async setTeamMembers(auth: AuthContext, teamId: string, userIds: string[]) {
     const team = await this.prisma.team.findFirst({ where: { id: teamId, organizationId: auth.organizationId, deletedAt: null } });
     if (!team) throw AppException.notFound('Team', teamId);
-    const valid = await this.prisma.membership.findMany({ where: { organizationId: auth.organizationId, userId: { in: userIds } }, select: { userId: true } });
+    const valid = await this.prisma.membership.findMany({
+      where: { organizationId: auth.organizationId, userId: { in: userIds } },
+      select: { userId: true },
+    });
     await this.prisma.$transaction([
       this.prisma.teamMember.deleteMany({ where: { teamId } }),
       this.prisma.teamMember.createMany({ data: valid.map((v) => ({ teamId, userId: v.userId })) }),
     ]);
-    await this.audit.record({ organizationId: auth.organizationId, action: 'team.members_updated', resourceType: 'team', resourceId: teamId, input: { userIds: valid.map((v) => v.userId) } });
-    return this.prisma.team.findUnique({ where: { id: teamId }, include: { members: { include: { user: { select: { id: true, name: true, email: true } } } } } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'team.members_updated',
+      resourceType: 'team',
+      resourceId: teamId,
+      input: { userIds: valid.map((v) => v.userId) },
+    });
+    return this.prisma.team.findUnique({
+      where: { id: teamId },
+      include: { members: { include: { user: { select: { id: true, name: true, email: true } } } } },
+    });
   }
 
   async deleteTeam(auth: AuthContext, teamId: string) {
-    const res = await this.prisma.team.updateMany({ where: { id: teamId, organizationId: auth.organizationId, deletedAt: null }, data: { deletedAt: new Date() } });
+    const res = await this.prisma.team.updateMany({
+      where: { id: teamId, organizationId: auth.organizationId, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
     if (!res.count) throw AppException.notFound('Team', teamId);
     await this.audit.record({ organizationId: auth.organizationId, action: 'team.deleted', resourceType: 'team', resourceId: teamId });
   }

@@ -22,24 +22,54 @@ export class NotificationsService implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.events.on<{ approvalId: string; title: string; riskLevel: string; requestedById?: string | null }>('approval.requested', (e) => this.onApprovalRequested(e));
-    this.events.on<{ approvalId: string; title: string; requestedById?: string | null; reason?: string }>('approval.granted', (e) => this.onApprovalDecided(e, true));
-    this.events.on<{ approvalId: string; title: string; requestedById?: string | null; reason?: string }>('approval.rejected', (e) => this.onApprovalDecided(e, false));
+    this.events.on<{ approvalId: string; title: string; riskLevel: string; requestedById?: string | null }>('approval.requested', (e) =>
+      this.onApprovalRequested(e),
+    );
+    this.events.on<{ approvalId: string; title: string; requestedById?: string | null; reason?: string }>('approval.granted', (e) =>
+      this.onApprovalDecided(e, true),
+    );
+    this.events.on<{ approvalId: string; title: string; requestedById?: string | null; reason?: string }>('approval.rejected', (e) =>
+      this.onApprovalDecided(e, false),
+    );
     this.events.on<{ title: string; triggeredById?: string | null }>('workflow.completed', (e) => this.onRunFinished(e, true));
-    this.events.on<{ title: string; triggeredById?: string | null; error?: { message?: string } | null }>('workflow.failed', (e) => this.onRunFinished(e, false));
+    this.events.on<{ title: string; triggeredById?: string | null; error?: { message?: string } | null }>('workflow.failed', (e) =>
+      this.onRunFinished(e, false),
+    );
     this.events.on<{ environment: string; version: string; simulated: boolean }>('deployment.completed', (e) =>
-      this.notifyProject(e.organizationId, e.projectId ?? null, { type: 'DEPLOYMENT', title: `Deployed ${e.data.version} to ${e.data.environment}${e.data.simulated ? ' (simulated)' : ''}`, link: e.executionId ? `/executions/${e.executionId}` : '/deployments' }),
+      this.notifyProject(e.organizationId, e.projectId ?? null, {
+        type: 'DEPLOYMENT',
+        title: `Deployed ${e.data.version} to ${e.data.environment}${e.data.simulated ? ' (simulated)' : ''}`,
+        link: e.executionId ? `/executions/${e.executionId}` : '/deployments',
+      }),
     );
     this.events.on<{ environment: string; version: string; message?: string }>('deployment.failed', (e) =>
-      this.notifyProject(e.organizationId, e.projectId ?? null, { type: 'DEPLOYMENT', title: `Deployment of ${e.data.version} to ${e.data.environment} failed`, body: e.data.message ?? null, link: e.executionId ? `/executions/${e.executionId}` : '/deployments' }),
+      this.notifyProject(e.organizationId, e.projectId ?? null, {
+        type: 'DEPLOYMENT',
+        title: `Deployment of ${e.data.version} to ${e.data.environment} failed`,
+        body: e.data.message ?? null,
+        link: e.executionId ? `/executions/${e.executionId}` : '/deployments',
+      }),
     );
   }
 
   async create(organizationId: string, userId: string, p: NotificationPayload) {
     const n = await this.prisma.notification.create({
-      data: { organizationId, userId, type: p.type, title: p.title.slice(0, 300), body: p.body?.slice(0, 4000) ?? null, link: p.link ?? null, data: (p.data ?? {}) as Prisma.InputJsonValue },
+      data: {
+        organizationId,
+        userId,
+        type: p.type,
+        title: p.title.slice(0, 300),
+        body: p.body?.slice(0, 4000) ?? null,
+        link: p.link ?? null,
+        data: (p.data ?? {}) as Prisma.InputJsonValue,
+      },
     });
-    await this.events.publish({ type: 'notification.created', organizationId, userId, data: { id: n.id, type: n.type, title: n.title, body: n.body, link: n.link, createdAt: n.createdAt.toISOString() } });
+    await this.events.publish({
+      type: 'notification.created',
+      organizationId,
+      userId,
+      data: { id: n.id, type: n.type, title: n.title, body: n.body, link: n.link, createdAt: n.createdAt.toISOString() },
+    });
     return n;
   }
 
@@ -54,7 +84,9 @@ export class NotificationsService implements OnModuleInit {
     return recipients.length;
   }
 
-  private async onApprovalRequested(e: DomainEvent<{ approvalId: string; title: string; riskLevel: string; requestedById?: string | null }>) {
+  private async onApprovalRequested(
+    e: DomainEvent<{ approvalId: string; title: string; riskLevel: string; requestedById?: string | null }>,
+  ) {
     await this.notifyProject(e.organizationId, e.projectId ?? null, {
       type: 'APPROVAL_REQUESTED',
       title: `Approval needed: ${e.data.title}`,
@@ -64,7 +96,10 @@ export class NotificationsService implements OnModuleInit {
     });
   }
 
-  private async onApprovalDecided(e: DomainEvent<{ approvalId: string; title: string; requestedById?: string | null; reason?: string }>, approved: boolean) {
+  private async onApprovalDecided(
+    e: DomainEvent<{ approvalId: string; title: string; requestedById?: string | null; reason?: string }>,
+    approved: boolean,
+  ) {
     if (!e.data.requestedById) return;
     await this.create(e.organizationId, e.data.requestedById, {
       type: 'APPROVAL_DECIDED',
@@ -74,7 +109,10 @@ export class NotificationsService implements OnModuleInit {
     });
   }
 
-  private async onRunFinished(e: DomainEvent<{ title: string; triggeredById?: string | null; error?: { message?: string } | null }>, ok: boolean) {
+  private async onRunFinished(
+    e: DomainEvent<{ title: string; triggeredById?: string | null; error?: { message?: string } | null }>,
+    ok: boolean,
+  ) {
     if (!e.data.triggeredById) return;
     await this.create(e.organizationId, e.data.triggeredById, {
       type: ok ? 'WORKFLOW_COMPLETED' : 'WORKFLOW_FAILED',
@@ -93,7 +131,9 @@ export class NotificationsService implements OnModuleInit {
   }
 
   async unreadCount(auth: AuthContext) {
-    return { unread: await this.prisma.notification.count({ where: { organizationId: auth.organizationId, userId: auth.userId, readAt: null } }) };
+    return {
+      unread: await this.prisma.notification.count({ where: { organizationId: auth.organizationId, userId: auth.userId, readAt: null } }),
+    };
   }
 
   async markRead(auth: AuthContext, ids: string[] | 'all') {

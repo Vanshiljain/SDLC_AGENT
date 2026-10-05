@@ -3,7 +3,13 @@ import type { StepDefinition } from '@forgeline/shared';
 /** Pure helpers for the flow builder (unit-tested). */
 
 export function uniqueKey(base: string, steps: StepDefinition[]): string {
-  const clean = base.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').replace(/^(\d)/, 's_$1').slice(0, 50) || 'step';
+  const clean =
+    base
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .replace(/^(\d)/, 's_$1')
+      .slice(0, 50) || 'step';
   let key = clean;
   for (let i = 2; steps.some((s) => s.key === key); i++) key = `${clean}_${i}`;
   return key;

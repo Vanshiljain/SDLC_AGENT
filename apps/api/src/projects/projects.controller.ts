@@ -59,7 +59,11 @@ export class ProjectsController {
   @Delete(':projectId/members/:userId')
   @HttpCode(204)
   @RequirePermissions('project:manage', { projectFrom: 'param:projectId' })
-  removeMember(@CurrentAuth() auth: AuthContext, @Param('projectId', ParseUUIDPipe) id: string, @Param('userId', ParseUUIDPipe) userId: string) {
+  removeMember(
+    @CurrentAuth() auth: AuthContext,
+    @Param('projectId', ParseUUIDPipe) id: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
+  ) {
     return this.projects.removeMember(auth, id, userId);
   }
 
@@ -72,14 +76,23 @@ export class ProjectsController {
 
   @Patch(':projectId/repositories/:repositoryId')
   @RequirePermissions('project:manage', { projectFrom: 'param:projectId' })
-  updateRepository(@CurrentAuth() auth: AuthContext, @Param('projectId', ParseUUIDPipe) id: string, @Param('repositoryId', ParseUUIDPipe) repoId: string, @Body() dto: UpdateRepositoryDto) {
+  updateRepository(
+    @CurrentAuth() auth: AuthContext,
+    @Param('projectId', ParseUUIDPipe) id: string,
+    @Param('repositoryId', ParseUUIDPipe) repoId: string,
+    @Body() dto: UpdateRepositoryDto,
+  ) {
     return this.projects.updateRepository(auth, id, repoId, dto);
   }
 
   @Delete(':projectId/repositories/:repositoryId')
   @HttpCode(204)
   @RequirePermissions('project:manage', { projectFrom: 'param:projectId' })
-  unlinkRepository(@CurrentAuth() auth: AuthContext, @Param('projectId', ParseUUIDPipe) id: string, @Param('repositoryId', ParseUUIDPipe) repoId: string) {
+  unlinkRepository(
+    @CurrentAuth() auth: AuthContext,
+    @Param('projectId', ParseUUIDPipe) id: string,
+    @Param('repositoryId', ParseUUIDPipe) repoId: string,
+  ) {
     return this.projects.unlinkRepository(auth, id, repoId);
   }
 
@@ -91,7 +104,12 @@ export class ProjectsController {
 
   @Patch(':projectId/environments/:environmentId')
   @RequirePermissions('project:manage', { projectFrom: 'param:projectId' })
-  updateEnvironment(@CurrentAuth() auth: AuthContext, @Param('projectId', ParseUUIDPipe) id: string, @Param('environmentId', ParseUUIDPipe) envId: string, @Body() dto: UpdateEnvironmentDto) {
+  updateEnvironment(
+    @CurrentAuth() auth: AuthContext,
+    @Param('projectId', ParseUUIDPipe) id: string,
+    @Param('environmentId', ParseUUIDPipe) envId: string,
+    @Body() dto: UpdateEnvironmentDto,
+  ) {
     return this.projects.updateEnvironment(auth, id, envId, dto);
   }
 }

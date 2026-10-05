@@ -15,7 +15,9 @@ export function TabsList({ tabs, className }: { tabs: { value: string; label: Re
           className="relative -mb-px flex h-9 items-center gap-1.5 border-b-2 border-transparent text-[13px] font-medium text-fg-muted transition-colors hover:text-fg data-[state=active]:border-accent data-[state=active]:text-fg"
         >
           {t.label}
-          {t.count !== undefined && t.count !== null && <span className="rounded-sm bg-sunken px-1 font-mono text-[10.5px] text-fg-subtle">{t.count}</span>}
+          {t.count !== undefined && t.count !== null && (
+            <span className="rounded-sm bg-sunken px-1 font-mono text-[10.5px] text-fg-subtle">{t.count}</span>
+          )}
         </Tabs.Trigger>
       ))}
     </Tabs.List>
@@ -23,7 +25,17 @@ export function TabsList({ tabs, className }: { tabs: { value: string; label: Re
 }
 
 /** Compact segmented control for filters. */
-export function Segmented<T extends string>({ value, onChange, options, className }: { value: T; onChange: (v: T) => void; options: { value: T; label: ReactNode }[]; className?: string }) {
+export function Segmented<T extends string>({
+  value,
+  onChange,
+  options,
+  className,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: ReactNode }[];
+  className?: string;
+}) {
   return (
     <div role="radiogroup" className={cn('inline-flex h-7 items-center rounded-md border border-line bg-sunken p-0.5', className)}>
       {options.map((o) => (
@@ -33,7 +45,10 @@ export function Segmented<T extends string>({ value, onChange, options, classNam
           role="radio"
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
-          className={cn('h-full rounded-sm px-2.5 text-[12px] font-medium transition-colors', value === o.value ? 'bg-raised text-fg shadow-card' : 'text-fg-muted hover:text-fg')}
+          className={cn(
+            'h-full rounded-sm px-2.5 text-[12px] font-medium transition-colors',
+            value === o.value ? 'bg-raised text-fg shadow-card' : 'text-fg-muted hover:text-fg',
+          )}
         >
           {o.label}
         </button>

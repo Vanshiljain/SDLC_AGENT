@@ -16,7 +16,9 @@ export const slackPostMessage = defineTool({
     const blocks = [
       ...(input.title ? [{ type: 'header', text: { type: 'plain_text', text: input.title.slice(0, 150) } }] : []),
       { type: 'section', text: { type: 'mrkdwn', text: input.text } },
-      ...(input.link ? [{ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: 'Open in Forgeline' }, url: input.link }] }] : []),
+      ...(input.link
+        ? [{ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: 'Open in Forgeline' }, url: input.link }] }]
+        : []),
     ];
     await slack.postMessage({ text: input.title ? `${input.title}\n${input.text}` : input.text, blocks });
     return { output: { delivered: true }, summary: 'Posted message to Slack' };

@@ -34,7 +34,12 @@ export class AuthController {
   private writeSession(res: Response, session: IssuedSession): SessionResponse {
     res.cookie(COOKIE_REFRESH, session.refreshToken, { ...this.cookieBase(), httpOnly: true, expires: session.refreshExpiresAt });
     // CSRF token must be readable by the SPA (double-submit), so it is not HttpOnly and lives at path "/".
-    res.cookie(COOKIE_CSRF, EncryptionService.randomToken(24), { ...this.cookieBase(), path: '/', httpOnly: false, expires: session.refreshExpiresAt });
+    res.cookie(COOKIE_CSRF, EncryptionService.randomToken(24), {
+      ...this.cookieBase(),
+      path: '/',
+      httpOnly: false,
+      expires: session.refreshExpiresAt,
+    });
     const { refreshToken: _r, refreshExpiresAt: _e, ...body } = session;
     return body;
   }
@@ -64,7 +69,11 @@ export class AuthController {
   @Throttle(AUTH_THROTTLE)
   @Post('accept-invite')
   @ApiOperation({ summary: 'Accept an organization invitation' })
-  async acceptInvite(@Body() dto: AcceptInviteDto, @Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<SessionResponse> {
+  async acceptInvite(
+    @Body() dto: AcceptInviteDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<SessionResponse> {
     return this.writeSession(res, await this.auth.acceptInvite(dto, this.meta(req)));
   }
 

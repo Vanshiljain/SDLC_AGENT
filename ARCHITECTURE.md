@@ -13,14 +13,14 @@ is kept up to date with the implementation.
 
 ## 1. Phase 1 — Repository analysis
 
-| Area | Finding |
-| --- | --- |
-| Current architecture | None. The repository was empty (no commits, no files). |
-| Existing components | None. |
-| Reusable components | None — greenfield. |
-| Problems | No constraints to preserve; the risk is the opposite: scope. Every layer (data model, engine, AI, integrations, UI) must be built and validated together. |
-| Missing components | Everything: monorepo tooling, backend, frontend, schema, engine, agents, adapters, infra, CI, docs. |
-| Environment | Node 22, pnpm 10, Docker (Postgres 16, Redis 7, Qdrant 1.x verified running), Chromium for Playwright. |
+| Area                 | Finding                                                                                                                                                   |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Current architecture | None. The repository was empty (no commits, no files).                                                                                                    |
+| Existing components  | None.                                                                                                                                                     |
+| Reusable components  | None — greenfield.                                                                                                                                        |
+| Problems             | No constraints to preserve; the risk is the opposite: scope. Every layer (data model, engine, AI, integrations, UI) must be built and validated together. |
+| Missing components   | Everything: monorepo tooling, backend, frontend, schema, engine, agents, adapters, infra, CI, docs.                                                       |
+| Environment          | Node 22, pnpm 10, Docker (Postgres 16, Redis 7, Qdrant 1.x verified running), Chromium for Playwright.                                                    |
 
 **Recommended architecture:** a pnpm + Turborepo monorepo with a NestJS API
 (that also runs background workers), a React/Vite web app, and framework-agnostic
@@ -115,10 +115,10 @@ consumes it.
 
 One NestJS codebase, two roles selected by `APP_ROLE`:
 
-* `api` — HTTP, WebSocket gateway, agent chat.
-* `worker` — BullMQ processors (workflow advance, step execution, ingestion),
+- `api` — HTTP, WebSocket gateway, agent chat.
+- `worker` — BullMQ processors (workflow advance, step execution, ingestion),
   lease reaper, cron triggers.
-* `all` (default in development) — both.
+- `all` (default in development) — both.
 
 Events produced anywhere are published on Redis (`forgeline:events`) and every
 API instance relays them to its Socket.IO rooms, so workers and the gateway can
@@ -164,22 +164,22 @@ erDiagram
 
 Key decisions:
 
-* **Credentials** live only in `IntegrationCredential.ciphertext`, AES-256-GCM
+- **Credentials** live only in `IntegrationCredential.ciphertext`, AES-256-GCM
   with a versioned key from the `SecretsProvider` abstraction (env-backed by
   default; swap for KMS/Vault). Tokens never leave the API process.
-* **Executions snapshot their definition** (`WorkflowExecution.definition`), so
+- **Executions snapshot their definition** (`WorkflowExecution.definition`), so
   editing a Flow never mutates in-flight Runs.
-* **Optimistic concurrency + row locks.** The engine advances a Run inside a
+- **Optimistic concurrency + row locks.** The engine advances a Run inside a
   transaction holding `SELECT … FOR UPDATE` on the execution row; step state
   transitions use conditional updates (`WHERE status = expected`) so duplicate
   job deliveries are no-ops.
-* **Idempotency ledger.** `ToolExecution(organizationId, idempotencyKey)` is
+- **Idempotency ledger.** `ToolExecution(organizationId, idempotencyKey)` is
   unique. Keys are derived from `executionId + stepKey + iteration`, so a retry
   of "Create Jira ticket" returns the recorded result instead of creating a
-  second ticket. Adapters additionally *find-before-create* using natural keys
+  second ticket. Adapters additionally _find-before-create_ using natural keys
   (Jira label, branch name, PR head, Notion marker) to cover crashes between the
   external call and the ledger write.
-* **Audit log** is append-only, redacted (secrets/tokens stripped by key name
+- **Audit log** is append-only, redacted (secrets/tokens stripped by key name
   and pattern) before write.
 
 ---
@@ -247,24 +247,24 @@ sequenceDiagram
   E-->>U: live step events over WebSocket
 ```
 
-* **LLM abstraction** (`packages/ai`): `LlmProvider` returns LangChain
-  `BaseChatModel`s by *role* (`orchestrator`, `planner`, `coder`, `reviewer`,
+- **LLM abstraction** (`packages/ai`): `LlmProvider` returns LangChain
+  `BaseChatModel`s by _role_ (`orchestrator`, `planner`, `coder`, `reviewer`,
   `fast`) mapped from env (`OPENAI_MODEL`, `OPENAI_MODEL_FAST`, …). OpenAI is the
   default implementation; any LangChain chat model can be plugged in.
-* **Prompts** are versioned `ChatPromptTemplate`s in a registry.
-* **Structured outputs** use zod schemas + `withStructuredOutput` (flow plans,
+- **Prompts** are versioned `ChatPromptTemplate`s in a registry.
+- **Structured outputs** use zod schemas + `withStructuredOutput` (flow plans,
   specs, code changes, review findings, QA cases, root-cause analysis, risk
   assessment).
-* **Tool calling**: the orchestrator binds *read-only* tools directly and one
-  *action* tool, `propose_flow`. Side effects always go through the workflow
+- **Tool calling**: the orchestrator binds _read-only_ tools directly and one
+  _action_ tool, `propose_flow`. Side effects always go through the workflow
   engine, so they are durable, approvable, idempotent and audited.
-* **Memory**: conversation window + rolling summary stored on the
+- **Memory**: conversation window + rolling summary stored on the
   Conversation; long-term memory is the knowledge base (past Runs are ingested).
-* **Reflection**: code generation runs a validate → repair loop driven by real
+- **Reflection**: code generation runs a validate → repair loop driven by real
   lint/test output; review findings feed a fix step.
-* **Reasoning transparency**: agents return concise `summary` fields
+- **Reasoning transparency**: agents return concise `summary` fields
   (decision + rationale), never hidden chain-of-thought.
-* **Authorization**: agents run *as the user*. Every tool invocation is checked
+- **Authorization**: agents run _as the user_. Every tool invocation is checked
   against the initiating user's current permissions at execution time.
 
 ---
@@ -275,17 +275,17 @@ A Flow is a **DAG of steps** (`dependsOn`) with a few structured extensions
 that cover loops and branches without arbitrary gotos (which make durability
 and termination hard to reason about):
 
-| Feature | Mechanism |
-| --- | --- |
-| Sequential / parallel | DAG dependencies; independent steps run concurrently. |
-| Conditional branches | `when` expression (safe evaluator, no `eval`). Unmet → `SKIPPED`, which propagates to dependents unless they opt into `runIf: "always"`. |
-| Retries | `retry { maxAttempts, backoff, initialDelayMs, maxDelayMs }`, applied only to *retryable* tool errors. |
-| Self-healing loops | `repair { step, maxIterations }` — on failure (or `successCondition` false), run the repair step with failure context, then re-run. Used for tests → fix → tests. |
-| Timeouts | per-step `timeoutMs` (AbortSignal) + lease expiry. |
-| Approvals | `type: approval` steps, plus policy-injected gates before sensitive tools. |
-| Compensation / rollback | Steps declare `compensate`; on failure with `onFailure: compensate`, completed steps are compensated in reverse topological order (saga). |
-| Pause / resume / cancel | Run status; the scheduler only dispatches when `RUNNING`; running steps observe cancellation via AbortSignal. |
-| Resumability | All state in Postgres; jobs in Redis; on boot and every 30 s the reaper re-enqueues steps with expired leases and Runs stuck in `RUNNING` with no in-flight work. |
+| Feature                 | Mechanism                                                                                                                                                         |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sequential / parallel   | DAG dependencies; independent steps run concurrently.                                                                                                             |
+| Conditional branches    | `when` expression (safe evaluator, no `eval`). Unmet → `SKIPPED`, which propagates to dependents unless they opt into `runIf: "always"`.                          |
+| Retries                 | `retry { maxAttempts, backoff, initialDelayMs, maxDelayMs }`, applied only to _retryable_ tool errors.                                                            |
+| Self-healing loops      | `repair { step, maxIterations }` — on failure (or `successCondition` false), run the repair step with failure context, then re-run. Used for tests → fix → tests. |
+| Timeouts                | per-step `timeoutMs` (AbortSignal) + lease expiry.                                                                                                                |
+| Approvals               | `type: approval` steps, plus policy-injected gates before sensitive tools.                                                                                        |
+| Compensation / rollback | Steps declare `compensate`; on failure with `onFailure: compensate`, completed steps are compensated in reverse topological order (saga).                         |
+| Pause / resume / cancel | Run status; the scheduler only dispatches when `RUNNING`; running steps observe cancellation via AbortSignal.                                                     |
+| Resumability            | All state in Postgres; jobs in Redis; on boot and every 30 s the reaper re-enqueues steps with expired leases and Runs stuck in `RUNNING` with no in-flight work. |
 
 ```mermaid
 stateDiagram-v2
@@ -322,29 +322,29 @@ Execution loop:
 
 ```ts
 interface SdlcTool<I, O> {
-  name: string;              // "jira.createIssue"
-  description: string;       // used by the LLM and the Flow builder
+  name: string; // "jira.createIssue"
+  description: string; // used by the LLM and the Flow builder
   provider: IntegrationProvider;
-  inputSchema: ZodType<I>;   // validated before execution; JSON Schema for UI
-  permission: Permission;    // checked against the initiating user
+  inputSchema: ZodType<I>; // validated before execution; JSON Schema for UI
+  permission: Permission; // checked against the initiating user
   risk: 'read' | 'write' | 'destructive' | 'production';
   execute(input: I, ctx: ToolExecutionContext): Promise<ToolExecutionResult<O>>;
   compensate?(input: I, output: O, ctx): Promise<void>;
 }
 ```
 
-* Each provider has an HTTP **client** (fetch, timeout, error classification →
+- Each provider has an HTTP **client** (fetch, timeout, error classification →
   `ToolError{kind, retryable, retryAfterMs}`) and **tools** built on it.
-* **CI/CD is an interface** (`CiCdProvider`: build, test, lint, securityScan,
+- **CI/CD is an interface** (`CiCdProvider`: build, test, lint, securityScan,
   createArtifact, buildContainer, scanImage, deploy, rollback, environments,
   healthCheck, smokeTest, getRun). Implementations: `HttpDevOpsProvider` (our
   DevOps platform's REST contract, HMAC-signed) and `GitHubActionsCiCdProvider`.
   Health checks and smoke tests are executed by Forgeline itself as real HTTP
   probes against the environment URL.
-* OAuth 2.0 (+PKCE where supported) for GitHub, Jira (Atlassian 3LO), Notion;
+- OAuth 2.0 (+PKCE where supported) for GitHub, Jira (Atlassian 3LO), Notion;
   API-token connections for Jira/GitHub PAT/Trello/DevOps/Slack webhook.
   Refresh tokens are rotated transparently before expiry.
-* Webhooks (`/webhooks/:provider/:webhookId`) verify signatures (GitHub HMAC
+- Webhooks (`/webhooks/:provider/:webhookId`) verify signatures (GitHub HMAC
   SHA-256, Jira/Trello/DevOps shared-secret HMAC), dedupe by delivery id, and
   dispatch commands / triggers.
 
@@ -352,21 +352,21 @@ interface SdlcTool<I, O> {
 
 ## 8. Security architecture
 
-* Short-lived JWT access tokens (Authorization header) + rotating refresh
+- Short-lived JWT access tokens (Authorization header) + rotating refresh
   tokens in an `HttpOnly; SameSite=Strict` cookie, stored hashed, with
   token-family reuse detection; the refresh endpoint requires a CSRF
   double-submit token.
-* Argon2id password hashing.
-* RBAC: org roles (OWNER, ADMIN, MEMBER, VIEWER) and project roles
+- Argon2id password hashing.
+- RBAC: org roles (OWNER, ADMIN, MEMBER, VIEWER) and project roles
   (MAINTAINER, DEVELOPER, VIEWER) → fine-grained permissions in
   `packages/shared`. `PermissionGuard` + service-level checks; every query is
   scoped by `organizationId` from the authenticated membership.
-* Agents and Flows act **as the initiating user**; permission is re-checked when
+- Agents and Flows act **as the initiating user**; permission is re-checked when
   each tool executes (permissions may be revoked mid-run).
-* Approval policies: production deploy, PR merge and destructive actions are
-  *always* gated; others configurable per project. Approver must hold
+- Approval policies: production deploy, PR merge and destructive actions are
+  _always_ gated; others configurable per project. Approver must hold
   `approval:decide`; self-approval of production gates is disabled by default.
-* Helmet secure headers, strict CORS allow-list, Redis-backed rate limiting,
+- Helmet secure headers, strict CORS allow-list, Redis-backed rate limiting,
   global `ValidationPipe` (whitelist + forbidNonWhitelisted), OAuth `state`
   bound to user+org with expiry and single use, webhook signature verification,
   audit log with redaction.
@@ -375,24 +375,24 @@ interface SdlcTool<I, O> {
 
 ## 9. Deployment architecture
 
-* Single Docker image for the API (roles via `APP_ROLE`), nginx-served static
+- Single Docker image for the API (roles via `APP_ROLE`), nginx-served static
   image for the web app.
-* `docker-compose.yml` (full stack) and `docker-compose.dev.yml` (infra only for
+- `docker-compose.yml` (full stack) and `docker-compose.dev.yml` (infra only for
   local `pnpm dev`).
-* Migrations run as a one-shot `migrate` service before API/worker start.
-* Stateless API/worker replicas; Postgres, Redis, Qdrant are the state.
+- Migrations run as a one-shot `migrate` service before API/worker start.
+- Stateless API/worker replicas; Postgres, Redis, Qdrant are the state.
 
 ---
 
 ## 10. Testing strategy
 
-| Layer | Tooling | Scope |
-| --- | --- | --- |
-| Packages | Vitest | engine scheduler, expressions, templates, backoff, validation; integration clients with mocked `fetch`; chunking; crypto |
-| API unit | Jest + @swc/jest | guards/RBAC, policy engine, tool executor (idempotency, permission denial, retry classification) |
-| API integration | Jest + Supertest + real Postgres/Redis | auth flows, tenant isolation, approvals, full workflow runs with inline queue and stubbed providers, recovery after simulated crash |
-| Web | Vitest + Testing Library | design-system components, chat rendering, approval card, workflow graph |
-| E2E | Playwright + mock external services (Jira, GitHub, Notion, DevOps, OpenAI-compatible) | the acceptance scenario, end to end through real adapters |
+| Layer           | Tooling                                                                               | Scope                                                                                                                               |
+| --------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Packages        | Vitest                                                                                | engine scheduler, expressions, templates, backoff, validation; integration clients with mocked `fetch`; chunking; crypto            |
+| API unit        | Jest + @swc/jest                                                                      | guards/RBAC, policy engine, tool executor (idempotency, permission denial, retry classification)                                    |
+| API integration | Jest + Supertest + real Postgres/Redis                                                | auth flows, tenant isolation, approvals, full workflow runs with inline queue and stubbed providers, recovery after simulated crash |
+| Web             | Vitest + Testing Library                                                              | design-system components, chat rendering, approval card, workflow graph                                                             |
+| E2E             | Playwright + mock external services (Jira, GitHub, Notion, DevOps, OpenAI-compatible) | the acceptance scenario, end to end through real adapters                                                                           |
 
 ---
 

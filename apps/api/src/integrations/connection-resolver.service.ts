@@ -55,13 +55,18 @@ export class ConnectionResolver {
     });
   }
 
-  private async require(organizationId: string, provider: IntegrationProvider): Promise<{ integration: Integration; bundle: CredentialBundle }> {
+  private async require(
+    organizationId: string,
+    provider: IntegrationProvider,
+  ): Promise<{ integration: Integration; bundle: CredentialBundle }> {
     const integration = await this.findActive(organizationId, provider);
     if (!integration) {
       const expired = await this.prisma.integration.findFirst({ where: { organizationId, provider, deletedAt: null, status: 'EXPIRED' } });
       throw new ToolError(
         expired ? 'auth' : 'not_configured',
-        expired ? `${PROVIDER_LABEL[provider]} authorization expired — reconnect it on the Integrations page` : `${PROVIDER_LABEL[provider]} is not connected. Connect it on the Integrations page.`,
+        expired
+          ? `${PROVIDER_LABEL[provider]} authorization expired — reconnect it on the Integrations page`
+          : `${PROVIDER_LABEL[provider]} is not connected. Connect it on the Integrations page.`,
         { retryable: false, provider: provider.toLowerCase() },
       );
     }
@@ -77,7 +82,10 @@ export class ConnectionResolver {
   buildJira(bundle: CredentialBundle, cfg: IntegrationConfig): JiraClient {
     if (bundle.kind === 'jira_oauth') {
       if (!cfg.cloudId) throw new ToolError('not_configured', 'Jira cloud id missing; reconnect Jira', { retryable: false });
-      return new JiraClient({ type: 'oauth', accessToken: bundle.accessToken, cloudId: cfg.cloudId, apiBaseUrl: this.config.oauth.jira.apiUrl }, { siteUrl: cfg.siteUrl });
+      return new JiraClient(
+        { type: 'oauth', accessToken: bundle.accessToken, cloudId: cfg.cloudId, apiBaseUrl: this.config.oauth.jira.apiUrl },
+        { siteUrl: cfg.siteUrl },
+      );
     }
     if (bundle.kind === 'jira_basic') {
       if (!cfg.siteUrl) throw new ToolError('not_configured', 'Jira site URL missing', { retryable: false });
@@ -99,7 +107,8 @@ export class ConnectionResolver {
   }
 
   buildDevOps(bundle: CredentialBundle, cfg: IntegrationConfig): HttpDevOpsProvider {
-    if (bundle.kind !== 'devops' || !cfg.baseUrl) throw new ToolError('not_configured', 'DevOps integration misconfigured', { retryable: false });
+    if (bundle.kind !== 'devops' || !cfg.baseUrl)
+      throw new ToolError('not_configured', 'DevOps integration misconfigured', { retryable: false });
     return new HttpDevOpsProvider({ baseUrl: cfg.baseUrl, apiToken: bundle.apiToken, signingSecret: bundle.signingSecret });
   }
 
@@ -117,18 +126,28 @@ export class ConnectionResolver {
   clientsFor(organizationId: string, project: ProjectContext | null): IntegrationClients {
     const cache = new Map<string, Promise<unknown>>();
     const memo = <T>(key: string, fn: () => Promise<T>): Promise<T> => {
-      if (!cache.has(key)) cache.set(key, fn().catch((err) => { cache.delete(key); throw err; }));
+      if (!cache.has(key))
+        cache.set(
+          key,
+          fn().catch((err) => {
+            cache.delete(key);
+            throw err;
+          }),
+        );
       return cache.get(key) as Promise<T>;
     };
-    const resolver = this;
     return {
-      github: () => memo('github', () => resolver.github(organizationId)),
-      jira: () => memo('jira', async () => { const { integration, bundle } = await resolver.require(organizationId, 'JIRA'); return resolver.buildJira(bundle, integration.config as IntegrationConfig); }),
-      trello: () => memo('trello', async () => resolver.buildTrello((await resolver.require(organizationId, 'TRELLO')).bundle)),
-      notion: () => memo('notion', async () => resolver.buildNotion((await resolver.require(organizationId, 'NOTION')).bundle)),
-      slack: () => memo('slack', async () => resolver.buildSlack((await resolver.require(organizationId, 'SLACK')).bundle)),
-      cicd: () => memo('cicd', () => resolver.cicd(organizationId, project)),
-      connected: () => memo('connected', () => resolver.connectedProviders(organizationId)),
+      github: () => memo('github', () => this.github(organizationId)),
+      jira: () =>
+        memo('jira', async () => {
+          const { integration, bundle } = await this.require(organizationId, 'JIRA');
+          return this.buildJira(bundle, integration.config as IntegrationConfig);
+        }),
+      trello: () => memo('trello', async () => this.buildTrello((await this.require(organizationId, 'TRELLO')).bundle)),
+      notion: () => memo('notion', async () => this.buildNotion((await this.require(organizationId, 'NOTION')).bundle)),
+      slack: () => memo('slack', async () => this.buildSlack((await this.require(organizationId, 'SLACK')).bundle)),
+      cicd: () => memo('cicd', () => this.cicd(organizationId, project)),
+      connected: () => memo('connected', () => this.connectedProviders(organizationId)),
     };
   }
 
@@ -150,11 +169,22 @@ export class ConnectionResolver {
       return this.buildDevOps(bundle, integration.config as IntegrationConfig);
     }
     if (!connected.includes('GITHUB_ACTIONS') && !connected.includes('GITHUB')) {
-      throw new ToolError('not_configured', 'No CI/CD provider connected. Connect Forgeline DevOps or GitHub Actions on the Integrations page.', { retryable: false });
+      throw new ToolError(
+        'not_configured',
+        'No CI/CD provider connected. Connect Forgeline DevOps or GitHub Actions on the Integrations page.',
+        { retryable: false },
+      );
     }
     const repo = project?.repository;
-    if (!repo) throw new ToolError('not_configured', 'GitHub Actions CI/CD requires a repository linked to the project', { retryable: false });
+    if (!repo)
+      throw new ToolError('not_configured', 'GitHub Actions CI/CD requires a repository linked to the project', { retryable: false });
     const gh = await this.github(organizationId);
-    return new GitHubActionsCiCdProvider(gh, { owner: repo.owner, repo: repo.name, ciWorkflow: repo.settings.ciWorkflow, deployWorkflow: repo.settings.deployWorkflow, defaultRef: repo.defaultBranch });
+    return new GitHubActionsCiCdProvider(gh, {
+      owner: repo.owner,
+      repo: repo.name,
+      ciWorkflow: repo.settings.ciWorkflow,
+      deployWorkflow: repo.settings.deployWorkflow,
+      defaultRef: repo.defaultBranch,
+    });
   }
 }

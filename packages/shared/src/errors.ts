@@ -20,13 +20,7 @@ export const TOOL_ERROR_KINDS = [
 ] as const;
 export type ToolErrorKind = (typeof TOOL_ERROR_KINDS)[number];
 
-const RETRYABLE_BY_DEFAULT: ReadonlySet<ToolErrorKind> = new Set([
-  'timeout',
-  'rate_limit',
-  'external',
-  'network',
-  'malformed_response',
-]);
+const RETRYABLE_BY_DEFAULT: ReadonlySet<ToolErrorKind> = new Set(['timeout', 'rate_limit', 'external', 'network', 'malformed_response']);
 
 export interface SerializedToolError {
   kind: ToolErrorKind;
@@ -81,7 +75,10 @@ export class ToolError extends Error {
   }
 
   static is(err: unknown): err is ToolError {
-    return err instanceof ToolError || (typeof err === 'object' && err !== null && (err as { name?: string }).name === 'ToolError' && 'kind' in err);
+    return (
+      err instanceof ToolError ||
+      (typeof err === 'object' && err !== null && (err as { name?: string }).name === 'ToolError' && 'kind' in err)
+    );
   }
 
   /** Normalise any thrown value into a ToolError. */
@@ -91,9 +88,11 @@ export class ToolError extends Error {
       if (err.name === 'AbortError' || err.name === 'TimeoutError') {
         return new ToolError('timeout', err.message || 'Operation timed out', { provider, cause: err });
       }
-      const code =
-        (err as { code?: string }).code ?? (err.cause as { code?: string } | undefined)?.code;
-      if (code && ['ECONNRESET', 'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ETIMEDOUT', 'UND_ERR_SOCKET', 'UND_ERR_CONNECT_TIMEOUT'].includes(code)) {
+      const code = (err as { code?: string }).code ?? (err.cause as { code?: string } | undefined)?.code;
+      if (
+        code &&
+        ['ECONNRESET', 'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ETIMEDOUT', 'UND_ERR_SOCKET', 'UND_ERR_CONNECT_TIMEOUT'].includes(code)
+      ) {
         return new ToolError('network', `${err.message} (${code})`, { provider, cause: err });
       }
       if (err.message === 'fetch failed') {

@@ -1,8 +1,4 @@
-import {
-  workflowDefinitionSchema,
-  type StepDefinition,
-  type WorkflowDefinition,
-} from '@forgeline/shared';
+import { workflowDefinitionSchema, type StepDefinition, type WorkflowDefinition } from '@forgeline/shared';
 import { collectPaths, parseExpression } from './expression';
 import { ancestors, repairStepKeys, topologicalOrder } from './graph';
 import { extractTemplateExpressions, referencedStepKeys } from './template';
@@ -24,12 +20,7 @@ export interface ValidateOptions {
 
 const KNOWN_SCOPE_ROOTS = new Set(['inputs', 'variables', 'steps', 'project', 'execution', 'repair', 'env', 'event', 'output', 'error']);
 
-function checkExpression(
-  expr: string,
-  path: string,
-  stepKey: string | undefined,
-  issues: ValidationIssue[],
-): void {
+function checkExpression(expr: string, path: string, stepKey: string | undefined, issues: ValidationIssue[]): void {
   try {
     parseExpression(expr);
   } catch (err) {
@@ -67,7 +58,8 @@ export function validateWorkflowDefinition(raw: unknown, options: ValidateOption
     for (const d of s.dependsOn) {
       if (!keys.has(d)) issues.push({ path: `${base}.dependsOn`, stepKey: s.key, message: `Unknown dependency '${d}'` });
       if (d === s.key) issues.push({ path: `${base}.dependsOn`, stepKey: s.key, message: 'A step cannot depend on itself' });
-      if (repairKeys.has(d)) issues.push({ path: `${base}.dependsOn`, stepKey: s.key, message: `'${d}' is a repair step and cannot be a dependency` });
+      if (repairKeys.has(d))
+        issues.push({ path: `${base}.dependsOn`, stepKey: s.key, message: `'${d}' is a repair step and cannot be a dependency` });
     }
 
     switch (s.type) {
@@ -96,12 +88,17 @@ export function validateWorkflowDefinition(raw: unknown, options: ValidateOption
         issues.push({ path: `${base}.repair.step`, stepKey: s.key, message: 'A step cannot repair itself' });
       }
       if (repairOwners.has(target)) {
-        issues.push({ path: `${base}.repair.step`, stepKey: s.key, message: `Repair step '${target}' is already used by '${repairOwners.get(target)}'` });
+        issues.push({
+          path: `${base}.repair.step`,
+          stepKey: s.key,
+          message: `Repair step '${target}' is already used by '${repairOwners.get(target)}'`,
+        });
       }
       repairOwners.set(target, s.key);
     }
     if (repairKeys.has(s.key)) {
-      if (s.dependsOn.length) issues.push({ path: `${base}.dependsOn`, stepKey: s.key, message: 'Repair steps must not declare dependencies' });
+      if (s.dependsOn.length)
+        issues.push({ path: `${base}.dependsOn`, stepKey: s.key, message: 'Repair steps must not declare dependencies' });
       if (s.repair) issues.push({ path: `${base}.repair`, stepKey: s.key, message: 'Repair steps cannot have their own repair step' });
       if (s.type !== 'tool') issues.push({ path: `${base}.type`, stepKey: s.key, message: 'Repair steps must be tool steps' });
     }
@@ -113,7 +110,13 @@ export function validateWorkflowDefinition(raw: unknown, options: ValidateOption
     if (s.when) checkExpression(s.when, `${base}.when`, s.key, issues);
     if (s.successCondition) checkExpression(s.successCondition, `${base}.successCondition`, s.key, issues);
     if (s.expression) checkExpression(s.expression, `${base}.expression`, s.key, issues);
-    for (const expr of extractTemplateExpressions([s.input, s.approval?.context, s.approval?.title, s.approval?.description, s.compensate?.input])) {
+    for (const expr of extractTemplateExpressions([
+      s.input,
+      s.approval?.context,
+      s.approval?.title,
+      s.approval?.description,
+      s.compensate?.input,
+    ])) {
       checkExpression(expr, `${base}.input`, s.key, issues);
     }
   });
@@ -122,7 +125,11 @@ export function validateWorkflowDefinition(raw: unknown, options: ValidateOption
 
   const { cycle } = topologicalOrder(def.steps);
   if (cycle) {
-    return { valid: false, definition: def, issues: [{ path: 'steps', message: `Dependency cycle detected between: ${cycle.join(', ')}` }] };
+    return {
+      valid: false,
+      definition: def,
+      issues: [{ path: 'steps', message: `Dependency cycle detected between: ${cycle.join(', ')}` }],
+    };
   }
 
   // Templates/conditions may only reference upstream steps (or, for repair steps, their owner's upstream + the owner).
@@ -137,7 +144,11 @@ export function validateWorkflowDefinition(raw: unknown, options: ValidateOption
       if (!keys.has(ref)) {
         issues.push({ path: `steps.${idx}`, stepKey: s.key, message: `References unknown step '${ref}'` });
       } else if (!allowed.has(ref)) {
-        issues.push({ path: `steps.${idx}`, stepKey: s.key, message: `References step '${ref}' which is not upstream; add it to dependsOn` });
+        issues.push({
+          path: `steps.${idx}`,
+          stepKey: s.key,
+          message: `References step '${ref}' which is not upstream; add it to dependsOn`,
+        });
       }
     }
     for (const expr of exprs) {
@@ -153,11 +164,7 @@ export function validateWorkflowDefinition(raw: unknown, options: ValidateOption
   return issues.length ? { valid: false, definition: def, issues } : { valid: true, definition: def, issues: [] };
 }
 
-function allowedReferences(
-  steps: StepDefinition[],
-  step: StepDefinition,
-  repairOwners: Map<string, string>,
-): Set<string> {
+function allowedReferences(steps: StepDefinition[], step: StepDefinition, repairOwners: Map<string, string>): Set<string> {
   const owner = repairOwners.get(step.key);
   const base = owner ? new Set([...ancestors(steps, owner), owner]) : ancestors(steps, step.key);
   // A step may read its own repair step and the repair steps of its ancestors:

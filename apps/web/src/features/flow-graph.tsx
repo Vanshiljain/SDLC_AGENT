@@ -1,7 +1,35 @@
 import { memo, useMemo } from 'react';
 import dagre from '@dagrejs/dagre';
-import { Background, BackgroundVariant, Controls, Handle, MarkerType, MiniMap, Position, ReactFlow, type Edge, type Node, type NodeProps, type ReactFlowInstance } from '@xyflow/react';
-import { Boxes, BookText, Clock, Code2, Hand, Layers, Repeat2, Rocket, ScanSearch, ShieldCheck, Split, TestTubes, Wrench, type LucideIcon } from 'lucide-react';
+import {
+  Background,
+  BackgroundVariant,
+  Controls,
+  Handle,
+  MarkerType,
+  MiniMap,
+  Position,
+  ReactFlow,
+  type Edge,
+  type Node,
+  type NodeProps,
+  type ReactFlowInstance,
+} from '@xyflow/react';
+import {
+  Boxes,
+  BookText,
+  Clock,
+  Code2,
+  Hand,
+  Layers,
+  Repeat2,
+  Rocket,
+  ScanSearch,
+  ShieldCheck,
+  Split,
+  TestTubes,
+  Wrench,
+  type LucideIcon,
+} from 'lucide-react';
 import type { StepDefinition, WorkflowDefinition } from '@forgeline/shared';
 import type { ExecutionStep } from '@/api/types';
 import { cn } from '@/lib/cn';
@@ -30,9 +58,20 @@ export function agentOf(step: { agent?: string | null; type?: string; tool?: str
   return (step.agent && AGENTS[step.agent]) || { label: step.tool?.split('.')[0] ?? 'Tool', icon: Wrench, color: 'var(--color-fg-subtle)' };
 }
 
-export function layout<N extends Node, E extends Edge>(nodes: N[], edges: E[], direction: 'LR' | 'TB' = 'LR', size = { w: NODE_W, h: NODE_H }): N[] {
+export function layout<N extends Node, E extends Edge>(
+  nodes: N[],
+  edges: E[],
+  direction: 'LR' | 'TB' = 'LR',
+  size = { w: NODE_W, h: NODE_H },
+): N[] {
   const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: direction, nodesep: direction === 'LR' ? 22 : 36, ranksep: direction === 'LR' ? 64 : 56, marginx: 20, marginy: 20 });
+  g.setGraph({
+    rankdir: direction,
+    nodesep: direction === 'LR' ? 22 : 36,
+    ranksep: direction === 'LR' ? 64 : 56,
+    marginx: 20,
+    marginy: 20,
+  });
   g.setDefaultEdgeLabel(() => ({}));
   nodes.forEach((n) => g.setNode(n.id, { width: n.width ?? size.w, height: n.height ?? size.h }));
   edges.forEach((e) => g.setEdge(e.source, e.target));
@@ -86,7 +125,10 @@ export const StepNode = memo(function StepNode({ data, selected }: NodeProps<Nod
       <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: a.color }} />
       {live && <span className="absolute inset-x-0 bottom-0 h-[2px] forge-line" />}
       <div className="flex h-full items-center gap-2.5 pr-3 pl-3.5">
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-md" style={{ background: `color-mix(in oklab, ${a.color} 14%, transparent)`, color: a.color }}>
+        <span
+          className="flex size-7 shrink-0 items-center justify-center rounded-md"
+          style={{ background: `color-mix(in oklab, ${a.color} 14%, transparent)`, color: a.color }}
+        >
           <a.icon className="size-3.5" />
         </span>
         <div className="min-w-0 flex-1">
@@ -100,7 +142,10 @@ export const StepNode = memo(function StepNode({ data, selected }: NodeProps<Nod
           </div>
         </div>
         {(iterations ?? 0) > 0 && (
-          <span title={`Self-healed ${iterations}×`} className="flex shrink-0 items-center gap-0.5 rounded-sm bg-ai-soft px-1 font-mono text-[10px] text-ai">
+          <span
+            title={`Self-healed ${iterations}×`}
+            className="flex shrink-0 items-center gap-0.5 rounded-sm bg-ai-soft px-1 font-mono text-[10px] text-ai"
+          >
             <Repeat2 className="size-2.5" />
             {iterations}
           </span>
@@ -114,8 +159,20 @@ export const StepNode = memo(function StepNode({ data, selected }: NodeProps<Nod
 
 function StatusPip({ status }: { status: string }) {
   const tone = statusTone(status);
-  const bg = { ok: 'bg-ok', bad: 'bg-bad', warn: 'bg-warn', arc: 'bg-arc', accent: 'bg-accent', ai: 'bg-ai', neutral: 'bg-fg-subtle' }[tone];
-  return <span title={titleCase(status)} className={cn('size-2 shrink-0 rounded-full', bg, isLive(status) && 'animate-pulse-dot', tone === 'arc' ? 'text-arc' : tone === 'accent' ? 'text-accent' : 'text-ai')} />;
+  const bg = { ok: 'bg-ok', bad: 'bg-bad', warn: 'bg-warn', arc: 'bg-arc', accent: 'bg-accent', ai: 'bg-ai', neutral: 'bg-fg-subtle' }[
+    tone
+  ];
+  return (
+    <span
+      title={titleCase(status)}
+      className={cn(
+        'size-2 shrink-0 rounded-full',
+        bg,
+        isLive(status) && 'animate-pulse-dot',
+        tone === 'arc' ? 'text-arc' : tone === 'accent' ? 'text-accent' : 'text-ai',
+      )}
+    />
+  );
 }
 
 export const nodeTypes = { step: StepNode };
@@ -125,13 +182,19 @@ export function latestSteps(steps: ExecutionStep[]): Map<string, { run: Executio
   const map = new Map<string, { run: ExecutionStep; iterations: number }>();
   for (const s of steps) {
     const cur = map.get(s.stepKey);
-    if (!cur || s.iteration > cur.run.iteration || (s.iteration === cur.run.iteration && s.position >= cur.run.position)) map.set(s.stepKey, { run: s, iterations: Math.max(cur?.iterations ?? 0, s.iteration) });
+    if (!cur || s.iteration > cur.run.iteration || (s.iteration === cur.run.iteration && s.position >= cur.run.position))
+      map.set(s.stepKey, { run: s, iterations: Math.max(cur?.iterations ?? 0, s.iteration) });
     else cur.iterations = Math.max(cur.iterations, s.iteration);
   }
   return map;
 }
 
-export function buildFlowGraph(definition: WorkflowDefinition, runSteps: ExecutionStep[] = [], direction: 'LR' | 'TB' = 'LR', selectedKey?: string | null): { nodes: Node<StepNodeData>[]; edges: Edge[] } {
+export function buildFlowGraph(
+  definition: WorkflowDefinition,
+  runSteps: ExecutionStep[] = [],
+  direction: 'LR' | 'TB' = 'LR',
+  selectedKey?: string | null,
+): { nodes: Node<StepNodeData>[]; edges: Edge[] } {
   const latest = latestSteps(runSteps);
   const repairOf = new Map<string, string>();
   for (const s of definition.steps) if (s.repair) repairOf.set(s.repair.step, s.key);
@@ -142,7 +205,13 @@ export function buildFlowGraph(definition: WorkflowDefinition, runSteps: Executi
     width: NODE_W,
     height: NODE_H,
     selected: step.key === selectedKey,
-    data: { step, run: latest.get(step.key)?.run ?? null, iterations: latest.get(step.key)?.iterations ?? 0, repairOf: repairOf.get(step.key) ?? null, direction },
+    data: {
+      step,
+      run: latest.get(step.key)?.run ?? null,
+      iterations: latest.get(step.key)?.iterations ?? 0,
+      repairOf: repairOf.get(step.key) ?? null,
+      direction,
+    },
   }));
   const edges: Edge[] = [];
   for (const step of definition.steps) {
@@ -156,7 +225,11 @@ export function buildFlowGraph(definition: WorkflowDefinition, runSteps: Executi
         source: dep,
         target: step.key,
         animated: Boolean(active),
-        style: { strokeWidth: done || active ? 1.6 : 1.2, stroke: done ? 'var(--color-ok)' : undefined, opacity: target?.status === 'SKIPPED' ? 0.35 : 1 },
+        style: {
+          strokeWidth: done || active ? 1.6 : 1.2,
+          stroke: done ? 'var(--color-ok)' : undefined,
+          opacity: target?.status === 'SKIPPED' ? 0.35 : 1,
+        },
         markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14, color: done ? 'var(--color-ok)' : 'var(--color-line-strong)' },
       });
     }
@@ -178,8 +251,25 @@ export function buildFlowGraph(definition: WorkflowDefinition, runSteps: Executi
   return { nodes: layout(nodes, layoutEdges, direction), edges };
 }
 
-export function RunGraph({ definition, steps, onSelect, selectedKey, className, direction = 'LR' }: { definition: WorkflowDefinition; steps: ExecutionStep[]; onSelect?: (key: string) => void; selectedKey?: string | null; className?: string; direction?: 'LR' | 'TB' }) {
-  const { nodes, edges } = useMemo(() => buildFlowGraph(definition, steps, direction, selectedKey), [definition, steps, direction, selectedKey]);
+export function RunGraph({
+  definition,
+  steps,
+  onSelect,
+  selectedKey,
+  className,
+  direction = 'LR',
+}: {
+  definition: WorkflowDefinition;
+  steps: ExecutionStep[];
+  onSelect?: (key: string) => void;
+  selectedKey?: string | null;
+  className?: string;
+  direction?: 'LR' | 'TB';
+}) {
+  const { nodes, edges } = useMemo(
+    () => buildFlowGraph(definition, steps, direction, selectedKey),
+    [definition, steps, direction, selectedKey],
+  );
   const large = nodes.length > 10;
   // Large flows open centred on the active (or most recent) step at a readable zoom.
   const onInit = (instance: ReactFlowInstance<Node<StepNodeData>>) => {
@@ -229,7 +319,15 @@ export function FlowMiniMap() {
       nodeColor={(n) => {
         const run = (n.data as StepNodeData).run;
         const tone = run ? statusTone(run.status) : 'neutral';
-        return { ok: 'var(--color-ok)', bad: 'var(--color-bad)', warn: 'var(--color-warn)', arc: 'var(--color-arc)', accent: 'var(--color-accent)', ai: 'var(--color-ai)', neutral: 'var(--color-line-strong)' }[tone];
+        return {
+          ok: 'var(--color-ok)',
+          bad: 'var(--color-bad)',
+          warn: 'var(--color-warn)',
+          arc: 'var(--color-arc)',
+          accent: 'var(--color-accent)',
+          ai: 'var(--color-ai)',
+          neutral: 'var(--color-line-strong)',
+        }[tone];
       }}
     />
   );

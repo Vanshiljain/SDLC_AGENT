@@ -19,14 +19,70 @@ export interface SystemAgentDefinition {
 
 /** Built-in agent personas shown across the product (Agents page, run visualisation). */
 export const SYSTEM_AGENTS: SystemAgentDefinition[] = [
-  { key: 'orchestrator', name: 'Forge · Orchestrator', kind: 'ORCHESTRATOR', description: 'Understands requests, gathers context and proposes Flows.', modelRole: 'orchestrator', tools: ['search_knowledge', 'list_projects', 'propose_flow'] },
-  { key: 'planning', name: 'Planning Agent', kind: 'PLANNER', description: 'Turns requirements into tickets, specs and executable plans.', modelRole: 'planner', tools: ['ai.draftTicket', 'ai.generateSpec', 'ai.generatePlan'] },
-  { key: 'architect', name: 'Architecture Agent', kind: 'ARCHITECT', description: 'Analyses repositories and grounds designs in the existing architecture.', modelRole: 'planner', tools: ['github.analyzeRepository', 'knowledge.retrieve'] },
-  { key: 'code', name: 'Code Agent', kind: 'CODER', description: 'Generates, validates and repairs code changes; commits and opens PRs.', modelRole: 'coder', tools: ['code.generate', 'code.validate', 'code.fix', 'code.commit'] },
-  { key: 'review', name: 'Review Agent', kind: 'REVIEWER', description: 'Reviews diffs for correctness, security, performance and tests.', modelRole: 'reviewer', tools: ['code.review', 'code.publishReview'] },
-  { key: 'qa', name: 'QA Agent', kind: 'QA', description: 'Derives test cases, runs suites, analyses failures and reports honestly.', modelRole: 'coder', tools: ['qa.run', 'qa.analyzeFailures'] },
-  { key: 'docs', name: 'Docs Agent', kind: 'DOCS', description: 'Writes and publishes documentation to Notion.', modelRole: 'planner', tools: ['docs.generate', 'notion.createPage'] },
-  { key: 'release', name: 'Release Agent', kind: 'RELEASE', description: 'Runs pipelines, deploys with verification and rolls back on failure.', modelRole: 'fast', tools: ['devops.runPipeline', 'deploy.environment', 'deploy.verify', 'deploy.rollback'] },
+  {
+    key: 'orchestrator',
+    name: 'Forge · Orchestrator',
+    kind: 'ORCHESTRATOR',
+    description: 'Understands requests, gathers context and proposes Flows.',
+    modelRole: 'orchestrator',
+    tools: ['search_knowledge', 'list_projects', 'propose_flow'],
+  },
+  {
+    key: 'planning',
+    name: 'Planning Agent',
+    kind: 'PLANNER',
+    description: 'Turns requirements into tickets, specs and executable plans.',
+    modelRole: 'planner',
+    tools: ['ai.draftTicket', 'ai.generateSpec', 'ai.generatePlan'],
+  },
+  {
+    key: 'architect',
+    name: 'Architecture Agent',
+    kind: 'ARCHITECT',
+    description: 'Analyses repositories and grounds designs in the existing architecture.',
+    modelRole: 'planner',
+    tools: ['github.analyzeRepository', 'knowledge.retrieve'],
+  },
+  {
+    key: 'code',
+    name: 'Code Agent',
+    kind: 'CODER',
+    description: 'Generates, validates and repairs code changes; commits and opens PRs.',
+    modelRole: 'coder',
+    tools: ['code.generate', 'code.validate', 'code.fix', 'code.commit'],
+  },
+  {
+    key: 'review',
+    name: 'Review Agent',
+    kind: 'REVIEWER',
+    description: 'Reviews diffs for correctness, security, performance and tests.',
+    modelRole: 'reviewer',
+    tools: ['code.review', 'code.publishReview'],
+  },
+  {
+    key: 'qa',
+    name: 'QA Agent',
+    kind: 'QA',
+    description: 'Derives test cases, runs suites, analyses failures and reports honestly.',
+    modelRole: 'coder',
+    tools: ['qa.run', 'qa.analyzeFailures'],
+  },
+  {
+    key: 'docs',
+    name: 'Docs Agent',
+    kind: 'DOCS',
+    description: 'Writes and publishes documentation to Notion.',
+    modelRole: 'planner',
+    tools: ['docs.generate', 'notion.createPage'],
+  },
+  {
+    key: 'release',
+    name: 'Release Agent',
+    kind: 'RELEASE',
+    description: 'Runs pipelines, deploys with verification and rolls back on failure.',
+    modelRole: 'fast',
+    tools: ['devops.runPipeline', 'deploy.environment', 'deploy.verify', 'deploy.rollback'],
+  },
 ];
 
 export interface AgentRunHandle {
@@ -55,7 +111,9 @@ export class AgentRunsService implements OnModuleInit {
     for (const a of SYSTEM_AGENTS) {
       const existing = await this.prisma.agent.findFirst({ where: { organizationId: null, key: a.key } });
       const data = { name: a.name, kind: a.kind, description: a.description, modelRole: a.modelRole, tools: a.tools };
-      const row = existing ? await this.prisma.agent.update({ where: { id: existing.id }, data }) : await this.prisma.agent.create({ data: { ...data, key: a.key } });
+      const row = existing
+        ? await this.prisma.agent.update({ where: { id: existing.id }, data })
+        : await this.prisma.agent.create({ data: { ...data, key: a.key } });
       this.agentIds.set(a.key, row.id);
     }
   }
@@ -102,7 +160,18 @@ export class AgentRunsService implements OnModuleInit {
     return { id: run.id, agentKey: params.agentKey, startedAt: Date.now() };
   }
 
-  async complete(organizationId: string, handle: AgentRunHandle, result: { usage?: UsageTracker; output?: unknown; summary?: string; model?: string; executionId?: string | null; conversationId?: string | null }): Promise<void> {
+  async complete(
+    organizationId: string,
+    handle: AgentRunHandle,
+    result: {
+      usage?: UsageTracker;
+      output?: unknown;
+      summary?: string;
+      model?: string;
+      executionId?: string | null;
+      conversationId?: string | null;
+    },
+  ): Promise<void> {
     const usage = result.usage?.snapshot();
     const model = result.model ?? usage?.models[0] ?? null;
     await this.prisma.agentRun.update({
@@ -148,6 +217,10 @@ export class AgentRunsService implements OnModuleInit {
         },
       })
       .catch((err: unknown) => this.logger.error({ err }, 'Failed to record agent run failure'));
-    await this.events.publish({ type: 'agent.activity', organizationId, data: { agentRunId: handle.id, agent: handle.agentKey, activity: 'Failed', status: 'failed' } });
+    await this.events.publish({
+      type: 'agent.activity',
+      organizationId,
+      data: { agentRunId: handle.id, agent: handle.agentKey, activity: 'Failed', status: 'failed' },
+    });
   }
 }

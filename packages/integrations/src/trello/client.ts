@@ -56,7 +56,9 @@ export class TrelloClient {
     return this.http.get<TrelloCard>(`/cards/${cardId}`);
   }
   createCard(params: { idList: string; name: string; desc?: string; pos?: 'top' | 'bottom' }) {
-    return this.http.post<TrelloCard>('/cards', undefined, { query: { idList: params.idList, name: params.name, desc: params.desc, pos: params.pos ?? 'top' } });
+    return this.http.post<TrelloCard>('/cards', undefined, {
+      query: { idList: params.idList, name: params.name, desc: params.desc, pos: params.pos ?? 'top' },
+    });
   }
   updateCard(cardId: string, patch: { name?: string; desc?: string; idList?: string; closed?: boolean }) {
     return this.http.put<TrelloCard>(`/cards/${cardId}`, undefined, { query: patch });

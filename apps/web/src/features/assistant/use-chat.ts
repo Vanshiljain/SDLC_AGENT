@@ -36,7 +36,16 @@ export function useChat(conversationId: string | null) {
     const off = realtime.on(
       (e) => {
         if (e.conversationId !== conversationId) return;
-        const data = e.data as { messageId?: string; delta?: string; callId?: string; tool?: string; title?: string; status?: ToolCallPart['status']; summary?: string | null; message?: Message };
+        const data = e.data as {
+          messageId?: string;
+          delta?: string;
+          callId?: string;
+          tool?: string;
+          title?: string;
+          status?: ToolCallPart['status'];
+          summary?: string | null;
+          message?: Message;
+        };
         const messageId = data.messageId;
         if (!messageId) return;
         if (e.type === 'agent.message.delta' && data.delta) {
@@ -44,8 +53,17 @@ export function useChat(conversationId: string | null) {
         } else if (e.type === 'agent.tool.started' || e.type === 'agent.tool.completed') {
           setStreams((s) => {
             const cur = s[messageId] ?? { text: '', tools: [] };
-            const part: ToolCallPart = { type: 'tool_call', callId: data.callId ?? '', tool: data.tool ?? '', title: data.title ?? data.tool ?? 'Tool', status: e.type === 'agent.tool.started' ? 'running' : (data.status ?? 'succeeded'), summary: data.summary ?? undefined };
-            const tools = cur.tools.some((t) => t.callId === part.callId) ? cur.tools.map((t) => (t.callId === part.callId ? part : t)) : [...cur.tools, part];
+            const part: ToolCallPart = {
+              type: 'tool_call',
+              callId: data.callId ?? '',
+              tool: data.tool ?? '',
+              title: data.title ?? data.tool ?? 'Tool',
+              status: e.type === 'agent.tool.started' ? 'running' : (data.status ?? 'succeeded'),
+              summary: data.summary ?? undefined,
+            };
+            const tools = cur.tools.some((t) => t.callId === part.callId)
+              ? cur.tools.map((t) => (t.callId === part.callId ? part : t))
+              : [...cur.tools, part];
             return { ...s, [messageId]: { ...cur, tools } };
           });
         } else if (e.type === 'agent.message.completed' && data.message) {
@@ -74,7 +92,9 @@ export function useChat(conversationId: string | null) {
     async (content: string, opts: { pageContext?: PageContext | null; projectId?: string | null } = {}): Promise<string> => {
       let id = idRef.current;
       if (!id) {
-        const created = await api.post<Conversation>('/conversations', { projectId: opts.projectId ?? opts.pageContext?.projectId ?? undefined });
+        const created = await api.post<Conversation>('/conversations', {
+          projectId: opts.projectId ?? opts.pageContext?.projectId ?? undefined,
+        });
         id = created.id;
         qc.setQueryData<ConversationDetail>(qk.conversation(id), { ...created, messages: [] });
         // Join the room before the turn starts so no deltas are missed; the view's own
@@ -82,8 +102,22 @@ export function useChat(conversationId: string | null) {
         const release = realtime.subscribe({ conversationId: id });
         setTimeout(release, 30_000);
       }
-      const res = await api.post<{ userMessage: Message; assistantMessage: Message }>(`/conversations/${id}/messages`, { content, pageContext: opts.pageContext ?? undefined });
-      qc.setQueryData<ConversationDetail>(qk.conversation(id), (old) => (old ? { ...old, messages: [...old.messages.filter((m) => m.id !== res.userMessage.id && m.id !== res.assistantMessage.id), res.userMessage, res.assistantMessage] } : old));
+      const res = await api.post<{ userMessage: Message; assistantMessage: Message }>(`/conversations/${id}/messages`, {
+        content,
+        pageContext: opts.pageContext ?? undefined,
+      });
+      qc.setQueryData<ConversationDetail>(qk.conversation(id), (old) =>
+        old
+          ? {
+              ...old,
+              messages: [
+                ...old.messages.filter((m) => m.id !== res.userMessage.id && m.id !== res.assistantMessage.id),
+                res.userMessage,
+                res.assistantMessage,
+              ],
+            }
+          : old,
+      );
       void qc.invalidateQueries({ queryKey: qk.conversations });
       return id;
     },

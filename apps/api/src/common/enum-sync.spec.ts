@@ -9,7 +9,13 @@ import * as shared from '@forgeline/shared';
 const schema = readFileSync(join(__dirname, '../../../../packages/database/prisma/schema.prisma'), 'utf8');
 const prismaEnums = new Map<string, string[]>();
 for (const m of schema.matchAll(/^enum (\w+) \{([^}]*)\}/gm)) {
-  prismaEnums.set(m[1]!, m[2]!.split('\n').map((l) => l.trim().split(/\s/)[0]!).filter((v) => v && !v.startsWith('//') && !v.startsWith('@@')));
+  prismaEnums.set(
+    m[1]!,
+    m[2]!
+      .split('\n')
+      .map((l) => l.trim().split(/\s/)[0]!)
+      .filter((v) => v && !v.startsWith('//') && !v.startsWith('@@')),
+  );
 }
 
 const PAIRS: [string, readonly string[]][] = [

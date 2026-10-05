@@ -1,7 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { flowPlanSchema, TEMPLATE_SYNTAX_HELP, type LlmProvider } from '@forgeline/ai';
-import { COMMANDS, type FlowProposalPart, type FlowProposalStep, type IntegrationProvider, type WorkflowDefinition, type WorkflowDefinitionInput } from '@forgeline/shared';
+import {
+  COMMANDS,
+  type FlowProposalPart,
+  type FlowProposalStep,
+  type IntegrationProvider,
+  type WorkflowDefinition,
+  type WorkflowDefinitionInput,
+} from '@forgeline/shared';
 import { evaluateCondition, resolveTemplates, validateWorkflowDefinition } from '@forgeline/workflow-engine';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { ToolRegistry } from '../tools/tool-registry.service';
@@ -60,7 +67,14 @@ export class PlannerService {
     return best;
   }
 
-  async plan(params: { organizationId: string; userId: string; projectId: string | null; request: string; context?: string; executionContext?: { executionId?: string | null } }): Promise<PlanResult> {
+  async plan(params: {
+    organizationId: string;
+    userId: string;
+    projectId: string | null;
+    request: string;
+    context?: string;
+    executionContext?: { executionId?: string | null };
+  }): Promise<PlanResult> {
     if (!params.projectId) params = { ...params, projectId: await this.inferProject(params.organizationId, params.request) };
     const project = await this.projects.load(params.organizationId, params.projectId);
     let title: string;
@@ -72,11 +86,19 @@ export class PlannerService {
 
     if (this.llm.isConfigured()) {
       const templates = FLOW_TEMPLATES.map((t) => {
-        const inputs = Object.entries(this.workflows.templateDefinition(t.key).inputs).map(([k, v]) => `${k}${v.required ? '' : '?'}:${v.type}`).join(', ');
+        const inputs = Object.entries(this.workflows.templateDefinition(t.key).inputs)
+          .map(([k, v]) => `${k}${v.required ? '' : '?'}:${v.type}`)
+          .join(', ');
         return `- ${t.key}: ${t.name} — ${t.description} Inputs: {${inputs}}`;
       }).join('\n');
       const { output } = await this.tasks.structured({
-        ctx: { organizationId: params.organizationId, userId: params.userId, executionId: params.executionContext?.executionId ?? null, signal: new AbortController().signal, logger: { debug() {}, info() {}, warn() {}, error() {} } },
+        ctx: {
+          organizationId: params.organizationId,
+          userId: params.userId,
+          executionId: params.executionContext?.executionId ?? null,
+          signal: new AbortController().signal,
+          logger: { debug() {}, info() {}, warn() {}, error() {} },
+        },
         agent: 'planning',
         task: 'Plan flow',
         prompt: 'planFlow',
@@ -84,7 +106,9 @@ export class PlannerService {
           templates,
           tools: this.registry.promptCatalog(),
           templateSyntax: TEMPLATE_SYNTAX_HELP,
-          project: project ? `${project.name} (${project.key}); repository: ${project.repository?.fullName ?? 'none'}; environments: ${project.environments.map((e) => `${e.name}:${e.type}`).join(', ')}` : 'No project selected',
+          project: project
+            ? `${project.name} (${project.key}); repository: ${project.repository?.fullName ?? 'none'}; environments: ${project.environments.map((e) => `${e.name}:${e.type}`).join(', ')}`
+            : 'No project selected',
           context: forPrompt(params.context, 8000),
           request: params.request,
         },
@@ -117,7 +141,10 @@ export class PlannerService {
           // Fall back to the closest template rather than executing an invalid plan.
           template = this.heuristicTemplate(params.request).template;
           definition = this.workflows.templateDefinition(template);
-          summary = `${summary} (custom plan was invalid: ${res.issues.slice(0, 2).map((i) => i.message).join('; ')} — using the "${findTemplate(template)?.name}" flow instead)`;
+          summary = `${summary} (custom plan was invalid: ${res.issues
+            .slice(0, 2)
+            .map((i) => i.message)
+            .join('; ')} — using the "${findTemplate(template)?.name}" flow instead)`;
         } else {
           definition = res.definition;
         }
@@ -141,7 +168,17 @@ export class PlannerService {
       if (env) input.environment = env.name;
     }
 
-    const proposal: StoredProposal = { id: randomUUID(), title, summary, template, projectId: params.projectId, definition, input, createdAt: new Date().toISOString(), source };
+    const proposal: StoredProposal = {
+      id: randomUUID(),
+      title,
+      summary,
+      template,
+      projectId: params.projectId,
+      definition,
+      input,
+      createdAt: new Date().toISOString(),
+      source,
+    };
     return { proposal, part: await this.describe(params.organizationId, proposal) };
   }
 
@@ -150,7 +187,10 @@ export class PlannerService {
    * or the workspace's only project. Ambiguity leaves it unset rather than guessing.
    */
   private async inferProject(organizationId: string, request: string): Promise<string | null> {
-    const projects = await this.prisma.project.findMany({ where: { organizationId, deletedAt: null }, select: { id: true, name: true, key: true } });
+    const projects = await this.prisma.project.findMany({
+      where: { organizationId, deletedAt: null },
+      select: { id: true, name: true, key: true },
+    });
     if (projects.length === 1) return projects[0]!.id;
     const text = request.toLowerCase();
     const named = projects.filter((p) => text.includes(p.name.toLowerCase()) || new RegExp(`\\b${p.key.toLowerCase()}\\b`).test(text));
@@ -165,7 +205,10 @@ export class PlannerService {
     const missing = new Set<string>();
     const approvals: string[] = [];
     const steps: FlowProposalStep[] = [];
-    const withDefaults: Record<string, unknown> = { ...Object.fromEntries(Object.entries(proposal.definition.inputs).map(([k, v]) => [k, v.default])), ...proposal.input };
+    const withDefaults: Record<string, unknown> = {
+      ...Object.fromEntries(Object.entries(proposal.definition.inputs).map(([k, v]) => [k, v.default])),
+      ...proposal.input,
+    };
     for (const s of proposal.definition.steps) {
       const tool = s.tool ? this.registry.get(s.tool) : undefined;
       // Conditions that depend only on inputs can be decided now (e.g. an optional plan-approval gate).
@@ -178,7 +221,15 @@ export class PlannerService {
         }
       }
       if (skippedByInputs) {
-        steps.push({ key: s.key, name: s.name, tool: s.tool, type: s.type, dependsOn: s.dependsOn, requiresApproval: false, agent: s.agent ?? tool?.agent });
+        steps.push({
+          key: s.key,
+          name: s.name,
+          tool: s.tool,
+          type: s.type,
+          dependsOn: s.dependsOn,
+          requiresApproval: false,
+          agent: s.agent ?? tool?.agent,
+        });
         continue;
       }
       let requiresApproval = s.type === 'approval';
@@ -202,12 +253,25 @@ export class PlannerService {
         }
         const provider = tool.provider;
         if (provider && !org.isDemo) {
-          const satisfied = provider === 'CUSTOM_DEVOPS' ? connected.has('CUSTOM_DEVOPS') || connected.has('GITHUB_ACTIONS') || connected.has('GITHUB') : provider === 'GITHUB_ACTIONS' ? connected.has('GITHUB_ACTIONS') || connected.has('GITHUB') : connected.has(provider);
+          const satisfied =
+            provider === 'CUSTOM_DEVOPS'
+              ? connected.has('CUSTOM_DEVOPS') || connected.has('GITHUB_ACTIONS') || connected.has('GITHUB')
+              : provider === 'GITHUB_ACTIONS'
+                ? connected.has('GITHUB_ACTIONS') || connected.has('GITHUB')
+                : connected.has(provider);
           if (!satisfied) missing.add(provider);
         }
       }
       if (s.type === 'approval') approvals.push(s.approval?.title && !s.approval.title.includes('{{') ? s.approval.title : s.name);
-      steps.push({ key: s.key, name: s.name, tool: s.tool, type: s.type, dependsOn: s.dependsOn, requiresApproval, agent: s.agent ?? tool?.agent });
+      steps.push({
+        key: s.key,
+        name: s.name,
+        tool: s.tool,
+        type: s.type,
+        dependsOn: s.dependsOn,
+        requiresApproval,
+        agent: s.agent ?? tool?.agent,
+      });
     }
     return {
       type: 'flow_proposal',

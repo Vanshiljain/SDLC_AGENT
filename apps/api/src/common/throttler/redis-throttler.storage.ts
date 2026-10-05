@@ -38,7 +38,12 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
 
   async increment(key: string, ttl: number, limit: number, blockDuration: number, throttlerName: string): Promise<ThrottlerStorageRecord> {
     const base = `forgeline:rl:${throttlerName}:${key}`;
-    const res = (await this.redis.eval(SCRIPT, 2, `${base}:hits`, `${base}:block`, ttl, limit, blockDuration || ttl)) as [number, number, number, number];
+    const res = (await this.redis.eval(SCRIPT, 2, `${base}:hits`, `${base}:block`, ttl, limit, blockDuration || ttl)) as [
+      number,
+      number,
+      number,
+      number,
+    ];
     return {
       totalHits: Number(res[0]),
       timeToExpire: Math.max(0, Math.ceil(Number(res[1]) / 1000)),

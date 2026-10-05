@@ -30,7 +30,11 @@ class RealtimeClient {
     }
     this.disconnect();
     this.key = key;
-    const socket = io(`${API_BASE}/realtime`, { auth: { token, organizationId }, transports: ['websocket', 'polling'], reconnectionDelayMax: 8000 });
+    const socket = io(`${API_BASE}/realtime`, {
+      auth: { token, organizationId },
+      transports: ['websocket', 'polling'],
+      reconnectionDelayMax: 8000,
+    });
     socket.on('connect', () => {
       this.setStatus(true);
       for (const room of this.rooms.keys()) socket.emit('subscribe', JSON.parse(room) as Record<string, string>);

@@ -86,21 +86,36 @@ export class CredentialVault {
         try {
           // Re-read: another worker may have refreshed while we waited.
           const row = await this.prisma.integrationCredential.findUniqueOrThrow({ where: { integrationId } });
-          const current = this.crypto.decryptJson<CredentialBundle>({ ciphertext: row.ciphertext, keyVersion: row.keyVersion }, integrationId);
+          const current = this.crypto.decryptJson<CredentialBundle>(
+            { ciphertext: row.ciphertext, keyVersion: row.keyVersion },
+            integrationId,
+          );
           if (row.expiresAt && row.expiresAt.getTime() - Date.now() >= REFRESH_SKEW_MS) return current;
           const refreshToken = 'refreshToken' in current ? current.refreshToken : undefined;
           if (!refreshToken) return current;
           const clientConfig = this.clientConfigFor(provider);
           const tokens = await refreshAccessToken(provider, { config: clientConfig, refreshToken }, this.oauthEndpoints());
-          const next = { ...current, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken ?? refreshToken } as CredentialBundle;
+          const next = {
+            ...current,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken ?? refreshToken,
+          } as CredentialBundle;
           await this.store(integrationId, next, tokens.expiresAt ?? null);
           this.logger.log({ integrationId, provider }, 'Refreshed OAuth access token');
           return next;
         } catch (err) {
-          await this.prisma.integration.update({ where: { id: integrationId }, data: { status: 'EXPIRED', healthStatus: 'UNHEALTHY', healthMessage: `Token refresh failed: ${(err as Error).message}` } });
+          await this.prisma.integration.update({
+            where: { id: integrationId },
+            data: { status: 'EXPIRED', healthStatus: 'UNHEALTHY', healthMessage: `Token refresh failed: ${(err as Error).message}` },
+          });
           throw new ToolError('auth', `${provider} token refresh failed — reconnect the integration`, { retryable: false, cause: err });
         } finally {
-          await this.redis.client.eval("if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end", 1, lockKey, token);
+          await this.redis.client.eval(
+            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+            1,
+            lockKey,
+            token,
+          );
         }
       }
       await new Promise((r) => setTimeout(r, 250));
@@ -116,7 +131,8 @@ export class CredentialVault {
       NOTION: this.config.oauth.notion,
     };
     const c = map[provider];
-    if (!c?.clientId || !c.clientSecret) throw new ToolError('not_configured', `OAuth is not configured for ${provider}`, { retryable: false });
+    if (!c?.clientId || !c.clientSecret)
+      throw new ToolError('not_configured', `OAuth is not configured for ${provider}`, { retryable: false });
     return { clientId: c.clientId, clientSecret: c.clientSecret };
   }
 }

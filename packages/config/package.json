@@ -2,5 +2,8 @@
   "name": "@forgeline/config",
   "version": "0.1.0",
   "private": true,
-  "files": ["tsconfig.base.json", "tsconfig.node.json"]
+  "files": [
+    "tsconfig.base.json",
+    "tsconfig.node.json"
+  ]
 }

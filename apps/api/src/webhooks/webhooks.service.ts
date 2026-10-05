@@ -46,7 +46,10 @@ export class WebhooksService {
   ) {}
 
   private verify(webhook: Webhook, inbound: InboundWebhook): boolean {
-    const secret = this.crypto.decrypt({ ciphertext: webhook.secretCiphertext, keyVersion: webhook.keyVersion }, `webhook:${webhook.integrationId}`);
+    const secret = this.crypto.decrypt(
+      { ciphertext: webhook.secretCiphertext, keyVersion: webhook.keyVersion },
+      `webhook:${webhook.integrationId}`,
+    );
     switch (inbound.provider) {
       case 'GITHUB':
       case 'GITHUB_ACTIONS':
@@ -55,9 +58,22 @@ export class WebhooksService {
         return verifyJiraSignature(secret, inbound.rawBody, header(inbound.headers, 'x-hub-signature'));
       case 'TRELLO':
         // Trello signs with the application secret over body + callback URL.
-        return Boolean(this.config.oauth.trello.apiSecret) && verifyTrelloSignature(this.config.oauth.trello.apiSecret!, inbound.rawBody, inbound.url, header(inbound.headers, 'x-trello-webhook'));
+        return (
+          Boolean(this.config.oauth.trello.apiSecret) &&
+          verifyTrelloSignature(
+            this.config.oauth.trello.apiSecret!,
+            inbound.rawBody,
+            inbound.url,
+            header(inbound.headers, 'x-trello-webhook'),
+          )
+        );
       default:
-        return verifyTimestampedSignature(secret, inbound.rawBody, header(inbound.headers, 'x-forgeline-timestamp'), header(inbound.headers, 'x-forgeline-signature'));
+        return verifyTimestampedSignature(
+          secret,
+          inbound.rawBody,
+          header(inbound.headers, 'x-forgeline-timestamp'),
+          header(inbound.headers, 'x-forgeline-signature'),
+        );
     }
   }
 
@@ -72,19 +88,31 @@ export class WebhooksService {
         return { deliveryId, events: [{ name: `github.${type}${action}`, deliveryId, payload: b }] };
       }
       case 'JIRA': {
-        const deliveryId = header(inbound.headers, 'x-atlassian-webhook-identifier') ?? `${String(b.timestamp ?? Date.now())}-${String((b.issue as { key?: string } | undefined)?.key ?? '')}`;
+        const deliveryId =
+          header(inbound.headers, 'x-atlassian-webhook-identifier') ??
+          `${String(b.timestamp ?? Date.now())}-${String((b.issue as { key?: string } | undefined)?.key ?? '')}`;
         const event = String(b.webhookEvent ?? 'jira:unknown');
         const events: ExternalEvent[] = [{ name: event.replace('jira:', 'jira.').replace(/_/g, '.'), deliveryId, payload: b }];
         const changelog = (b.changelog as { items?: { field: string; fromString?: string; toString?: string }[] } | undefined)?.items ?? [];
         const statusChange = changelog.find((i) => i.field === 'status');
-        if (statusChange) events.push({ name: 'jira.issue.transitioned', deliveryId: `${deliveryId}:transition`, payload: { ...b, fromStatus: statusChange.fromString, toStatus: statusChange.toString } });
+        if (statusChange)
+          events.push({
+            name: 'jira.issue.transitioned',
+            deliveryId: `${deliveryId}:transition`,
+            payload: { ...b, fromStatus: statusChange.fromString, toStatus: statusChange.toString },
+          });
         return { deliveryId, events };
       }
       case 'TRELLO': {
         const action = (b.action ?? {}) as { id?: string; type?: string; data?: { listAfter?: { name: string } } };
         const deliveryId = action.id ?? `trello-${Date.now()}`;
         const events: ExternalEvent[] = [{ name: `trello.${action.type ?? 'unknown'}`, deliveryId, payload: b }];
-        if (action.data?.listAfter) events.push({ name: 'trello.card.moved', deliveryId: `${deliveryId}:moved`, payload: { ...b, toList: action.data.listAfter.name } });
+        if (action.data?.listAfter)
+          events.push({
+            name: 'trello.card.moved',
+            deliveryId: `${deliveryId}:moved`,
+            payload: { ...b, toList: action.data.listAfter.name },
+          });
         return { deliveryId, events };
       }
       default: {
@@ -96,21 +124,40 @@ export class WebhooksService {
 
   async handle(inbound: InboundWebhook): Promise<{ status: string; executions: string[] }> {
     const webhook = await this.prisma.webhook.findUnique({ where: { id: inbound.webhookId }, include: { integration: true } });
-    const providerMatches = webhook && (webhook.provider === inbound.provider || (webhook.provider === 'GITHUB' && inbound.provider === 'GITHUB_ACTIONS'));
+    const providerMatches =
+      webhook && (webhook.provider === inbound.provider || (webhook.provider === 'GITHUB' && inbound.provider === 'GITHUB_ACTIONS'));
     if (!webhook || !webhook.isActive || !providerMatches) throw AppException.notFound('Webhook');
     const signatureValid = this.verify(webhook, inbound);
     const { deliveryId, events } = this.normalise(inbound);
     let delivery;
     try {
       delivery = await this.prisma.webhookDelivery.create({
-        data: { webhookId: webhook.id, organizationId: webhook.organizationId, provider: webhook.provider, deliveryId, eventType: events[0]?.name ?? 'unknown', signatureValid, payload: inbound.body as Prisma.InputJsonValue, status: signatureValid ? 'RECEIVED' : 'REJECTED' },
+        data: {
+          webhookId: webhook.id,
+          organizationId: webhook.organizationId,
+          provider: webhook.provider,
+          deliveryId,
+          eventType: events[0]?.name ?? 'unknown',
+          signatureValid,
+          payload: inbound.body as Prisma.InputJsonValue,
+          status: signatureValid ? 'RECEIVED' : 'REJECTED',
+        },
       });
     } catch (err) {
       if (isUniqueViolation(err)) return { status: 'duplicate', executions: [] };
       throw err;
     }
     if (!signatureValid) {
-      await this.audit.record({ organizationId: webhook.organizationId, actorType: 'WEBHOOK', actorId: null, action: 'webhook.rejected', resourceType: 'webhook', resourceId: webhook.id, status: 'DENIED', output: { reason: 'invalid signature', provider: inbound.provider } });
+      await this.audit.record({
+        organizationId: webhook.organizationId,
+        actorType: 'WEBHOOK',
+        actorId: null,
+        action: 'webhook.rejected',
+        resourceType: 'webhook',
+        resourceId: webhook.id,
+        status: 'DENIED',
+        output: { reason: 'invalid signature', provider: inbound.provider },
+      });
       throw AppException.unauthorized('Invalid webhook signature', 'INVALID_SIGNATURE');
     }
     await this.prisma.webhook.update({ where: { id: webhook.id }, data: { lastDeliveryAt: new Date() } });
@@ -119,12 +166,27 @@ export class WebhooksService {
     try {
       for (const event of events) executions.push(...(await this.triggers.dispatchEvent(webhook.organizationId, event)));
       executions.push(...(await this.slashCommands(webhook, inbound, deliveryId)));
-      await this.prisma.webhookDelivery.update({ where: { id: delivery.id }, data: { status: executions.length ? 'PROCESSED' : 'IGNORED', processedAt: new Date(), executionIds: executions } });
+      await this.prisma.webhookDelivery.update({
+        where: { id: delivery.id },
+        data: { status: executions.length ? 'PROCESSED' : 'IGNORED', processedAt: new Date(), executionIds: executions },
+      });
     } catch (err) {
-      await this.prisma.webhookDelivery.update({ where: { id: delivery.id }, data: { status: 'FAILED', error: (err as Error).message.slice(0, 1000), processedAt: new Date() } });
+      await this.prisma.webhookDelivery.update({
+        where: { id: delivery.id },
+        data: { status: 'FAILED', error: (err as Error).message.slice(0, 1000), processedAt: new Date() },
+      });
       this.logger.error({ err: (err as Error).message, deliveryId }, 'Webhook processing failed');
     }
-    await this.audit.record({ organizationId: webhook.organizationId, actorType: 'WEBHOOK', actorId: null, actorLabel: inbound.provider, action: 'webhook.received', resourceType: 'webhook', resourceId: webhook.id, output: { event: events[0]?.name, executions } });
+    await this.audit.record({
+      organizationId: webhook.organizationId,
+      actorType: 'WEBHOOK',
+      actorId: null,
+      actorLabel: inbound.provider,
+      action: 'webhook.received',
+      resourceType: 'webhook',
+      resourceId: webhook.id,
+      output: { event: events[0]?.name, executions },
+    });
     return { status: 'accepted', executions };
   }
 
@@ -133,7 +195,11 @@ export class WebhooksService {
    * The run acts as the user who connected the integration; every tool call is
    * still permission-checked and policy gates still apply.
    */
-  private async slashCommands(webhook: Webhook & { integration: { connectedById: string | null } | null }, inbound: InboundWebhook, deliveryId: string): Promise<string[]> {
+  private async slashCommands(
+    webhook: Webhook & { integration: { connectedById: string | null } | null },
+    inbound: InboundWebhook,
+    deliveryId: string,
+  ): Promise<string[]> {
     const principal = webhook.integration?.connectedById;
     if (!principal) return [];
     const b = inbound.body;
@@ -143,7 +209,9 @@ export class WebhooksService {
       const issue = b.issue as { number: number; pull_request?: unknown };
       const repoFull = String((b.repository as { full_name?: string })?.full_name ?? '');
       if (/^\/forgeline\s+review\b/im.test(comment) && issue?.pull_request) {
-        const repo = await this.prisma.repository.findFirst({ where: { organizationId: webhook.organizationId, fullName: repoFull, deletedAt: null } });
+        const repo = await this.prisma.repository.findFirst({
+          where: { organizationId: webhook.organizationId, fullName: repoFull, deletedAt: null },
+        });
         if (repo) {
           const exec = await this.executions.start({
             organizationId: webhook.organizationId,
@@ -166,9 +234,23 @@ export class WebhooksService {
       const issue = b.issue as { key?: string; fields?: { summary?: string; project?: { key?: string } } } | undefined;
       const match = /\/forgeline\s+(implement|plan|spec)\b/i.exec(text);
       if (match && issue?.key) {
-        const project = await this.prisma.project.findFirst({ where: { organizationId: webhook.organizationId, deletedAt: null, OR: [{ key: issue.fields?.project?.key ?? '' }, { settings: { path: ['jiraProjectKey'], equals: issue.fields?.project?.key ?? '' } }] } });
+        const project = await this.prisma.project.findFirst({
+          where: {
+            organizationId: webhook.organizationId,
+            deletedAt: null,
+            OR: [
+              { key: issue.fields?.project?.key ?? '' },
+              { settings: { path: ['jiraProjectKey'], equals: issue.fields?.project?.key ?? '' } },
+            ],
+          },
+        });
         if (project) {
-          const template = match[1]!.toLowerCase() === 'implement' ? 'implement_change' : match[1]!.toLowerCase() === 'plan' ? 'implementation_plan' : 'technical_spec';
+          const template =
+            match[1]!.toLowerCase() === 'implement'
+              ? 'implement_change'
+              : match[1]!.toLowerCase() === 'plan'
+                ? 'implementation_plan'
+                : 'technical_spec';
           const exec = await this.executions.start({
             organizationId: webhook.organizationId,
             projectId: project.id,

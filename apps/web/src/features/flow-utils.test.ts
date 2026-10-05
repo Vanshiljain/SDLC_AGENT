@@ -1,7 +1,15 @@
 import type { StepDefinition } from '@forgeline/shared';
 import { ancestors, uniqueKey, wouldCycle } from './flow-utils';
 
-const s = (key: string, dependsOn: string[] = []): StepDefinition => ({ key, name: key, type: 'tool', input: {}, dependsOn, runIf: 'all_success', continueOnError: false });
+const s = (key: string, dependsOn: string[] = []): StepDefinition => ({
+  key,
+  name: key,
+  type: 'tool',
+  input: {},
+  dependsOn,
+  runIf: 'all_success',
+  continueOnError: false,
+});
 
 describe('flow builder helpers', () => {
   const steps = [s('a'), s('b', ['a']), s('c', ['b'])];

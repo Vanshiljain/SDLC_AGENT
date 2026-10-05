@@ -4,7 +4,9 @@ import type { PrismaService } from '../common/prisma/prisma.service';
 import { ApprovalPolicyService } from './approval-policy.service';
 
 function service(orgSettings: Record<string, unknown> = {}) {
-  const prisma = { organization: { findUniqueOrThrow: jest.fn().mockResolvedValue({ settings: orgSettings }) } } as unknown as PrismaService;
+  const prisma = {
+    organization: { findUniqueOrThrow: jest.fn().mockResolvedValue({ settings: orgSettings }) },
+  } as unknown as PrismaService;
   const orgs = Object.create(OrganizationsService.prototype) as OrganizationsService;
   return new ApprovalPolicyService(prisma, orgs);
 }

@@ -9,7 +9,8 @@ import { BullJobQueue, InlineJobQueue, JobQueue } from './job-queue.service';
     {
       provide: JobQueue,
       inject: [APP_CONFIG, MetricsService],
-      useFactory: (c: AppConfig, metrics: MetricsService) => (c.queueDriver === 'inline' ? new InlineJobQueue() : new BullJobQueue(c, metrics)),
+      useFactory: (c: AppConfig, metrics: MetricsService) =>
+        c.queueDriver === 'inline' ? new InlineJobQueue() : new BullJobQueue(c, metrics),
     },
   ],
   exports: [JobQueue],

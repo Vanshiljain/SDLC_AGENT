@@ -17,8 +17,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleInit(): Promise<void> {
-    (this as unknown as { $on: (e: string, cb: (ev: { message: string }) => void) => void }).$on('warn', (e) => this.logger.warn(e.message));
-    (this as unknown as { $on: (e: string, cb: (ev: { message: string }) => void) => void }).$on('error', (e) => this.logger.error(e.message));
+    (this as unknown as { $on: (e: string, cb: (ev: { message: string }) => void) => void }).$on('warn', (e) =>
+      this.logger.warn(e.message),
+    );
+    (this as unknown as { $on: (e: string, cb: (ev: { message: string }) => void) => void }).$on('error', (e) =>
+      this.logger.error(e.message),
+    );
     await this.$connect();
   }
 

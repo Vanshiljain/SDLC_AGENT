@@ -37,7 +37,12 @@ export class NotionClient {
   async search(query: string, pageSize = 20): Promise<NotionPage[]> {
     const res = await this.http.post<{ results: NotionPage[] }>(
       '/search',
-      { query, filter: { property: 'object', value: 'page' }, page_size: pageSize, sort: { direction: 'descending', timestamp: 'last_edited_time' } },
+      {
+        query,
+        filter: { property: 'object', value: 'page' },
+        page_size: pageSize,
+        sort: { direction: 'descending', timestamp: 'last_edited_time' },
+      },
       { retry: true },
     );
     return res.results;
@@ -47,13 +52,17 @@ export class NotionClient {
     return this.http.get<NotionPage>(`/pages/${pageId}`);
   }
 
-  async createPage(params: { parentPageId?: string; parentDatabaseId?: string; title: string; markdown: string; icon?: string }): Promise<NotionPage> {
+  async createPage(params: {
+    parentPageId?: string;
+    parentDatabaseId?: string;
+    title: string;
+    markdown: string;
+    icon?: string;
+  }): Promise<NotionPage> {
     const blocks = markdownToBlocks(params.markdown);
     const first = blocks.slice(0, MAX_BLOCKS_PER_REQUEST);
     const parent = params.parentDatabaseId ? { database_id: params.parentDatabaseId } : { page_id: params.parentPageId };
-    const properties = params.parentDatabaseId
-      ? { Name: { title: richText(params.title) } }
-      : { title: { title: richText(params.title) } };
+    const properties = params.parentDatabaseId ? { Name: { title: richText(params.title) } } : { title: { title: richText(params.title) } };
     const page = await this.http.post<NotionPage>('/pages', {
       parent,
       properties,
@@ -78,9 +87,12 @@ export class NotionClient {
     const all: NotionBlock[] = [];
     let cursor: string | undefined;
     do {
-      const res = await this.http.get<{ results: NotionBlock[]; has_more: boolean; next_cursor: string | null }>(`/blocks/${blockId}/children`, {
-        query: { page_size: 100, start_cursor: cursor },
-      });
+      const res = await this.http.get<{ results: NotionBlock[]; has_more: boolean; next_cursor: string | null }>(
+        `/blocks/${blockId}/children`,
+        {
+          query: { page_size: 100, start_cursor: cursor },
+        },
+      );
       all.push(...res.results);
       cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined;
     } while (cursor && all.length < 2000);

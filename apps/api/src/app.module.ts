@@ -61,7 +61,9 @@ import { DashboardModule } from './dashboard/dashboard.module';
             req: (req: { id: string; method: string; url: string }) => ({ id: req.id, method: req.method, url: req.url?.split('?')[0] }),
             res: (res: { statusCode: number }) => ({ statusCode: res.statusCode }),
           },
-          ...(c.env === 'development' && { transport: { target: 'pino-pretty', options: { singleLine: true, translateTime: 'HH:MM:ss.l', ignore: 'pid,hostname' } } }),
+          ...(c.env === 'development' && {
+            transport: { target: 'pino-pretty', options: { singleLine: true, translateTime: 'HH:MM:ss.l', ignore: 'pid,hostname' } },
+          }),
         },
       }),
     }),

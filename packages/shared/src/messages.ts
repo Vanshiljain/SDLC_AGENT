@@ -6,15 +6,7 @@ import type { ArtifactType, ExecutionStatus, StepStatus } from './enums';
  * rather than plain text.
  */
 export type MessagePart =
-  | TextPart
-  | RunCardPart
-  | FlowProposalPart
-  | ToolCallPart
-  | ArtifactPart
-  | ApprovalPart
-  | EntityPart
-  | SourcesPart
-  | ErrorPart;
+  TextPart | RunCardPart | FlowProposalPart | ToolCallPart | ArtifactPart | ApprovalPart | EntityPart | SourcesPart | ErrorPart;
 
 export interface TextPart {
   type: 'text';
@@ -102,17 +94,7 @@ export interface PageContext {
   route: string;
   title?: string;
   entity?: {
-    kind:
-      | 'project'
-      | 'execution'
-      | 'workflow'
-      | 'deployment'
-      | 'code_review'
-      | 'qa_run'
-      | 'approval'
-      | 'task'
-      | 'document'
-      | 'repository';
+    kind: 'project' | 'execution' | 'workflow' | 'deployment' | 'code_review' | 'qa_run' | 'approval' | 'task' | 'document' | 'repository';
     id: string;
     label?: string;
   };

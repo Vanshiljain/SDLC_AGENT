@@ -22,7 +22,11 @@ export class ApprovalContextBuilder {
     private readonly risk: RiskAssessor,
   ) {}
 
-  async build(execution: WorkflowExecution, steps: WorkflowExecutionStep[], params: { action: string; environment?: string | null; version?: string | null; userId: string | null }) {
+  async build(
+    execution: WorkflowExecution,
+    steps: WorkflowExecutionStep[],
+    params: { action: string; environment?: string | null; version?: string | null; userId: string | null },
+  ) {
     const codegen = lastOutput(steps, ['code.generate', 'code.fix']);
     const pr = lastOutput(steps, ['github.createPullRequest', 'github.getPullRequest']);
     const ci = lastOutput(steps, ['github_actions.awaitRuns', 'devops.runPipeline']);
@@ -47,7 +51,13 @@ export class ApprovalContextBuilder {
           : ci.conclusion || ci.status === 'failed'
             ? 'failed'
             : 'pending';
-    const qaStatus: ApprovalEvidence['qa']['status'] = !qa ? 'not_run' : qa.status === 'PASSED' ? 'passed' : qa.status === 'SKIPPED' ? 'skipped' : 'failed';
+    const qaStatus: ApprovalEvidence['qa']['status'] = !qa
+      ? 'not_run'
+      : qa.status === 'PASSED'
+        ? 'passed'
+        : qa.status === 'SKIPPED'
+          ? 'skipped'
+          : 'failed';
     const dims = (review?.dimensions ?? {}) as Record<string, string>;
     const evidence: ApprovalEvidence = {
       action: params.action,

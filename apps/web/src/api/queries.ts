@@ -1,4 +1,12 @@
-import { keepPreviousData, QueryClient, useMutation, useQuery, useQueryClient, type QueryKey, type UseQueryOptions } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryKey,
+  type UseQueryOptions,
+} from '@tanstack/react-query';
 import type { MeResponse, Paginated } from '@forgeline/shared';
 import { toast } from 'sonner';
 import { api, ApiError, errorMessage } from './client';
@@ -68,10 +76,13 @@ export const useMe = (enabled = true) => useGet<MeResponse>(qk.me, '/auth/me', u
 export const useDashboard = () => useGet<T.DashboardData>(qk.dashboard, '/dashboard', undefined, { refetchInterval: 60_000 });
 export const useProjects = () => useGet<T.ProjectSummary[]>(qk.projects, '/projects');
 export const useProject = (id: string) => useGet<T.ProjectDetail>(qk.project(id), `/projects/${id}`);
-export const useExecutions = (q: Q) => useGet<Paginated<T.ExecutionListItem>>(qk.executions(q), '/workflow-executions', q, { placeholderData: keepPreviousData });
+export const useExecutions = (q: Q) =>
+  useGet<Paginated<T.ExecutionListItem>>(qk.executions(q), '/workflow-executions', q, { placeholderData: keepPreviousData });
 export const useExecution = (id: string) => useGet<T.ExecutionDetail>(qk.execution(id), `/workflow-executions/${id}`);
-export const useExecutionLogs = (id: string) => useGet<T.ExecutionLog[]>(qk.executionLogs(id), `/workflow-executions/${id}/logs`, { limit: 2000 });
-export const useApprovals = (q: Q) => useGet<Paginated<T.Approval>>(qk.approvals(q), '/approvals', q, { placeholderData: keepPreviousData });
+export const useExecutionLogs = (id: string) =>
+  useGet<T.ExecutionLog[]>(qk.executionLogs(id), `/workflow-executions/${id}/logs`, { limit: 2000 });
+export const useApprovals = (q: Q) =>
+  useGet<Paginated<T.Approval>>(qk.approvals(q), '/approvals', q, { placeholderData: keepPreviousData });
 export const useApproval = (id: string) => useGet<T.Approval>(qk.approval(id), `/approvals/${id}`);
 export const useWorkflows = () => useGet<T.Workflow[]>(qk.workflows, '/workflows');
 export const useWorkflow = (id: string, enabled = true) => useGet<T.Workflow>(qk.workflow(id), `/workflows/${id}`, undefined, { enabled });
@@ -79,35 +90,49 @@ export const useTemplates = () => useGet<T.FlowTemplate[]>(qk.templates, '/workf
 export const useTools = () => useGet<T.ToolInfo[]>(qk.tools, '/tools', undefined, { staleTime: 10 * 60_000 });
 export const useCommands = () => useGet<T.CommandCatalog>(qk.commands, '/commands', undefined, { staleTime: 10 * 60_000 });
 export const useConversations = () => useGet<T.Conversation[]>(qk.conversations, '/conversations');
-export const useConversation = (id: string | null) => useGet<T.ConversationDetail>(qk.conversation(id ?? 'none'), `/conversations/${id}`, undefined, { enabled: Boolean(id) });
+export const useConversation = (id: string | null) =>
+  useGet<T.ConversationDetail>(qk.conversation(id ?? 'none'), `/conversations/${id}`, undefined, { enabled: Boolean(id) });
 export const useIntegrations = () => useGet<T.Integration[]>(qk.integrations, '/integrations');
 export const useProviders = () => useGet<T.ProviderInfo[]>(qk.providers, '/integrations/providers', undefined, { staleTime: 10 * 60_000 });
-export const useDeployments = (q: Q) => useGet<Paginated<T.Deployment>>(qk.deployments(q), '/deployments', q, { placeholderData: keepPreviousData });
+export const useDeployments = (q: Q) =>
+  useGet<Paginated<T.Deployment>>(qk.deployments(q), '/deployments', q, { placeholderData: keepPreviousData });
 export const useEnvironmentBoard = () => useGet<T.EnvironmentBoardItem[]>(qk.environments, '/deployments/environments');
 export const useGraph = (q: Q) => useGet<T.EngineeringGraph>(qk.graph(q), '/graph', q);
-export const useKnowledge = (q: Q) => useGet<Paginated<T.KnowledgeDocument>>(qk.knowledge(q), '/knowledge/documents', q, { placeholderData: keepPreviousData });
+export const useKnowledge = (q: Q) =>
+  useGet<Paginated<T.KnowledgeDocument>>(qk.knowledge(q), '/knowledge/documents', q, { placeholderData: keepPreviousData });
 export const useKnowledgeStats = () => useGet<T.KnowledgeStats>(qk.knowledgeStats, '/knowledge/stats');
 export const useAgents = () => useGet<T.AgentInfo[]>(qk.agents, '/agents');
-export const useAgentRuns = (q: Q) => useGet<Paginated<T.AgentRun>>(qk.agentRuns(q), '/agents/runs', q, { placeholderData: keepPreviousData });
+export const useAgentRuns = (q: Q) =>
+  useGet<Paginated<T.AgentRun>>(qk.agentRuns(q), '/agents/runs', q, { placeholderData: keepPreviousData });
 export const useNotifications = () => useGet<T.Notification[]>(qk.notifications, '/notifications');
-export const useUnreadCount = () => useGet<{ count: number }>(qk.unread, '/notifications/unread-count', undefined, { refetchInterval: 120_000 });
+export const useUnreadCount = () =>
+  useGet<{ count: number }>(qk.unread, '/notifications/unread-count', undefined, { refetchInterval: 120_000 });
 export const useAudit = (q: Q) => useGet<Paginated<T.AuditEntry>>(qk.audit(q), '/audit', q, { placeholderData: keepPreviousData });
 export const useObservability = () => useGet<T.ObservabilitySummary>(qk.observability, '/observability/summary');
 export const useOrganization = () => useGet<T.Organization>(qk.org, '/organizations/current');
 export const useMembers = () => useGet<{ members: T.Member[]; invitations: T.Invitation[] }>(qk.members, '/organizations/current/members');
 export const useTeams = () => useGet<T.Team[]>(qk.teams, '/organizations/current/teams');
-export const useReviews = (q: Q) => useGet<Paginated<T.CodeReviewSummary>>(qk.reviews(q), '/code-review', q, { placeholderData: keepPreviousData });
+export const useReviews = (q: Q) =>
+  useGet<Paginated<T.CodeReviewSummary>>(qk.reviews(q), '/code-review', q, { placeholderData: keepPreviousData });
 export const useReview = (id: string) => useGet<T.CodeReviewDetail>(qk.review(id), `/code-review/${id}`);
-export const useQaRuns = (q: Q) => useGet<Paginated<T.QaRun> & { summary: Record<string, number> }>(qk.qa(q), '/qa/runs', q, { placeholderData: keepPreviousData });
-export const useDocuments = (q: Q) => useGet<Paginated<T.DocumentSummary>>(qk.documents(q), '/documents', q, { placeholderData: keepPreviousData });
+export const useQaRuns = (q: Q) =>
+  useGet<Paginated<T.QaRun> & { summary: Record<string, number> }>(qk.qa(q), '/qa/runs', q, { placeholderData: keepPreviousData });
+export const useDocuments = (q: Q) =>
+  useGet<Paginated<T.DocumentSummary>>(qk.documents(q), '/documents', q, { placeholderData: keepPreviousData });
 export const useDocument = (id: string) => useGet<T.DocumentDetail>(qk.document(id), `/documents/${id}`);
 export const useTasks = (q: Q) => useGet<Paginated<T.Task>>(qk.tasks(q), '/tasks', q, { placeholderData: keepPreviousData });
-export const useCodeGenerations = (q: Q) => useGet<Paginated<T.CodeGenerationSummary>>(qk.codegen(q), '/code-generation', q, { placeholderData: keepPreviousData });
+export const useCodeGenerations = (q: Q) =>
+  useGet<Paginated<T.CodeGenerationSummary>>(qk.codegen(q), '/code-generation', q, { placeholderData: keepPreviousData });
 
 /** Mutation with toast feedback and cache invalidation. */
 export function useAction<TVars, TRes = unknown>(
   fn: (vars: TVars) => Promise<TRes>,
-  opts: { success?: string | ((res: TRes) => string); invalidate?: QueryKey[]; onSuccess?: (res: TRes, vars: TVars) => void; silent?: boolean } = {},
+  opts: {
+    success?: string | ((res: TRes) => string);
+    invalidate?: QueryKey[];
+    onSuccess?: (res: TRes, vars: TVars) => void;
+    silent?: boolean;
+  } = {},
 ) {
   const qc = useQueryClient();
   return useMutation<TRes, Error, TVars>({

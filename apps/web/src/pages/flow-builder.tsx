@@ -1,7 +1,36 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { Background, BackgroundVariant, Controls, MarkerType, ReactFlow, type Connection, type Edge, type EdgeChange, type Node, type NodeChange } from '@xyflow/react';
-import { ArrowLeft, CalendarClock, Check, CircleAlert, Clock, Hand, LayoutGrid, Play, Plus, Save, Search, Split, Trash2, Webhook, Wrench, X, Zap } from 'lucide-react';
+import {
+  Background,
+  BackgroundVariant,
+  Controls,
+  MarkerType,
+  ReactFlow,
+  type Connection,
+  type Edge,
+  type EdgeChange,
+  type Node,
+  type NodeChange,
+} from '@xyflow/react';
+import {
+  ArrowLeft,
+  CalendarClock,
+  Check,
+  CircleAlert,
+  Clock,
+  Hand,
+  LayoutGrid,
+  Play,
+  Plus,
+  Save,
+  Search,
+  Split,
+  Trash2,
+  Webhook,
+  Wrench,
+  X,
+  Zap,
+} from 'lucide-react';
 import { STEP_KEY_PATTERN, type StepDefinition, type WorkflowDefinition } from '@forgeline/shared';
 import { api, errorMessage } from '@/api/client';
 import { qk, useAction, useProjects, useTools, useWorkflow } from '@/api/queries';
@@ -106,7 +135,11 @@ export function FlowBuilderPage() {
         let steps = d.steps.map((s) => (s.key === key ? { ...s, ...patch } : s));
         if (patch.key && patch.key !== key) {
           const nk = patch.key;
-          steps = steps.map((s) => ({ ...s, dependsOn: s.dependsOn.map((x) => (x === key ? nk : x)), ...(s.repair?.step === key && { repair: { ...s.repair, step: nk } }) }));
+          steps = steps.map((s) => ({
+            ...s,
+            dependsOn: s.dependsOn.map((x) => (x === key ? nk : x)),
+            ...(s.repair?.step === key && { repair: { ...s.repair, step: nk } }),
+          }));
         }
         return { ...d, steps };
       });
@@ -144,11 +177,23 @@ export function FlowBuilderPage() {
     const edges = def.steps.flatMap((s) => s.dependsOn.map((d) => ({ id: `${d}-${s.key}`, source: d, target: s.key })));
     const laid = layout(nodes, edges, 'LR');
     const pos = new Map(laid.map((n) => [n.id, n.position]));
-    update((d) => ({ ...d, steps: d.steps.map((s) => ({ ...s, ui: { ...(s.ui ?? {}), x: Math.round(pos.get(s.key)!.x), y: Math.round(pos.get(s.key)!.y) } })) }));
+    update((d) => ({
+      ...d,
+      steps: d.steps.map((s) => ({ ...s, ui: { ...(s.ui ?? {}), x: Math.round(pos.get(s.key)!.x), y: Math.round(pos.get(s.key)!.y) } })),
+    }));
   };
 
   // ─────────────── Graph projection ───────────────
-  const invalidKeys = useMemo(() => new Set((issues ?? []).map((i) => i.stepKey ?? i.path.match(/^steps\.(\d+)/)?.[1]).filter(Boolean).map((k) => (/^\d+$/.test(k!) ? def.steps[Number(k)]?.key : k))), [issues, def.steps]);
+  const invalidKeys = useMemo(
+    () =>
+      new Set(
+        (issues ?? [])
+          .map((i) => i.stepKey ?? i.path.match(/^steps\.(\d+)/)?.[1])
+          .filter(Boolean)
+          .map((k) => (/^\d+$/.test(k!) ? def.steps[Number(k)]?.key : k)),
+      ),
+    [issues, def.steps],
+  );
   const toolAgent = useMemo(() => new Map((tools.data ?? []).map((t) => [t.name, t.agent ?? undefined])), [tools.data]);
   const nodes: Node<StepNodeData>[] = useMemo(
     () =>
@@ -160,14 +205,38 @@ export function FlowBuilderPage() {
         height: NODE_H,
         selected: s.key === selected,
         draggable: !readOnly,
-        data: { step: s.agent || !s.tool ? s : { ...s, agent: toolAgent.get(s.tool) }, invalid: invalidKeys.has(s.key), repairOf: def.steps.find((o) => o.repair?.step === s.key)?.key ?? null },
+        data: {
+          step: s.agent || !s.tool ? s : { ...s, agent: toolAgent.get(s.tool) },
+          invalid: invalidKeys.has(s.key),
+          repairOf: def.steps.find((o) => o.repair?.step === s.key)?.key ?? null,
+        },
       })),
     [def.steps, selected, invalidKeys, readOnly, toolAgent],
   );
   const edges: Edge[] = useMemo(
     () => [
-      ...def.steps.flatMap((s) => s.dependsOn.map((d) => ({ id: `${d}->${s.key}`, source: d, target: s.key, markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14 }, deletable: !readOnly }))),
-      ...def.steps.filter((s) => s.repair).map((s) => ({ id: `${s.key}~>${s.repair!.step}`, source: s.key, target: s.repair!.step, deletable: false, selectable: false, label: 'repair', style: { strokeDasharray: '4 4', stroke: 'var(--color-ai)' }, labelStyle: { fill: 'var(--color-ai)', fontSize: 10 }, labelBgStyle: { fill: 'var(--color-canvas)' } })),
+      ...def.steps.flatMap((s) =>
+        s.dependsOn.map((d) => ({
+          id: `${d}->${s.key}`,
+          source: d,
+          target: s.key,
+          markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14 },
+          deletable: !readOnly,
+        })),
+      ),
+      ...def.steps
+        .filter((s) => s.repair)
+        .map((s) => ({
+          id: `${s.key}~>${s.repair!.step}`,
+          source: s.key,
+          target: s.repair!.step,
+          deletable: false,
+          selectable: false,
+          label: 'repair',
+          style: { strokeDasharray: '4 4', stroke: 'var(--color-ai)' },
+          labelStyle: { fill: 'var(--color-ai)', fontSize: 10 },
+          labelBgStyle: { fill: 'var(--color-canvas)' },
+        })),
     ],
     [def.steps, readOnly],
   );
@@ -179,7 +248,9 @@ export function FlowBuilderPage() {
         ...d,
         steps: d.steps.map((s) => {
           const m = moves.find((c) => c.type === 'position' && c.id === s.key);
-          return m && m.type === 'position' && m.position ? { ...s, ui: { ...(s.ui ?? {}), x: Math.round(m.position.x), y: Math.round(m.position.y) } } : s;
+          return m && m.type === 'position' && m.position
+            ? { ...s, ui: { ...(s.ui ?? {}), x: Math.round(m.position.x), y: Math.round(m.position.y) } }
+            : s;
         }),
       }));
       setDirty(true);
@@ -190,12 +261,20 @@ export function FlowBuilderPage() {
     if (readOnly) return;
     const removed = changes.filter((c) => c.type === 'remove').map((c) => c.id);
     if (!removed.length) return;
-    update((d) => ({ ...d, steps: d.steps.map((s) => ({ ...s, dependsOn: s.dependsOn.filter((dep) => !removed.includes(`${dep}->${s.key}`)) })) }));
+    update((d) => ({
+      ...d,
+      steps: d.steps.map((s) => ({ ...s, dependsOn: s.dependsOn.filter((dep) => !removed.includes(`${dep}->${s.key}`)) })),
+    }));
   };
   const onConnect = (c: Connection) => {
     if (readOnly || !c.source || !c.target || c.source === c.target) return;
     if (wouldCycle(def.steps, c.source, c.target)) return void toast.error('That connection would create a cycle');
-    update((d) => ({ ...d, steps: d.steps.map((s) => (s.key === c.target && !s.dependsOn.includes(c.source!) ? { ...s, dependsOn: [...s.dependsOn, c.source!] } : s)) }));
+    update((d) => ({
+      ...d,
+      steps: d.steps.map((s) =>
+        s.key === c.target && !s.dependsOn.includes(c.source!) ? { ...s, dependsOn: [...s.dependsOn, c.source!] } : s,
+      ),
+    }));
   };
 
   // ─────────────── Server actions ───────────────
@@ -252,12 +331,24 @@ export function FlowBuilderPage() {
         <Link to="/workflows" className="rounded-sm p-1 text-fg-muted hover:bg-sunken hover:text-fg" aria-label="Back to flows">
           <ArrowLeft className="size-4" />
         </Link>
-        <input value={name} onChange={(e) => (setName(e.target.value), setDirty(true))} disabled={readOnly} aria-label="Flow name" className="h-8 min-w-0 flex-1 rounded-md bg-transparent px-2 text-[15px] font-semibold tracking-tight outline-none hover:bg-sunken focus:bg-sunken sm:max-w-sm" />
+        <input
+          value={name}
+          onChange={(e) => (setName(e.target.value), setDirty(true))}
+          disabled={readOnly}
+          aria-label="Flow name"
+          className="h-8 min-w-0 flex-1 rounded-md bg-transparent px-2 text-[15px] font-semibold tracking-tight outline-none hover:bg-sunken focus:bg-sunken sm:max-w-sm"
+        />
         {readOnly && <Badge tone="warn">Read-only</Badge>}
         {existing.data && <Badge>v{existing.data.version}</Badge>}
         {dirty && !readOnly && <span className="text-[11.5px] text-fg-subtle">Unsaved changes</span>}
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
-          <Select value={projectId ?? ''} onChange={(e) => (setProjectId(e.target.value || null), setDirty(true))} disabled={readOnly} className="h-7 w-44 text-[12px]" aria-label="Project">
+          <Select
+            value={projectId ?? ''}
+            onChange={(e) => (setProjectId(e.target.value || null), setDirty(true))}
+            disabled={readOnly}
+            className="h-7 w-44 text-[12px]"
+            aria-label="Project"
+          >
             <option value="">No project</option>
             {projects.data?.map((p) => (
               <option key={p.id} value={p.id}>
@@ -272,13 +363,33 @@ export function FlowBuilderPage() {
             Trigger
           </Button>
           <Tooltip content="Auto-arrange">
-            <Button size="icon-sm" variant="ghost" aria-label="Auto-arrange" onClick={autoLayout} disabled={readOnly || !steps.length} icon={<LayoutGrid className="size-4" />} />
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-label="Auto-arrange"
+              onClick={autoLayout}
+              disabled={readOnly || !steps.length}
+              icon={<LayoutGrid className="size-4" />}
+            />
           </Tooltip>
-          <Button size="sm" icon={<Check className="size-3.5" />} loading={validate.isPending} onClick={() => validate.mutate(undefined)} disabled={!steps.length}>
+          <Button
+            size="sm"
+            icon={<Check className="size-3.5" />}
+            loading={validate.isPending}
+            onClick={() => validate.mutate(undefined)}
+            disabled={!steps.length}
+          >
             Validate
           </Button>
           {!readOnly && (
-            <Button size="sm" variant={id ? 'secondary' : 'primary'} icon={<Save className="size-3.5" />} loading={save.isPending} disabled={!steps.length || name.trim().length < 2} onClick={() => save.mutate(undefined)}>
+            <Button
+              size="sm"
+              variant={id ? 'secondary' : 'primary'}
+              icon={<Save className="size-3.5" />}
+              loading={save.isPending}
+              disabled={!steps.length || name.trim().length < 2}
+              onClick={() => save.mutate(undefined)}
+            >
               Save
             </Button>
           )}
@@ -319,7 +430,10 @@ export function FlowBuilderPage() {
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <div className="pointer-events-auto max-w-sm rounded-xl border border-dashed border-line-strong bg-surface/90 p-6 text-center backdrop-blur">
                 <div className="text-[14px] font-semibold">Start your flow</div>
-                <p className="mt-1.5 text-[12.5px] text-fg-muted">Add steps from the palette on the left. Connect them by dragging from one step’s right edge to another. Steps run as soon as their dependencies finish.</p>
+                <p className="mt-1.5 text-[12.5px] text-fg-muted">
+                  Add steps from the palette on the left. Connect them by dragging from one step’s right edge to another. Steps run as soon
+                  as their dependencies finish.
+                </p>
               </div>
             </div>
           )}
@@ -327,7 +441,12 @@ export function FlowBuilderPage() {
             <div className="absolute bottom-3 left-3 max-h-48 w-[min(520px,calc(100%-24px))] overflow-y-auto rounded-lg border border-bad/40 bg-raised p-3 shadow-pop">
               <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-bad">
                 <CircleAlert className="size-3.5" /> {issues.length} issue{issues.length === 1 ? '' : 's'} to fix
-                <button type="button" className="ml-auto text-fg-subtle hover:text-fg" onClick={() => setIssues(null)} aria-label="Dismiss issues">
+                <button
+                  type="button"
+                  className="ml-auto text-fg-subtle hover:text-fg"
+                  onClick={() => setIssues(null)}
+                  aria-label="Dismiss issues"
+                >
                   <X className="size-3.5" />
                 </button>
               </div>
@@ -344,15 +463,40 @@ export function FlowBuilderPage() {
           )}
           {pendingTrigger && (
             <div className="absolute top-3 left-3 flex items-center gap-2 rounded-md border border-arc/40 bg-raised px-3 py-1.5 text-[12px] shadow-card">
-              <Webhook className="size-3.5 text-arc" /> Trigger will be added on save: <Mono>{String(pendingTrigger.event ?? pendingTrigger.cron)}</Mono>
+              <Webhook className="size-3.5 text-arc" /> Trigger will be added on save:{' '}
+              <Mono>{String(pendingTrigger.event ?? pendingTrigger.cron)}</Mono>
             </div>
           )}
         </div>
-        {selectedStep && <Inspector key={selectedStep.key} step={selectedStep} steps={steps} def={def} tools={tools.data ?? []} readOnly={readOnly} onChange={(p) => updateStep(selectedStep.key, p)} onRemove={() => removeStep(selectedStep.key)} onClose={() => setSelected(null)} />}
+        {selectedStep && (
+          <Inspector
+            key={selectedStep.key}
+            step={selectedStep}
+            steps={steps}
+            def={def}
+            tools={tools.data ?? []}
+            readOnly={readOnly}
+            onChange={(p) => updateStep(selectedStep.key, p)}
+            onRemove={() => removeStep(selectedStep.key)}
+            onClose={() => setSelected(null)}
+          />
+        )}
       </div>
 
-      <InputsDialog open={dialog === 'inputs'} def={def} readOnly={readOnly} onClose={() => setDialog(null)} onChange={(inputs) => update((d) => ({ ...d, inputs }))} />
-      <TriggerDialog open={dialog === 'trigger'} workflow={existing.data ?? null} onClose={() => setDialog(null)} onPending={setPendingTrigger} onChanged={() => void existing.refetch()} />
+      <InputsDialog
+        open={dialog === 'inputs'}
+        def={def}
+        readOnly={readOnly}
+        onClose={() => setDialog(null)}
+        onChange={(inputs) => update((d) => ({ ...d, inputs }))}
+      />
+      <TriggerDialog
+        open={dialog === 'trigger'}
+        workflow={existing.data ?? null}
+        onClose={() => setDialog(null)}
+        onPending={setPendingTrigger}
+        onChanged={() => void existing.refetch()}
+      />
       {id && existing.data && <RunDialog open={dialog === 'run'} workflow={existing.data} onClose={() => setDialog(null)} />}
     </div>
   );
@@ -364,11 +508,24 @@ function withPositions(def: WorkflowDefinition): WorkflowDefinition {
   const edges = def.steps.flatMap((s) => s.dependsOn.map((d) => ({ id: `${d}-${s.key}`, source: d, target: s.key })));
   for (const s of def.steps) if (s.repair) edges.push({ id: `r-${s.key}`, source: s.key, target: s.repair.step });
   const pos = new Map(layout(nodes, edges, 'LR').map((n) => [n.id, n.position]));
-  return { ...def, steps: def.steps.map((s) => (s.ui ? s : { ...s, ui: { x: Math.round(pos.get(s.key)!.x), y: Math.round(pos.get(s.key)!.y) } })) };
+  return {
+    ...def,
+    steps: def.steps.map((s) => (s.ui ? s : { ...s, ui: { x: Math.round(pos.get(s.key)!.x), y: Math.round(pos.get(s.key)!.y) } })),
+  };
 }
 
 // ─────────────── Palette ───────────────
-function Palette({ tools, loading, onAdd, steps }: { tools: ToolInfo[]; loading: boolean; onAdd: (s: StepDefinition) => void; steps: StepDefinition[] }) {
+function Palette({
+  tools,
+  loading,
+  onAdd,
+  steps,
+}: {
+  tools: ToolInfo[];
+  loading: boolean;
+  onAdd: (s: StepDefinition) => void;
+  steps: StepDefinition[];
+}) {
   const [q, setQ] = useState('');
   const groups = useMemo(() => {
     const filtered = tools.filter((t) => !q || `${t.title} ${t.name} ${t.description}`.toLowerCase().includes(q.toLowerCase()));
@@ -377,9 +534,22 @@ function Palette({ tools, loading, onAdd, steps }: { tools: ToolInfo[]; loading:
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [tools, q]);
   const special: { label: string; icon: React.ReactNode; make: () => StepDefinition }[] = [
-    { label: 'Approval gate', icon: <Hand className="size-3.5 text-accent" />, make: () => newStep({ key: uniqueKey('approval', steps), name: 'Approval', type: 'approval', approval: { title: 'Approve to continue' } }) },
-    { label: 'Condition', icon: <Split className="size-3.5" />, make: () => newStep({ key: uniqueKey('condition', steps), name: 'Condition', type: 'condition', expression: 'true' }) },
-    { label: 'Delay', icon: <Clock className="size-3.5" />, make: () => newStep({ key: uniqueKey('wait', steps), name: 'Wait', type: 'delay', delayMs: 60_000 }) },
+    {
+      label: 'Approval gate',
+      icon: <Hand className="size-3.5 text-accent" />,
+      make: () =>
+        newStep({ key: uniqueKey('approval', steps), name: 'Approval', type: 'approval', approval: { title: 'Approve to continue' } }),
+    },
+    {
+      label: 'Condition',
+      icon: <Split className="size-3.5" />,
+      make: () => newStep({ key: uniqueKey('condition', steps), name: 'Condition', type: 'condition', expression: 'true' }),
+    },
+    {
+      label: 'Delay',
+      icon: <Clock className="size-3.5" />,
+      make: () => newStep({ key: uniqueKey('wait', steps), name: 'Wait', type: 'delay', delayMs: 60_000 }),
+    },
   ];
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r border-line bg-surface">
@@ -389,7 +559,12 @@ function Palette({ tools, loading, onAdd, steps }: { tools: ToolInfo[]; loading:
       <div className="flex-1 overflow-y-auto p-2">
         <div className="label-caps px-1.5 pt-1 pb-1.5">Control</div>
         {special.map((s) => (
-          <button key={s.label} type="button" onClick={() => onAdd(s.make())} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12.5px] hover:bg-sunken">
+          <button
+            key={s.label}
+            type="button"
+            onClick={() => onAdd(s.make())}
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12.5px] hover:bg-sunken"
+          >
             {s.icon}
             {s.label}
             <Plus className="ml-auto size-3 text-fg-subtle" />
@@ -405,7 +580,17 @@ function Palette({ tools, loading, onAdd, steps }: { tools: ToolInfo[]; loading:
                 <Tooltip key={t.name} content={t.description} side="right">
                   <button
                     type="button"
-                    onClick={() => onAdd(newStep({ key: uniqueKey(t.name.split('.').pop() ?? t.name, steps), name: t.title, tool: t.name, agent: t.agent ?? undefined, input: defaultInput(t) }))}
+                    onClick={() =>
+                      onAdd(
+                        newStep({
+                          key: uniqueKey(t.name.split('.').pop() ?? t.name, steps),
+                          name: t.title,
+                          tool: t.name,
+                          agent: t.agent ?? undefined,
+                          input: defaultInput(t),
+                        }),
+                      )
+                    }
                     className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12.5px] hover:bg-sunken"
                   >
                     <a.icon className="size-3.5 shrink-0" style={{ color: a.color }} />
@@ -426,18 +611,40 @@ function defaultInput(t: ToolInfo): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const name of t.inputSchema.required ?? []) {
     const p = t.inputSchema.properties?.[name];
-    out[name] = p?.default ?? (p?.type === 'number' || p?.type === 'integer' ? 0 : p?.type === 'boolean' ? false : p?.type === 'array' ? [] : '');
+    out[name] =
+      p?.default ?? (p?.type === 'number' || p?.type === 'integer' ? 0 : p?.type === 'boolean' ? false : p?.type === 'array' ? [] : '');
   }
   return out;
 }
 
 // ─────────────── Inspector ───────────────
-function Inspector({ step, steps, def, tools, readOnly, onChange, onRemove, onClose }: { step: StepDefinition; steps: StepDefinition[]; def: WorkflowDefinition; tools: ToolInfo[]; readOnly: boolean; onChange: (p: Partial<StepDefinition>) => void; onRemove: () => void; onClose: () => void }) {
+function Inspector({
+  step,
+  steps,
+  def,
+  tools,
+  readOnly,
+  onChange,
+  onRemove,
+  onClose,
+}: {
+  step: StepDefinition;
+  steps: StepDefinition[];
+  def: WorkflowDefinition;
+  tools: ToolInfo[];
+  readOnly: boolean;
+  onChange: (p: Partial<StepDefinition>) => void;
+  onRemove: () => void;
+  onClose: () => void;
+}) {
   const tool = tools.find((t) => t.name === step.tool);
   const [inputText, setInputText] = useState(() => JSON.stringify(step.input ?? {}, null, 2));
   const [inputError, setInputError] = useState<string | null>(null);
   const [key, setKey] = useState(step.key);
-  const refs = useMemo(() => ['inputs.' + (Object.keys(def.inputs)[0] ?? 'name'), ...ancestors(steps, step.key).map((k) => `steps.${k}.output`)], [def.inputs, steps, step.key]);
+  const refs = useMemo(
+    () => ['inputs.' + (Object.keys(def.inputs)[0] ?? 'name'), ...ancestors(steps, step.key).map((k) => `steps.${k}.output`)],
+    [def.inputs, steps, step.key],
+  );
   const a = agentOf(step);
   const commitInput = (text: string) => {
     setInputText(text);
@@ -455,15 +662,32 @@ function Inspector({ step, steps, def, tools, readOnly, onChange, onRemove, onCl
       <div className="flex items-center gap-2 border-b border-line px-4 py-2.5">
         <a.icon className="size-4" style={{ color: a.color }} />
         <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{step.name}</span>
-        {!readOnly && <Button size="icon-sm" variant="danger-ghost" aria-label="Delete step" onClick={onRemove} icon={<Trash2 className="size-3.5" />} />}
+        {!readOnly && (
+          <Button
+            size="icon-sm"
+            variant="danger-ghost"
+            aria-label="Delete step"
+            onClick={onRemove}
+            icon={<Trash2 className="size-3.5" />}
+          />
+        )}
         <Button size="icon-sm" variant="ghost" aria-label="Close inspector" onClick={onClose} icon={<X className="size-4" />} />
       </div>
       <fieldset disabled={readOnly} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
         <Field label="Name">
           <Input value={step.name} onChange={(e) => onChange({ name: e.target.value })} />
         </Field>
-        <Field label="Key" hint="Used in templates: steps.<key>.output" error={STEP_KEY_PATTERN.test(key) ? null : 'snake_case, starting with a letter'}>
-          <Input value={key} className="font-mono text-[12px]" onChange={(e) => setKey(e.target.value)} onBlur={() => key !== step.key && STEP_KEY_PATTERN.test(key) && !steps.some((s) => s.key === key) && onChange({ key })} />
+        <Field
+          label="Key"
+          hint="Used in templates: steps.<key>.output"
+          error={STEP_KEY_PATTERN.test(key) ? null : 'snake_case, starting with a letter'}
+        >
+          <Input
+            value={key}
+            className="font-mono text-[12px]"
+            onChange={(e) => setKey(e.target.value)}
+            onBlur={() => key !== step.key && STEP_KEY_PATTERN.test(key) && !steps.some((s) => s.key === key) && onChange({ key })}
+          />
         </Field>
         {step.type === 'tool' && (
           <>
@@ -486,8 +710,22 @@ function Inspector({ step, steps, def, tools, readOnly, onChange, onRemove, onCl
                 )}
               </div>
             )}
-            <Field label="Input (JSON)" error={inputError} hint={<span>Use templates like <Mono>{'{{ ' + (refs[1] ?? refs[0]) + ' }}'}</Mono></span>}>
-              <Textarea value={inputText} onChange={(e) => commitInput(e.target.value)} rows={8} className="font-mono text-[11.5px]" spellCheck={false} />
+            <Field
+              label="Input (JSON)"
+              error={inputError}
+              hint={
+                <span>
+                  Use templates like <Mono>{'{{ ' + (refs[1] ?? refs[0]) + ' }}'}</Mono>
+                </span>
+              }
+            >
+              <Textarea
+                value={inputText}
+                onChange={(e) => commitInput(e.target.value)}
+                rows={8}
+                className="font-mono text-[11.5px]"
+                spellCheck={false}
+              />
             </Field>
             {tool?.inputSchema.properties && (
               <div className="space-y-1 text-[11.5px]">
@@ -498,7 +736,9 @@ function Inspector({ step, steps, def, tools, readOnly, onChange, onRemove, onCl
                       {p}
                       {tool.inputSchema.required?.includes(p) ? '*' : ''}
                     </Mono>
-                    <span className="truncate text-fg-subtle">{spec.description ?? (Array.isArray(spec.type) ? spec.type.join('|') : spec.type)}</span>
+                    <span className="truncate text-fg-subtle">
+                      {spec.description ?? (Array.isArray(spec.type) ? spec.type.join('|') : spec.type)}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -520,28 +760,51 @@ function Inspector({ step, steps, def, tools, readOnly, onChange, onRemove, onCl
         {step.type === 'approval' && (
           <>
             <Field label="Approval title">
-              <Input value={step.approval?.title ?? ''} onChange={(e) => onChange({ approval: { ...(step.approval ?? { title: '' }), title: e.target.value } })} />
+              <Input
+                value={step.approval?.title ?? ''}
+                onChange={(e) => onChange({ approval: { ...(step.approval ?? { title: '' }), title: e.target.value } })}
+              />
             </Field>
             <Field label="Policy action" hint="e.g. deploy.production, pr.merge — drives required permission and risk">
-              <Input value={step.approval?.action ?? ''} className="font-mono text-[12px]" onChange={(e) => onChange({ approval: { ...(step.approval ?? { title: 'Approval' }), action: e.target.value || undefined } })} />
+              <Input
+                value={step.approval?.action ?? ''}
+                className="font-mono text-[12px]"
+                onChange={(e) =>
+                  onChange({ approval: { ...(step.approval ?? { title: 'Approval' }), action: e.target.value || undefined } })
+                }
+              />
             </Field>
           </>
         )}
         {step.type === 'condition' && (
           <Field label="Expression" hint="Result is available as steps.<key>.output.result">
-            <Input value={step.expression ?? ''} className="font-mono text-[12px]" onChange={(e) => onChange({ expression: e.target.value })} />
+            <Input
+              value={step.expression ?? ''}
+              className="font-mono text-[12px]"
+              onChange={(e) => onChange({ expression: e.target.value })}
+            />
           </Field>
         )}
         {step.type === 'delay' && (
           <Field label="Delay (seconds)">
-            <Input type="number" min={0} value={Math.round((step.delayMs ?? 0) / 1000)} onChange={(e) => onChange({ delayMs: Math.max(0, Number(e.target.value)) * 1000 })} />
+            <Input
+              type="number"
+              min={0}
+              value={Math.round((step.delayMs ?? 0) / 1000)}
+              onChange={(e) => onChange({ delayMs: Math.max(0, Number(e.target.value)) * 1000 })}
+            />
           </Field>
         )}
 
         <div className="space-y-3 border-t border-line pt-4">
           <div className="label-caps">Control flow</div>
           <Field label="Run only when" hint="Expression; when false the step is skipped">
-            <Input value={step.when ?? ''} placeholder="inputs.deployToProduction == true" className="font-mono text-[12px]" onChange={(e) => onChange({ when: e.target.value || undefined })} />
+            <Input
+              value={step.when ?? ''}
+              placeholder="inputs.deployToProduction == true"
+              className="font-mono text-[12px]"
+              onChange={(e) => onChange({ when: e.target.value || undefined })}
+            />
           </Field>
           <Field label="Run policy">
             <Select value={step.runIf} onChange={(e) => onChange({ runIf: e.target.value as StepDefinition['runIf'] })}>
@@ -553,14 +816,34 @@ function Inspector({ step, steps, def, tools, readOnly, onChange, onRemove, onCl
           {step.type === 'tool' && (
             <>
               <Field label="Success condition" hint="Evaluated against the output; false fails the step">
-                <Input value={step.successCondition ?? ''} placeholder="output.passed == true" className="font-mono text-[12px]" onChange={(e) => onChange({ successCondition: e.target.value || undefined })} />
+                <Input
+                  value={step.successCondition ?? ''}
+                  placeholder="output.passed == true"
+                  className="font-mono text-[12px]"
+                  onChange={(e) => onChange({ successCondition: e.target.value || undefined })}
+                />
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Max attempts">
-                  <Input type="number" min={1} max={10} value={step.retry?.maxAttempts ?? 3} onChange={(e) => onChange({ retry: { ...(step.retry ?? {}), maxAttempts: Math.min(10, Math.max(1, Number(e.target.value))) } })} />
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={step.retry?.maxAttempts ?? 3}
+                    onChange={(e) =>
+                      onChange({ retry: { ...(step.retry ?? {}), maxAttempts: Math.min(10, Math.max(1, Number(e.target.value))) } })
+                    }
+                  />
                 </Field>
                 <Field label="Self-heal with">
-                  <Select value={step.repair?.step ?? ''} onChange={(e) => onChange({ repair: e.target.value ? { step: e.target.value, maxIterations: step.repair?.maxIterations ?? 2 } : undefined })}>
+                  <Select
+                    value={step.repair?.step ?? ''}
+                    onChange={(e) =>
+                      onChange({
+                        repair: e.target.value ? { step: e.target.value, maxIterations: step.repair?.maxIterations ?? 2 } : undefined,
+                      })
+                    }
+                  >
                     <option value="">No repair</option>
                     {steps
                       .filter((s) => s.key !== step.key)
@@ -579,7 +862,14 @@ function Inspector({ step, steps, def, tools, readOnly, onChange, onRemove, onCl
             <Switch checked={step.continueOnError} onCheckedChange={(v) => onChange({ continueOnError: v })} label="Continue on error" />
           </div>
           <div className="text-[11.5px] text-fg-subtle">
-            Depends on: {step.dependsOn.length ? step.dependsOn.map((d) => <Mono key={d} className="mr-1">{d}</Mono>) : 'nothing (starts immediately)'}
+            Depends on:{' '}
+            {step.dependsOn.length
+              ? step.dependsOn.map((d) => (
+                  <Mono key={d} className="mr-1">
+                    {d}
+                  </Mono>
+                ))
+              : 'nothing (starts immediately)'}
           </div>
         </div>
       </fieldset>
@@ -588,13 +878,29 @@ function Inspector({ step, steps, def, tools, readOnly, onChange, onRemove, onCl
 }
 
 // ─────────────── Inputs ───────────────
-function InputsDialog({ open, def, readOnly, onClose, onChange }: { open: boolean; def: WorkflowDefinition; readOnly: boolean; onClose: () => void; onChange: (inputs: WorkflowDefinition['inputs']) => void }) {
+function InputsDialog({
+  open,
+  def,
+  readOnly,
+  onClose,
+  onChange,
+}: {
+  open: boolean;
+  def: WorkflowDefinition;
+  readOnly: boolean;
+  onClose: () => void;
+  onChange: (inputs: WorkflowDefinition['inputs']) => void;
+}) {
   const [rows, setRows] = useState(() => Object.entries(def.inputs));
   useEffect(() => {
     if (open) setRows(Object.entries(def.inputs));
   }, [open, def.inputs]);
   const set = (i: number, patch: Partial<WorkflowDefinition['inputs'][string]> & { name?: string }) =>
-    setRows((r) => r.map(([n, spec], idx) => (idx === i ? [patch.name ?? n, { ...spec, ...patch, name: undefined } as WorkflowDefinition['inputs'][string]] : [n, spec])));
+    setRows((r) =>
+      r.map(([n, spec], idx) =>
+        idx === i ? [patch.name ?? n, { ...spec, ...patch, name: undefined } as WorkflowDefinition['inputs'][string]] : [n, spec],
+      ),
+    );
   return (
     <Dialog
       open={open}
@@ -611,7 +917,13 @@ function InputsDialog({ open, def, readOnly, onClose, onChange }: { open: boolea
             <Button
               variant="primary"
               onClick={() => {
-                onChange(Object.fromEntries(rows.filter(([n]) => /^[a-zA-Z_]\w*$/.test(n)).map(([n, s]) => [n, Object.fromEntries(Object.entries(s).filter(([, v]) => v !== undefined)) as typeof s])));
+                onChange(
+                  Object.fromEntries(
+                    rows
+                      .filter(([n]) => /^[a-zA-Z_]\w*$/.test(n))
+                      .map(([n, s]) => [n, Object.fromEntries(Object.entries(s).filter(([, v]) => v !== undefined)) as typeof s]),
+                  ),
+                );
                 onClose();
               }}
             >
@@ -624,21 +936,54 @@ function InputsDialog({ open, def, readOnly, onClose, onChange }: { open: boolea
       <fieldset disabled={readOnly} className="space-y-2">
         {rows.map(([name, spec], i) => (
           <div key={i} className="grid grid-cols-[1fr_110px_1fr_auto_auto] items-center gap-2">
-            <Input value={name} className="font-mono text-[12px]" placeholder="name" onChange={(e) => set(i, { name: e.target.value })} aria-label="Input name" />
+            <Input
+              value={name}
+              className="font-mono text-[12px]"
+              placeholder="name"
+              onChange={(e) => set(i, { name: e.target.value })}
+              aria-label="Input name"
+            />
             <Select value={spec.type} onChange={(e) => set(i, { type: e.target.value as typeof spec.type })} aria-label="Type">
               {['string', 'number', 'boolean', 'object', 'array'].map((t) => (
                 <option key={t}>{t}</option>
               ))}
             </Select>
-            <Input value={spec.default === undefined ? '' : String(spec.default)} placeholder="default" onChange={(e) => set(i, { default: e.target.value === '' ? undefined : spec.type === 'number' ? Number(e.target.value) : spec.type === 'boolean' ? e.target.value === 'true' : e.target.value })} aria-label="Default" />
+            <Input
+              value={spec.default === undefined ? '' : String(spec.default)}
+              placeholder="default"
+              onChange={(e) =>
+                set(i, {
+                  default:
+                    e.target.value === ''
+                      ? undefined
+                      : spec.type === 'number'
+                        ? Number(e.target.value)
+                        : spec.type === 'boolean'
+                          ? e.target.value === 'true'
+                          : e.target.value,
+                })
+              }
+              aria-label="Default"
+            />
             <label className="flex items-center gap-1.5 text-[12px] text-fg-muted">
               <Switch checked={spec.required} onCheckedChange={(v) => set(i, { required: v })} label="Required" /> req.
             </label>
-            <Button size="icon-sm" variant="ghost" aria-label="Remove input" onClick={() => setRows((r) => r.filter((_, idx) => idx !== i))} icon={<Trash2 className="size-3.5" />} />
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-label="Remove input"
+              onClick={() => setRows((r) => r.filter((_, idx) => idx !== i))}
+              icon={<Trash2 className="size-3.5" />}
+            />
           </div>
         ))}
         {!rows.length && <p className="text-[12.5px] text-fg-subtle">No inputs defined.</p>}
-        <Button size="sm" variant="ghost" icon={<Plus className="size-3.5" />} onClick={() => setRows((r) => [...r, [`input_${r.length + 1}`, { type: 'string', required: false }]])}>
+        <Button
+          size="sm"
+          variant="ghost"
+          icon={<Plus className="size-3.5" />}
+          onClick={() => setRows((r) => [...r, [`input_${r.length + 1}`, { type: 'string', required: false }]])}
+        >
           Add input
         </Button>
       </fieldset>
@@ -647,17 +992,44 @@ function InputsDialog({ open, def, readOnly, onClose, onChange }: { open: boolea
 }
 
 // ─────────────── Triggers ───────────────
-const EVENTS = ['jira.issue.transitioned', 'jira.issue.created', 'github.pull_request.opened', 'github.pull_request.synchronize', 'github.push', 'github.issue_comment.created', 'trello.card.moved', 'devops.deployment.failed'];
+const EVENTS = [
+  'jira.issue.transitioned',
+  'jira.issue.created',
+  'github.pull_request.opened',
+  'github.pull_request.synchronize',
+  'github.push',
+  'github.issue_comment.created',
+  'trello.card.moved',
+  'devops.deployment.failed',
+];
 
-function TriggerDialog({ open, workflow, onClose, onPending, onChanged }: { open: boolean; workflow: Workflow | null; onClose: () => void; onPending: (t: Record<string, unknown>) => void; onChanged: () => void }) {
+function TriggerDialog({
+  open,
+  workflow,
+  onClose,
+  onPending,
+  onChanged,
+}: {
+  open: boolean;
+  workflow: Workflow | null;
+  onClose: () => void;
+  onPending: (t: Record<string, unknown>) => void;
+  onChanged: () => void;
+}) {
   const [type, setType] = useState<'EVENT' | 'SCHEDULE'>('EVENT');
   const [event, setEvent] = useState(EVENTS[0]!);
   const [filter, setFilter] = useState("event.toStatus == 'Ready for Development'");
   const [cron, setCron] = useState('0 9 * * 1-5');
   const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
   const config = type === 'EVENT' ? { type, event, ...(filter.trim() && { filter }), inputs: {} } : { type, cron, timezone };
-  const add = useAction(() => api.post(`/workflows/${workflow!.id}/triggers`, { config, enabled: true }), { success: 'Trigger added', onSuccess: () => (onChanged(), onClose()) });
-  const remove = useAction((t: WorkflowTrigger) => api.del(`/workflows/${workflow!.id}/triggers/${t.id}`), { success: 'Trigger removed', onSuccess: onChanged });
+  const add = useAction(() => api.post(`/workflows/${workflow!.id}/triggers`, { config, enabled: true }), {
+    success: 'Trigger added',
+    onSuccess: () => (onChanged(), onClose()),
+  });
+  const remove = useAction((t: WorkflowTrigger) => api.del(`/workflows/${workflow!.id}/triggers/${t.id}`), {
+    success: 'Trigger removed',
+    onSuccess: onChanged,
+  });
   return (
     <Dialog
       open={open}
@@ -692,14 +1064,31 @@ function TriggerDialog({ open, workflow, onClose, onPending, onChanged }: { open
             .map((t) => (
               <li key={t.id} className="flex items-center gap-2 rounded-md border border-line px-3 py-2 text-[12.5px]">
                 {t.type === 'SCHEDULE' ? <CalendarClock className="size-3.5 text-arc" /> : <Webhook className="size-3.5 text-arc" />}
-                <Mono className="flex-1 truncate text-fg">{t.type === 'SCHEDULE' ? `${String(t.config.cron)} (${String(t.config.timezone ?? 'UTC')})` : `${String(t.config.event)}${t.config.filter ? ` if ${String(t.config.filter)}` : ''}`}</Mono>
-                <Button size="icon-sm" variant="ghost" aria-label="Remove trigger" onClick={() => remove.mutate(t)} icon={<Trash2 className="size-3.5" />} />
+                <Mono className="flex-1 truncate text-fg">
+                  {t.type === 'SCHEDULE'
+                    ? `${String(t.config.cron)} (${String(t.config.timezone ?? 'UTC')})`
+                    : `${String(t.config.event)}${t.config.filter ? ` if ${String(t.config.filter)}` : ''}`}
+                </Mono>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="Remove trigger"
+                  onClick={() => remove.mutate(t)}
+                  icon={<Trash2 className="size-3.5" />}
+                />
               </li>
             ))}
         </ul>
       )}
       <div className="space-y-4">
-        <Segmented value={type} onChange={setType} options={[{ value: 'EVENT', label: 'On event' }, { value: 'SCHEDULE', label: 'On schedule' }]} />
+        <Segmented
+          value={type}
+          onChange={setType}
+          options={[
+            { value: 'EVENT', label: 'On event' },
+            { value: 'SCHEDULE', label: 'On schedule' },
+          ]}
+        />
         {type === 'EVENT' ? (
           <>
             <Field label="Event">
@@ -738,7 +1127,14 @@ function RunDialog({ open, workflow, onClose }: { open: boolean; workflow: Workf
       for (const [k, spec] of Object.entries(workflow.definition.inputs)) {
         const v = values[k];
         if (v === undefined || v === '') continue;
-        input[k] = spec.type === 'number' ? Number(v) : spec.type === 'boolean' ? v === 'true' : spec.type === 'object' || spec.type === 'array' ? JSON.parse(v) : v;
+        input[k] =
+          spec.type === 'number'
+            ? Number(v)
+            : spec.type === 'boolean'
+              ? v === 'true'
+              : spec.type === 'object' || spec.type === 'array'
+                ? JSON.parse(v)
+                : v;
       }
       return api.post<{ id: string }>(`/workflows/${workflow.id}/run`, { projectId: workflow.projectId ?? undefined, input });
     },
@@ -767,7 +1163,10 @@ function RunDialog({ open, workflow, onClose }: { open: boolean; workflow: Workf
         <div className="space-y-3">
           {inputs.map(([k, spec]) => (
             <Field key={k} label={k} required={spec.required} hint={spec.description}>
-              <Input value={values[k] ?? (spec.default === undefined ? '' : String(spec.default))} onChange={(e) => setValues((v) => ({ ...v, [k]: e.target.value }))} />
+              <Input
+                value={values[k] ?? (spec.default === undefined ? '' : String(spec.default))}
+                onChange={(e) => setValues((v) => ({ ...v, [k]: e.target.value }))}
+              />
             </Field>
           ))}
         </div>

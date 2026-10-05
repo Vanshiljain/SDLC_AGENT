@@ -48,14 +48,30 @@ export class RecoveryService implements OnApplicationBootstrap {
     const touched = new Set<string>();
 
     // 1) Expired leases: the worker executing the step disappeared.
-    const expired = await this.prisma.workflowExecutionStep.findMany({ where: { status: 'RUNNING', leaseOwner: { not: null }, leaseExpiresAt: { lt: new Date(now) } }, take: 200 });
+    const expired = await this.prisma.workflowExecutionStep.findMany({
+      where: { status: 'RUNNING', leaseOwner: { not: null }, leaseExpiresAt: { lt: new Date(now) } },
+      take: 200,
+    });
     for (const s of expired) {
       const retry = s.attempt < s.maxAttempts;
       const res = await this.prisma.workflowExecutionStep.updateMany({
         where: { id: s.id, status: 'RUNNING', leaseOwner: s.leaseOwner },
         data: retry
-          ? { status: 'RETRY_SCHEDULED', attempt: s.attempt + 1, leaseOwner: null, leaseExpiresAt: null, nextAttemptAt: new Date(now), error: { kind: 'internal', message: `Worker ${s.leaseOwner} lost while executing; retrying`, retryable: true } }
-          : { status: 'FAILED', leaseOwner: null, leaseExpiresAt: null, completedAt: new Date(), error: { kind: 'internal', message: 'Worker lost while executing and no attempts remain', retryable: false } },
+          ? {
+              status: 'RETRY_SCHEDULED',
+              attempt: s.attempt + 1,
+              leaseOwner: null,
+              leaseExpiresAt: null,
+              nextAttemptAt: new Date(now),
+              error: { kind: 'internal', message: `Worker ${s.leaseOwner} lost while executing; retrying`, retryable: true },
+            }
+          : {
+              status: 'FAILED',
+              leaseOwner: null,
+              leaseExpiresAt: null,
+              completedAt: new Date(),
+              error: { kind: 'internal', message: 'Worker lost while executing and no attempts remain', retryable: false },
+            },
       });
       if (res.count) {
         stats.expiredLeases++;
@@ -91,8 +107,18 @@ export class RecoveryService implements OnApplicationBootstrap {
     for (const e of idle) {
       const def = workflowDefinitionSchema.safeParse(e.definition);
       if (def.success && def.data.timeoutMs && e.startedAt && now - e.startedAt.getTime() > def.data.timeoutMs) {
-        await this.prisma.workflowExecution.update({ where: { id: e.id }, data: { status: 'FAILED', completedAt: new Date(), error: { message: `Run exceeded its ${Math.round(def.data.timeoutMs / 60_000)} minute timeout` } } });
-        await this.prisma.workflowExecutionStep.updateMany({ where: { executionId: e.id, status: { in: ['PENDING', 'QUEUED', 'RETRY_SCHEDULED', 'WAITING_APPROVAL'] } }, data: { status: 'CANCELLED' } });
+        await this.prisma.workflowExecution.update({
+          where: { id: e.id },
+          data: {
+            status: 'FAILED',
+            completedAt: new Date(),
+            error: { message: `Run exceeded its ${Math.round(def.data.timeoutMs / 60_000)} minute timeout` },
+          },
+        });
+        await this.prisma.workflowExecutionStep.updateMany({
+          where: { executionId: e.id, status: { in: ['PENDING', 'QUEUED', 'RETRY_SCHEDULED', 'WAITING_APPROVAL'] } },
+          data: { status: 'CANCELLED' },
+        });
         stats.timedOut++;
         continue;
       }
@@ -105,7 +131,11 @@ export class RecoveryService implements OnApplicationBootstrap {
     }
 
     // 4) Unfinished compensations.
-    const compensating = await this.prisma.workflowExecution.findMany({ where: { status: 'COMPENSATING', updatedAt: { lt: new Date(now - GRACE_MS) } }, select: { id: true }, take: 50 });
+    const compensating = await this.prisma.workflowExecution.findMany({
+      where: { status: 'COMPENSATING', updatedAt: { lt: new Date(now - GRACE_MS) } },
+      select: { id: true },
+      take: 50,
+    });
     for (const c of compensating) await this.queue.add('run.compensate', { executionId: c.id });
 
     if (stats.expiredLeases || stats.redispatched || stats.timedOut) this.logger.warn(stats, 'Recovery sweep repaired state');

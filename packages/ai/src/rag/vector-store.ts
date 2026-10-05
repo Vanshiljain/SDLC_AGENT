@@ -62,7 +62,11 @@ export interface VectorStore {
 
 type QdrantCondition = Record<string, unknown>;
 
-export function buildQdrantFilter(filter: VectorSearchFilter): { must: QdrantCondition[]; should?: QdrantCondition[]; min_should?: unknown } {
+export function buildQdrantFilter(filter: VectorSearchFilter): {
+  must: QdrantCondition[];
+  should?: QdrantCondition[];
+  min_should?: unknown;
+} {
   if (!filter.organizationId) throw new Error('organizationId filter is mandatory for vector search');
   const must: QdrantCondition[] = [{ key: 'organizationId', match: { value: filter.organizationId } }];
   if (filter.projectId) {
@@ -90,10 +94,13 @@ export class QdrantVectorStore implements VectorStore {
   private readonly client: QdrantClient;
   private ensured = false;
 
-  constructor(
-    private readonly options: { url: string; apiKey?: string; collection: string; timeoutMs?: number },
-  ) {
-    this.client = new QdrantClient({ url: options.url, apiKey: options.apiKey || undefined, timeout: options.timeoutMs ?? 30_000, checkCompatibility: false });
+  constructor(private readonly options: { url: string; apiKey?: string; collection: string; timeoutMs?: number }) {
+    this.client = new QdrantClient({
+      url: options.url,
+      apiKey: options.apiKey || undefined,
+      timeout: options.timeoutMs ?? 30_000,
+      checkCompatibility: false,
+    });
   }
 
   async ensureCollection(dimensions: number): Promise<void> {

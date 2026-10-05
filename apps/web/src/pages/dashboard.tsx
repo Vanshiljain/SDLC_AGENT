@@ -1,6 +1,22 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { Activity, ArrowRight, ArrowUp, CheckCircle2, Coins, FileText, GitPullRequestArrow, Hand, Plug, Rocket, ShieldAlert, Sparkles, TriangleAlert, Workflow, Zap } from 'lucide-react';
+import {
+  Activity,
+  ArrowRight,
+  ArrowUp,
+  CheckCircle2,
+  Coins,
+  FileText,
+  GitPullRequestArrow,
+  Hand,
+  Plug,
+  Rocket,
+  ShieldAlert,
+  Sparkles,
+  TriangleAlert,
+  Workflow,
+  Zap,
+} from 'lucide-react';
 import { useDashboard } from '@/api/queries';
 import type { DashboardData } from '@/api/types';
 import { useAuth } from '@/lib/auth';
@@ -105,11 +121,23 @@ function AskForge() {
           placeholder="Describe what you want shipped — “Implement a password reset feature for my authentication service”"
           className="h-10 min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-fg-subtle"
         />
-        <Button type="submit" variant="primary" size="icon" aria-label="Ask Forge" disabled={text.trim().length < 2} icon={<ArrowUp className="size-4" />} />
+        <Button
+          type="submit"
+          variant="primary"
+          size="icon"
+          aria-label="Ask Forge"
+          disabled={text.trim().length < 2}
+          icon={<ArrowUp className="size-4" />}
+        />
       </form>
       <div className="relative flex flex-wrap gap-1.5 border-t border-line px-3 py-2">
         {QUICK.map((q) => (
-          <button key={q.id} type="button" onClick={() => commandLauncher.open(q.id)} className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[12px] text-fg-muted transition-colors hover:bg-sunken hover:text-fg">
+          <button
+            key={q.id}
+            type="button"
+            onClick={() => commandLauncher.open(q.id)}
+            className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[12px] text-fg-muted transition-colors hover:bg-sunken hover:text-fg"
+          >
             <q.icon className="size-3.5 text-fg-subtle" />
             {q.label}
           </button>
@@ -125,7 +153,12 @@ function Headline({ data, loading }: { data?: DashboardData; loading: boolean })
   return (
     <Card className="grid grid-cols-2 divide-line sm:grid-cols-3 lg:grid-cols-6 lg:divide-x [&>*]:border-line max-lg:[&>*]:border-b">
       <Stat icon={<Activity />} label="Active runs" value={v(h?.activeRuns ?? 0)} tone={h?.activeRuns ? 'arc' : undefined} />
-      <Stat icon={<Hand />} label="Awaiting approval" value={v(h?.pendingApprovals ?? 0)} tone={h?.pendingApprovals ? 'accent' : undefined} />
+      <Stat
+        icon={<Hand />}
+        label="Awaiting approval"
+        value={v(h?.pendingApprovals ?? 0)}
+        tone={h?.pendingApprovals ? 'accent' : undefined}
+      />
       <Stat icon={<CheckCircle2 />} label="Success rate · 30d" value={v(formatPercent(h?.successRate30d))} />
       <Stat icon={<Rocket />} label="Deployments · 7d" value={v(h?.deployments7d ?? 0)} />
       <Stat icon={<TriangleAlert />} label="Failed runs · 7d" value={v(h?.failedRuns7d ?? 0)} tone={h?.failedRuns7d ? 'bad' : undefined} />
@@ -245,7 +278,12 @@ function Environments({ data }: { data?: DashboardData }) {
         }
       />
       {!items.length ? (
-        <EmptyState compact icon={<Rocket />} title="No deployments yet" description="Deployments started by flows appear here with health checks and smoke tests." />
+        <EmptyState
+          compact
+          icon={<Rocket />}
+          title="No deployments yet"
+          description="Deployments started by flows appear here with health checks and smoke tests."
+        />
       ) : (
         <div className="grid gap-px overflow-hidden border-t border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
           {items.map((d) => (
@@ -274,7 +312,11 @@ function NeedsYou({ data }: { data?: DashboardData }) {
   const failed = data?.failedRuns ?? [];
   return (
     <Card className={cn(approvals.length && 'border-accent/30')}>
-      <CardHeader icon={<Hand className="size-4" />} title="Needs you" description={approvals.length || failed.length ? 'Decisions and failures waiting for a human' : undefined} />
+      <CardHeader
+        icon={<Hand className="size-4" />}
+        title="Needs you"
+        description={approvals.length || failed.length ? 'Decisions and failures waiting for a human' : undefined}
+      />
       {!approvals.length && !failed.length ? (
         <EmptyState compact icon={<CheckCircle2 />} title="All clear" description="No pending approvals or recent failures." />
       ) : (
@@ -324,14 +366,22 @@ function AgentFeed({ data }: { data?: DashboardData }) {
         }
       />
       {!items.length ? (
-        <EmptyState compact icon={<Sparkles />} title="Agents are idle" description="Planning, code, review, QA, release and docs agents report what they do here." />
+        <EmptyState
+          compact
+          icon={<Sparkles />}
+          title="Agents are idle"
+          description="Planning, code, review, QA, release and docs agents report what they do here."
+        />
       ) : (
         <ol className="relative space-y-3 border-t border-line px-4 py-3">
           {items.slice(0, 8).map((r) => {
             const a = agentOf({ agent: r.agent.key });
             return (
               <li key={r.id} className="flex gap-2.5">
-                <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md" style={{ background: `color-mix(in oklab, ${a.color} 15%, transparent)`, color: a.color }}>
+                <span
+                  className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md"
+                  style={{ background: `color-mix(in oklab, ${a.color} 15%, transparent)`, color: a.color }}
+                >
                   <a.icon className="size-3" />
                 </span>
                 <div className="min-w-0 flex-1">

@@ -12,11 +12,15 @@ type Behaviour = (ctx: { iteration: number; attempt: number }) => { ok: true; ou
  * In-memory simulator: applies scheduler decisions exactly as the API runner
  * does, executing steps synchronously with scripted behaviours.
  */
-function simulate(raw: WorkflowDefinitionInput, behaviours: Record<string, Behaviour> = {}, opts: { approvals?: Record<string, boolean> } = {}) {
+function simulate(
+  raw: WorkflowDefinitionInput,
+  behaviours: Record<string, Behaviour> = {},
+  opts: { approvals?: Record<string, boolean> } = {},
+) {
   const definition = assertValidWorkflowDefinition(raw);
   const steps: Record<string, StepRuntimeState> = {};
   const order: string[] = [];
-  let status: ExecutionStatus = 'RUNNING';
+  const status: ExecutionStatus = 'RUNNING';
   let outcome: SchedulerOutcome = 'running';
   const scopeBase = { inputs: {}, variables: {} };
 
@@ -104,16 +108,19 @@ describe('scheduler', () => {
   });
 
   it('skips a conditional branch and joins with none_failed', () => {
-    const r = simulate({
-      inputs: {},
-      steps: [
-        t('check', { tool: 'demo.echo' }),
-        t('big', { dependsOn: ['check'], when: 'steps.check.output.size > 10' }),
-        t('small', { dependsOn: ['check'], when: 'steps.check.output.size <= 10' }),
-        t('join', { dependsOn: ['big', 'small'], runIf: 'none_failed' }),
-        t('after_big', { dependsOn: ['big'] }),
-      ],
-    }, { check: () => ({ ok: true, output: { size: 3 } }) });
+    const r = simulate(
+      {
+        inputs: {},
+        steps: [
+          t('check', { tool: 'demo.echo' }),
+          t('big', { dependsOn: ['check'], when: 'steps.check.output.size > 10' }),
+          t('small', { dependsOn: ['check'], when: 'steps.check.output.size <= 10' }),
+          t('join', { dependsOn: ['big', 'small'], runIf: 'none_failed' }),
+          t('after_big', { dependsOn: ['big'] }),
+        ],
+      },
+      { check: () => ({ ok: true, output: { size: 3 } }) },
+    );
     expect(r.steps.big!.status).toBe('SKIPPED');
     expect(r.steps.small!.status).toBe('COMPLETED');
     expect(r.steps.join!.status).toBe('COMPLETED');
@@ -195,12 +202,24 @@ describe('scheduler', () => {
   });
 
   it('waits on approvals and continues once approved', () => {
-    const pending = simulate({ steps: [t('plan'), { key: 'gate', name: 'Gate', type: 'approval', approval: { title: 'Ok?' }, dependsOn: ['plan'] }, t('code', { dependsOn: ['gate'] })] });
+    const pending = simulate({
+      steps: [
+        t('plan'),
+        { key: 'gate', name: 'Gate', type: 'approval', approval: { title: 'Ok?' }, dependsOn: ['plan'] },
+        t('code', { dependsOn: ['gate'] }),
+      ],
+    });
     expect(pending.outcome).toBe('waiting_approval');
     expect(pending.steps.code).toBeUndefined();
 
     const approved = simulate(
-      { steps: [t('plan'), { key: 'gate', name: 'Gate', type: 'approval', approval: { title: 'Ok?' }, dependsOn: ['plan'] }, t('code', { dependsOn: ['gate'] })] },
+      {
+        steps: [
+          t('plan'),
+          { key: 'gate', name: 'Gate', type: 'approval', approval: { title: 'Ok?' }, dependsOn: ['plan'] },
+          t('code', { dependsOn: ['gate'] }),
+        ],
+      },
       {},
       { approvals: { gate: true } },
     );
@@ -243,8 +262,12 @@ describe('scheduler', () => {
 
   it('is inert while paused and inactive when terminal', () => {
     const def = assertValidWorkflowDefinition({ steps: [t('a')] });
-    expect(schedule({ definition: def, executionStatus: 'PAUSED', steps: {}, scope: { inputs: {}, variables: {} } }).outcome).toBe('paused');
-    expect(schedule({ definition: def, executionStatus: 'CANCELLED', steps: {}, scope: { inputs: {}, variables: {} } }).decisions).toEqual([]);
+    expect(schedule({ definition: def, executionStatus: 'PAUSED', steps: {}, scope: { inputs: {}, variables: {} } }).outcome).toBe(
+      'paused',
+    );
+    expect(schedule({ definition: def, executionStatus: 'CANCELLED', steps: {}, scope: { inputs: {}, variables: {} } }).decisions).toEqual(
+      [],
+    );
   });
 
   it('computes steps to reset for a manual retry', () => {

@@ -11,9 +11,7 @@ import { z } from 'zod';
 
 export const STEP_KEY_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
 
-export const stepKeySchema = z
-  .string()
-  .regex(STEP_KEY_PATTERN, 'Step keys must be snake_case, start with a letter, max 64 chars');
+export const stepKeySchema = z.string().regex(STEP_KEY_PATTERN, 'Step keys must be snake_case, start with a letter, max 64 chars');
 
 export const retryPolicySchema = z.object({
   maxAttempts: z.number().int().min(1).max(10).default(3),
@@ -38,7 +36,12 @@ export const approvalConfigSchema = z.object({
   risk: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
   /** Permission the approver must hold. Defaults to approval:decide. */
   requiredPermission: z.string().max(64).optional(),
-  expiresInMinutes: z.number().int().min(1).max(60 * 24 * 30).optional(),
+  expiresInMinutes: z
+    .number()
+    .int()
+    .min(1)
+    .max(60 * 24 * 30)
+    .optional(),
   allowSelfApproval: z.boolean().optional(),
   /** Templated context shown to the approver (changes, QA, CI…). */
   context: z.record(z.string(), z.unknown()).optional(),
@@ -67,7 +70,12 @@ export const stepDefinitionSchema = z.object({
    */
   runIf: z.enum(['all_success', 'none_failed', 'always']).default('all_success'),
   retry: retryPolicySchema.partial().optional(),
-  timeoutMs: z.number().int().min(1_000).max(6 * 3_600_000).optional(),
+  timeoutMs: z
+    .number()
+    .int()
+    .min(1_000)
+    .max(6 * 3_600_000)
+    .optional(),
   /** If true a failure does not fail the run; dependents still run. */
   continueOnError: z.boolean().default(false),
   /** Evaluated against the step output; false turns success into a failure. */
@@ -90,7 +98,12 @@ export const stepDefinitionSchema = z.object({
   /** type=condition: expression whose boolean result becomes output.result. */
   expression: z.string().max(1000).optional(),
   /** type=delay */
-  delayMs: z.number().int().min(0).max(7 * 24 * 3_600_000).optional(),
+  delayMs: z
+    .number()
+    .int()
+    .min(0)
+    .max(7 * 24 * 3_600_000)
+    .optional(),
   /** Visual-builder metadata only. */
   ui: z
     .object({
@@ -122,7 +135,12 @@ export const workflowDefinitionSchema = z.object({
   steps: z.array(stepDefinitionSchema).min(1).max(100),
   /** fail: stop the run. compensate: run compensations of completed steps. */
   onFailure: z.enum(['fail', 'compensate']).default('fail'),
-  timeoutMs: z.number().int().min(1_000).max(14 * 24 * 3_600_000).optional(),
+  timeoutMs: z
+    .number()
+    .int()
+    .min(1_000)
+    .max(14 * 24 * 3_600_000)
+    .optional(),
   /** Max steps executing at once within one run. */
   concurrency: z.number().int().min(1).max(32).default(8),
 });

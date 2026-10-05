@@ -29,7 +29,10 @@ export class ProjectSettingsDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(64) notionParentPageId?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(80) slackChannel?: string;
   @ApiPropertyOptional({ enum: ['JIRA', 'TRELLO'] }) @IsOptional() @IsIn(['JIRA', 'TRELLO']) ticketProvider?: 'JIRA' | 'TRELLO';
-  @ApiPropertyOptional({ enum: ['CUSTOM_DEVOPS', 'GITHUB_ACTIONS'] }) @IsOptional() @IsIn(['CUSTOM_DEVOPS', 'GITHUB_ACTIONS']) cicdProvider?: 'CUSTOM_DEVOPS' | 'GITHUB_ACTIONS';
+  @ApiPropertyOptional({ enum: ['CUSTOM_DEVOPS', 'GITHUB_ACTIONS'] })
+  @IsOptional()
+  @IsIn(['CUSTOM_DEVOPS', 'GITHUB_ACTIONS'])
+  cicdProvider?: 'CUSTOM_DEVOPS' | 'GITHUB_ACTIONS';
   @ApiPropertyOptional({ description: 'Map of policy action → auto|required, e.g. {"pr.create":"required"}' })
   @IsOptional()
   @IsObject()
@@ -41,15 +44,26 @@ export class CreateProjectDto {
   @ApiProperty({ description: 'Short uppercase key, e.g. AUTH' }) @IsString() @Matches(/^[A-Z][A-Z0-9]{1,9}$/) key!: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(2000) description?: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() teamId?: string;
-  @ApiPropertyOptional({ type: ProjectSettingsDto }) @IsOptional() @ValidateNested() @Type(() => ProjectSettingsDto) settings?: ProjectSettingsDto;
-  @ApiPropertyOptional({ description: 'Create default development/staging/production environments' }) @IsOptional() @IsBoolean() createDefaultEnvironments?: boolean;
+  @ApiPropertyOptional({ type: ProjectSettingsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProjectSettingsDto)
+  settings?: ProjectSettingsDto;
+  @ApiPropertyOptional({ description: 'Create default development/staging/production environments' })
+  @IsOptional()
+  @IsBoolean()
+  createDefaultEnvironments?: boolean;
 }
 
 export class UpdateProjectDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MinLength(2) @MaxLength(80) name?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(2000) description?: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() teamId?: string | null;
-  @ApiPropertyOptional({ type: ProjectSettingsDto }) @IsOptional() @ValidateNested() @Type(() => ProjectSettingsDto) settings?: ProjectSettingsDto;
+  @ApiPropertyOptional({ type: ProjectSettingsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProjectSettingsDto)
+  settings?: ProjectSettingsDto;
 }
 
 export class ProjectMemberDto {
@@ -71,12 +85,20 @@ export class RepositorySettingsDto {
 export class LinkRepositoryDto {
   @ApiProperty({ description: 'owner/name' }) @IsString() @Matches(/^[\w.-]+\/[\w.-]+$/) fullName!: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() integrationId?: string;
-  @ApiPropertyOptional({ type: RepositorySettingsDto }) @IsOptional() @ValidateNested() @Type(() => RepositorySettingsDto) settings?: RepositorySettingsDto;
+  @ApiPropertyOptional({ type: RepositorySettingsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RepositorySettingsDto)
+  settings?: RepositorySettingsDto;
 }
 
 export class UpdateRepositoryDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(200) defaultBranch?: string;
-  @ApiPropertyOptional({ type: RepositorySettingsDto }) @IsOptional() @ValidateNested() @Type(() => RepositorySettingsDto) settings?: RepositorySettingsDto;
+  @ApiPropertyOptional({ type: RepositorySettingsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RepositorySettingsDto)
+  settings?: RepositorySettingsDto;
 }
 
 export class SmokeTestDto {
@@ -93,7 +115,13 @@ export class EnvironmentDto {
   @ApiPropertyOptional() @IsOptional() @IsUrl({ require_tld: false, protocols: ['http', 'https'], require_protocol: true }) url?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @Matches(/^\//) healthCheckPath?: string;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() requiresApproval?: boolean;
-  @ApiPropertyOptional({ type: [SmokeTestDto] }) @IsOptional() @IsArray() @ArrayMaxSize(50) @ValidateNested({ each: true }) @Type(() => SmokeTestDto) smokeTests?: SmokeTestDto[];
+  @ApiPropertyOptional({ type: [SmokeTestDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => SmokeTestDto)
+  smokeTests?: SmokeTestDto[];
   @ApiPropertyOptional() @IsOptional() @IsObject() config?: Record<string, unknown>;
 }
 
@@ -101,6 +129,12 @@ export class UpdateEnvironmentDto {
   @ApiPropertyOptional() @IsOptional() @IsUrl({ require_tld: false, protocols: ['http', 'https'], require_protocol: true }) url?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @Matches(/^\//) healthCheckPath?: string;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() requiresApproval?: boolean;
-  @ApiPropertyOptional({ type: [SmokeTestDto] }) @IsOptional() @IsArray() @ArrayMaxSize(50) @ValidateNested({ each: true }) @Type(() => SmokeTestDto) smokeTests?: SmokeTestDto[];
+  @ApiPropertyOptional({ type: [SmokeTestDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => SmokeTestDto)
+  smokeTests?: SmokeTestDto[];
   @ApiPropertyOptional() @IsOptional() @IsObject() config?: Record<string, unknown>;
 }

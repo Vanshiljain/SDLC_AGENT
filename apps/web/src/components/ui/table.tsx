@@ -13,7 +13,16 @@ export function Table({ children, className }: { children: ReactNode; className?
 }
 
 export function Th({ children, className }: { children?: ReactNode; className?: string }) {
-  return <th className={cn('h-8 border-b border-line px-3 text-left text-[11px] font-semibold tracking-wide whitespace-nowrap text-fg-subtle uppercase first:pl-4 last:pr-4', className)}>{children}</th>;
+  return (
+    <th
+      className={cn(
+        'h-8 border-b border-line px-3 text-left text-[11px] font-semibold tracking-wide whitespace-nowrap text-fg-subtle uppercase first:pl-4 last:pr-4',
+        className,
+      )}
+    >
+      {children}
+    </th>
+  );
 }
 
 export function Td({ children, className, colSpan }: { children?: ReactNode; className?: string; colSpan?: number }) {
@@ -24,13 +33,28 @@ export function Td({ children, className, colSpan }: { children?: ReactNode; cla
   );
 }
 
-export function Tr({ children, onClick, className, active }: { children: ReactNode; onClick?: () => void; className?: string; active?: boolean }) {
+export function Tr({
+  children,
+  onClick,
+  className,
+  active,
+}: {
+  children: ReactNode;
+  onClick?: () => void;
+  className?: string;
+  active?: boolean;
+}) {
   return (
     <tr
       onClick={onClick}
       onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined}
       tabIndex={onClick ? 0 : undefined}
-      className={cn('transition-colors last:[&>td]:border-b-0', onClick && 'cursor-pointer hover:bg-sunken/70 focus-visible:bg-sunken', active && 'bg-sunken', className)}
+      className={cn(
+        'transition-colors last:[&>td]:border-b-0',
+        onClick && 'cursor-pointer hover:bg-sunken/70 focus-visible:bg-sunken',
+        active && 'bg-sunken',
+        className,
+      )}
     >
       {children}
     </tr>
@@ -53,7 +77,17 @@ export function TableSkeleton({ rows = 6, cols = 5 }: { rows?: number; cols?: nu
   );
 }
 
-export function Pagination({ page, pageSize, total, onPage }: { page: number; pageSize: number; total: number; onPage: (p: number) => void }) {
+export function Pagination({
+  page,
+  pageSize,
+  total,
+  onPage,
+}: {
+  page: number;
+  pageSize: number;
+  total: number;
+  onPage: (p: number) => void;
+}) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
   if (total <= pageSize) return null;
   return (
@@ -62,11 +96,25 @@ export function Pagination({ page, pageSize, total, onPage }: { page: number; pa
         {(page - 1) * pageSize + 1}–{Math.min(total, page * pageSize)} of {total}
       </span>
       <div className="flex items-center gap-1">
-        <Button size="icon-sm" variant="ghost" aria-label="Previous page" disabled={page <= 1} onClick={() => onPage(page - 1)} icon={<ChevronLeft className="size-4" />} />
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          aria-label="Previous page"
+          disabled={page <= 1}
+          onClick={() => onPage(page - 1)}
+          icon={<ChevronLeft className="size-4" />}
+        />
         <span className="px-1 font-mono">
           {page}/{pages}
         </span>
-        <Button size="icon-sm" variant="ghost" aria-label="Next page" disabled={page >= pages} onClick={() => onPage(page + 1)} icon={<ChevronRight className="size-4" />} />
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          aria-label="Next page"
+          disabled={page >= pages}
+          onClick={() => onPage(page + 1)}
+          icon={<ChevronRight className="size-4" />}
+        />
       </div>
     </div>
   );

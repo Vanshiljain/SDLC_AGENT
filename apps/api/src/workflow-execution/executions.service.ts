@@ -1,8 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@forgeline/database';
 import { isUniqueViolation } from '@forgeline/database';
-import { assertValidWorkflowDefinition, stepsToResetForRetry, topologicalOrder, resolveRetryPolicy, repairStepKeys } from '@forgeline/workflow-engine';
-import type { ExecutionMode, ExecutionStatus, StepStatus, TriggerSource, WorkflowDefinition, WorkflowDefinitionInput } from '@forgeline/shared';
+import {
+  assertValidWorkflowDefinition,
+  stepsToResetForRetry,
+  topologicalOrder,
+  resolveRetryPolicy,
+  repairStepKeys,
+} from '@forgeline/workflow-engine';
+import type {
+  ExecutionMode,
+  ExecutionStatus,
+  StepStatus,
+  TriggerSource,
+  WorkflowDefinition,
+  WorkflowDefinitionInput,
+} from '@forgeline/shared';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AppException } from '../common/errors';
 import { AuditService } from '../audit/audit.service';
@@ -82,7 +95,9 @@ export class ExecutionsService {
     const mode: ExecutionMode = org.isDemo ? 'DEMO' : 'LIVE';
 
     if (p.idempotencyKey) {
-      const existing = await this.prisma.workflowExecution.findUnique({ where: { organizationId_idempotencyKey: { organizationId: p.organizationId, idempotencyKey: p.idempotencyKey } } });
+      const existing = await this.prisma.workflowExecution.findUnique({
+        where: { organizationId_idempotencyKey: { organizationId: p.organizationId, idempotencyKey: p.idempotencyKey } },
+      });
       if (existing) return existing;
     }
 
@@ -132,7 +147,9 @@ export class ExecutionsService {
       });
     } catch (err) {
       if (isUniqueViolation(err) && p.idempotencyKey) {
-        return this.prisma.workflowExecution.findUniqueOrThrow({ where: { organizationId_idempotencyKey: { organizationId: p.organizationId, idempotencyKey: p.idempotencyKey } } });
+        return this.prisma.workflowExecution.findUniqueOrThrow({
+          where: { organizationId_idempotencyKey: { organizationId: p.organizationId, idempotencyKey: p.idempotencyKey } },
+        });
       }
       throw err;
     }
@@ -152,7 +169,14 @@ export class ExecutionsService {
       organizationId: p.organizationId,
       projectId: p.projectId,
       executionId: execution.id,
-      data: { status: 'RUNNING', title: execution.title, mode, template: p.template ?? null, progress: { completed: 0, total: definition.steps.length - repairKeys.size }, conversationId: p.conversationId ?? null },
+      data: {
+        status: 'RUNNING',
+        title: execution.title,
+        mode,
+        template: p.template ?? null,
+        progress: { completed: 0, total: definition.steps.length - repairKeys.size },
+        conversationId: p.conversationId ?? null,
+      },
     });
     await this.runner.advance(execution.id);
     return this.prisma.workflowExecution.findUniqueOrThrow({ where: { id: execution.id } });
@@ -164,7 +188,10 @@ export class ExecutionsService {
     return e;
   }
 
-  async list(auth: AuthContext, q: { page: number; pageSize: number; status?: ExecutionStatus; projectId?: string; search?: string; template?: string }) {
+  async list(
+    auth: AuthContext,
+    q: { page: number; pageSize: number; status?: ExecutionStatus; projectId?: string; search?: string; template?: string },
+  ) {
     const where: Prisma.WorkflowExecutionWhereInput = {
       organizationId: auth.organizationId,
       ...(q.status && { status: q.status }),
@@ -189,7 +216,10 @@ export class ExecutionsService {
           error: true,
           project: { select: { id: true, name: true, key: true } },
           triggeredBy: { select: { id: true, name: true } },
-          steps: { select: { stepKey: true, name: true, status: true, agent: true, tool: true, position: true }, orderBy: { position: 'asc' } },
+          steps: {
+            select: { stepKey: true, name: true, status: true, agent: true, tool: true, position: true },
+            orderBy: { position: 'asc' },
+          },
           _count: { select: { approvals: { where: { status: 'PENDING' } } } },
         },
         ...skipTake(q),
@@ -208,18 +238,70 @@ export class ExecutionsService {
         triggeredBy: { select: { id: true, name: true, email: true } },
         steps: { orderBy: { position: 'asc' } },
         approvals: { orderBy: { createdAt: 'desc' }, include: { decidedBy: { select: { id: true, name: true } } } },
-        artifacts: { orderBy: { createdAt: 'asc' }, select: { id: true, type: true, title: true, stepId: true, contentType: true, url: true, createdAt: true, version: true } },
+        artifacts: {
+          orderBy: { createdAt: 'asc' },
+          select: { id: true, type: true, title: true, stepId: true, contentType: true, url: true, createdAt: true, version: true },
+        },
         externalResources: { orderBy: { createdAt: 'asc' } },
         deployments: { orderBy: { createdAt: 'asc' }, include: { environment: { select: { name: true, type: true } } } },
         codeReviews: { orderBy: { createdAt: 'asc' } },
-        qaRuns: { orderBy: { createdAt: 'asc' }, select: { id: true, type: true, status: true, title: true, total: true, passed: true, failed: true, skipped: true, durationMs: true, simulated: true, createdAt: true } },
-        codeGenerations: { orderBy: { createdAt: 'asc' }, select: { id: true, status: true, branch: true, files: true, commitSha: true, prUrl: true, prNumber: true, iterations: true, simulated: true, validation: true } },
+        qaRuns: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            type: true,
+            status: true,
+            title: true,
+            total: true,
+            passed: true,
+            failed: true,
+            skipped: true,
+            durationMs: true,
+            simulated: true,
+            createdAt: true,
+          },
+        },
+        codeGenerations: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            status: true,
+            branch: true,
+            files: true,
+            commitSha: true,
+            prUrl: true,
+            prNumber: true,
+            iterations: true,
+            simulated: true,
+            validation: true,
+          },
+        },
       },
     });
     if (!e) throw AppException.notFound('Run', id);
     const [agentRuns, toolExecutions] = await Promise.all([
-      this.prisma.agentRun.findMany({ where: { executionId: id }, include: { agent: { select: { key: true, name: true, kind: true } } }, orderBy: { startedAt: 'asc' } }),
-      this.prisma.toolExecution.findMany({ where: { executionId: id }, orderBy: { startedAt: 'asc' }, select: { id: true, stepId: true, tool: true, status: true, attempt: true, durationMs: true, startedAt: true, completedAt: true, simulated: true, externalUrl: true, error: true } }),
+      this.prisma.agentRun.findMany({
+        where: { executionId: id },
+        include: { agent: { select: { key: true, name: true, kind: true } } },
+        orderBy: { startedAt: 'asc' },
+      }),
+      this.prisma.toolExecution.findMany({
+        where: { executionId: id },
+        orderBy: { startedAt: 'asc' },
+        select: {
+          id: true,
+          stepId: true,
+          tool: true,
+          status: true,
+          attempt: true,
+          durationMs: true,
+          startedAt: true,
+          completedAt: true,
+          simulated: true,
+          externalUrl: true,
+          error: true,
+        },
+      }),
     ]);
     const tokens = agentRuns.reduce((s, r) => s + r.totalTokens, 0);
     return { ...e, agentRuns, toolExecutions, usage: { totalTokens: tokens, llmCalls: agentRuns.reduce((s, r) => s + r.llmCalls, 0) } };
@@ -243,7 +325,14 @@ export class ExecutionsService {
   async updateArtifact(auth: AuthContext, artifactId: string, content: string) {
     const a = await this.artifact(auth, artifactId);
     const updated = await this.prisma.artifact.update({ where: { id: a.id }, data: { content, version: { increment: 1 } } });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'artifact.edited', resourceType: 'artifact', resourceId: a.id, executionId: a.executionId, input: { version: updated.version } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'artifact.edited',
+      resourceType: 'artifact',
+      resourceId: a.id,
+      executionId: a.executionId,
+      input: { version: updated.version },
+    });
     return updated;
   }
 
@@ -254,23 +343,58 @@ export class ExecutionsService {
   async pause(auth: AuthContext, id: string) {
     const e = await this.load(auth, id);
     await this.assertCanControl(auth, e.projectId);
-    const res = await this.prisma.workflowExecution.updateMany({ where: { id, status: { in: ['RUNNING', 'WAITING_APPROVAL'] } }, data: { status: 'PAUSED', pausedAt: new Date() } });
+    const res = await this.prisma.workflowExecution.updateMany({
+      where: { id, status: { in: ['RUNNING', 'WAITING_APPROVAL'] } },
+      data: { status: 'PAUSED', pausedAt: new Date() },
+    });
     if (!res.count) throw AppException.conflict(`Cannot pause a ${e.status.toLowerCase()} run`, 'INVALID_STATE');
-    await this.audit.record({ organizationId: auth.organizationId, action: 'workflow.paused', resourceType: 'execution', resourceId: id, executionId: id, projectId: e.projectId });
-    await this.events.publish({ type: 'workflow.paused', organizationId: auth.organizationId, projectId: e.projectId, executionId: id, data: { status: 'PAUSED', title: e.title } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'workflow.paused',
+      resourceType: 'execution',
+      resourceId: id,
+      executionId: id,
+      projectId: e.projectId,
+    });
+    await this.events.publish({
+      type: 'workflow.paused',
+      organizationId: auth.organizationId,
+      projectId: e.projectId,
+      executionId: id,
+      data: { status: 'PAUSED', title: e.title },
+    });
     return this.get(auth, id);
   }
 
   async resume(auth: AuthContext, id: string) {
     const e = await this.load(auth, id);
     await this.assertCanControl(auth, e.projectId);
-    const res = await this.prisma.workflowExecution.updateMany({ where: { id, status: 'PAUSED' }, data: { status: 'RUNNING', pausedAt: null } });
+    const res = await this.prisma.workflowExecution.updateMany({
+      where: { id, status: 'PAUSED' },
+      data: { status: 'RUNNING', pausedAt: null },
+    });
     if (!res.count) throw AppException.conflict(`Cannot resume a ${e.status.toLowerCase()} run`, 'INVALID_STATE');
     // Re-dispatch work that was queued while paused.
-    const queued = await this.prisma.workflowExecutionStep.findMany({ where: { executionId: id, status: { in: ['QUEUED', 'RETRY_SCHEDULED'] } } });
-    for (const s of queued) await this.queue.add('step.execute', { stepId: s.id, iteration: s.iteration, attempt: s.attempt, polls: s.polls });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'workflow.resumed', resourceType: 'execution', resourceId: id, executionId: id, projectId: e.projectId });
-    await this.events.publish({ type: 'workflow.resumed', organizationId: auth.organizationId, projectId: e.projectId, executionId: id, data: { status: 'RUNNING', title: e.title } });
+    const queued = await this.prisma.workflowExecutionStep.findMany({
+      where: { executionId: id, status: { in: ['QUEUED', 'RETRY_SCHEDULED'] } },
+    });
+    for (const s of queued)
+      await this.queue.add('step.execute', { stepId: s.id, iteration: s.iteration, attempt: s.attempt, polls: s.polls });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'workflow.resumed',
+      resourceType: 'execution',
+      resourceId: id,
+      executionId: id,
+      projectId: e.projectId,
+    });
+    await this.events.publish({
+      type: 'workflow.resumed',
+      organizationId: auth.organizationId,
+      projectId: e.projectId,
+      executionId: id,
+      data: { status: 'RUNNING', title: e.title },
+    });
     await this.runner.advance(id);
     return this.get(auth, id);
   }
@@ -278,22 +402,45 @@ export class ExecutionsService {
   async cancel(auth: AuthContext, id: string, opts: { rollback?: boolean; reason?: string } = {}) {
     const e = await this.load(auth, id);
     await this.assertCanControl(auth, e.projectId);
-    if (TERMINAL.includes(e.status as ExecutionStatus)) throw AppException.conflict(`Run is already ${e.status.toLowerCase()}`, 'INVALID_STATE');
+    if (TERMINAL.includes(e.status as ExecutionStatus))
+      throw AppException.conflict(`Run is already ${e.status.toLowerCase()}`, 'INVALID_STATE');
     await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "WorkflowExecution" WHERE id = ${id}::uuid FOR UPDATE`;
       await tx.workflowExecution.update({
         where: { id },
-        data: { status: opts.rollback ? 'COMPENSATING' : 'CANCELLED', cancelledAt: new Date(), completedAt: opts.rollback ? null : new Date(), error: { message: opts.reason ?? `Cancelled by ${auth.name}` } },
+        data: {
+          status: opts.rollback ? 'COMPENSATING' : 'CANCELLED',
+          cancelledAt: new Date(),
+          completedAt: opts.rollback ? null : new Date(),
+          error: { message: opts.reason ?? `Cancelled by ${auth.name}` },
+        },
       });
       // Running steps observe cancellation via their heartbeat and abort.
       await tx.workflowExecutionStep.updateMany({
-        where: { executionId: id, status: { in: ['PENDING', 'QUEUED', 'RETRY_SCHEDULED', 'WAITING_APPROVAL', 'REPAIRING'] as StepStatus[] } },
+        where: {
+          executionId: id,
+          status: { in: ['PENDING', 'QUEUED', 'RETRY_SCHEDULED', 'WAITING_APPROVAL', 'REPAIRING'] as StepStatus[] },
+        },
         data: { status: 'CANCELLED', completedAt: new Date() },
       });
     });
     await this.approvals.cancelForExecution(id);
-    await this.audit.record({ organizationId: auth.organizationId, action: 'workflow.cancelled', resourceType: 'execution', resourceId: id, executionId: id, projectId: e.projectId, input: opts });
-    await this.events.publish({ type: 'workflow.cancelled', organizationId: auth.organizationId, projectId: e.projectId, executionId: id, data: { status: opts.rollback ? 'COMPENSATING' : 'CANCELLED', title: e.title } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'workflow.cancelled',
+      resourceType: 'execution',
+      resourceId: id,
+      executionId: id,
+      projectId: e.projectId,
+      input: opts,
+    });
+    await this.events.publish({
+      type: 'workflow.cancelled',
+      organizationId: auth.organizationId,
+      projectId: e.projectId,
+      executionId: id,
+      data: { status: opts.rollback ? 'COMPENSATING' : 'CANCELLED', title: e.title },
+    });
     if (opts.rollback) await this.queue.add('run.compensate', { executionId: id });
     return this.get(auth, id);
   }
@@ -301,25 +448,58 @@ export class ExecutionsService {
   async retryStep(auth: AuthContext, id: string, stepId: string) {
     const e = await this.load(auth, id);
     await this.assertCanControl(auth, e.projectId);
-    if (!['FAILED', 'RUNNING', 'WAITING_APPROVAL', 'CANCELLED'].includes(e.status)) throw AppException.conflict(`Cannot retry steps of a ${e.status.toLowerCase()} run`, 'INVALID_STATE');
+    if (!['FAILED', 'RUNNING', 'WAITING_APPROVAL', 'CANCELLED'].includes(e.status))
+      throw AppException.conflict(`Cannot retry steps of a ${e.status.toLowerCase()} run`, 'INVALID_STATE');
     const steps = await this.prisma.workflowExecutionStep.findMany({ where: { executionId: id } });
     const target = steps.find((s) => s.id === stepId);
     if (!target) throw AppException.notFound('Step', stepId);
-    const runtime = Object.fromEntries(steps.map((s) => [s.stepKey, { key: s.stepKey, status: s.status as StepStatus, attempt: s.attempt, iteration: s.iteration }]));
+    const runtime = Object.fromEntries(
+      steps.map((s) => [s.stepKey, { key: s.stepKey, status: s.status as StepStatus, attempt: s.attempt, iteration: s.iteration }]),
+    );
     const reset = stepsToResetForRetry(this.runner.definitionOf(e), runtime, target.stepKey);
     if (!reset.length) throw AppException.conflict('Only failed or cancelled steps can be retried', 'INVALID_STATE');
     await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "WorkflowExecution" WHERE id = ${id}::uuid FOR UPDATE`;
       await tx.workflowExecutionStep.updateMany({
         where: { executionId: id, stepKey: { in: reset } },
-        data: { status: 'PENDING', attempt: 0, error: Prisma.DbNull, leaseOwner: null, leaseExpiresAt: null, nextAttemptAt: null, completedAt: null, checkpoint: Prisma.DbNull, polls: 0, pollStartedAt: null },
+        data: {
+          status: 'PENDING',
+          attempt: 0,
+          error: Prisma.DbNull,
+          leaseOwner: null,
+          leaseExpiresAt: null,
+          nextAttemptAt: null,
+          completedAt: null,
+          checkpoint: Prisma.DbNull,
+          polls: 0,
+          pollStartedAt: null,
+        },
       });
       // A rejected/expired gate must be asked again on retry; approved gates remain valid.
-      await tx.approval.deleteMany({ where: { executionId: id, step: { stepKey: { in: reset } }, status: { in: ['REJECTED', 'EXPIRED', 'CANCELLED'] } } });
-      await tx.workflowExecution.update({ where: { id }, data: { status: 'RUNNING', completedAt: null, cancelledAt: null, error: Prisma.DbNull } });
+      await tx.approval.deleteMany({
+        where: { executionId: id, step: { stepKey: { in: reset } }, status: { in: ['REJECTED', 'EXPIRED', 'CANCELLED'] } },
+      });
+      await tx.workflowExecution.update({
+        where: { id },
+        data: { status: 'RUNNING', completedAt: null, cancelledAt: null, error: Prisma.DbNull },
+      });
     });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'workflow.step_retried', resourceType: 'execution', resourceId: id, executionId: id, projectId: e.projectId, input: { step: target.stepKey, reset } });
-    await this.events.publish({ type: 'workflow.resumed', organizationId: auth.organizationId, projectId: e.projectId, executionId: id, data: { status: 'RUNNING', title: e.title, retriedStep: target.stepKey } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'workflow.step_retried',
+      resourceType: 'execution',
+      resourceId: id,
+      executionId: id,
+      projectId: e.projectId,
+      input: { step: target.stepKey, reset },
+    });
+    await this.events.publish({
+      type: 'workflow.resumed',
+      organizationId: auth.organizationId,
+      projectId: e.projectId,
+      executionId: id,
+      data: { status: 'RUNNING', title: e.title, retriedStep: target.stepKey },
+    });
     await this.runner.advance(id);
     return this.get(auth, id);
   }
@@ -327,10 +507,24 @@ export class ExecutionsService {
   async rollback(auth: AuthContext, id: string) {
     const e = await this.load(auth, id);
     await this.assertCanControl(auth, e.projectId);
-    if (!['FAILED', 'COMPLETED', 'CANCELLED'].includes(e.status)) throw AppException.conflict('Only finished runs can be rolled back', 'INVALID_STATE');
+    if (!['FAILED', 'COMPLETED', 'CANCELLED'].includes(e.status))
+      throw AppException.conflict('Only finished runs can be rolled back', 'INVALID_STATE');
     await this.prisma.workflowExecution.update({ where: { id }, data: { status: 'COMPENSATING', completedAt: null } });
-    await this.audit.record({ organizationId: auth.organizationId, action: 'workflow.rollback_requested', resourceType: 'execution', resourceId: id, executionId: id, projectId: e.projectId });
-    await this.events.publish({ type: 'workflow.status', organizationId: auth.organizationId, projectId: e.projectId, executionId: id, data: { status: 'COMPENSATING', title: e.title } });
+    await this.audit.record({
+      organizationId: auth.organizationId,
+      action: 'workflow.rollback_requested',
+      resourceType: 'execution',
+      resourceId: id,
+      executionId: id,
+      projectId: e.projectId,
+    });
+    await this.events.publish({
+      type: 'workflow.status',
+      organizationId: auth.organizationId,
+      projectId: e.projectId,
+      executionId: id,
+      data: { status: 'COMPENSATING', title: e.title },
+    });
     await this.queue.add('run.compensate', { executionId: id });
     return this.get(auth, id);
   }

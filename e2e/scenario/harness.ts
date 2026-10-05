@@ -187,7 +187,11 @@ export class ApiClient {
   }
 }
 
-export async function poll<T>(fn: () => Promise<T>, done: (v: T) => boolean, { timeoutMs = 120_000, intervalMs = 500, label = 'condition' } = {}): Promise<T> {
+export async function poll<T>(
+  fn: () => Promise<T>,
+  done: (v: T) => boolean,
+  { timeoutMs = 120_000, intervalMs = 500, label = 'condition' } = {},
+): Promise<T> {
   const deadline = Date.now() + timeoutMs;
   let last: T | undefined;
   while (Date.now() < deadline) {

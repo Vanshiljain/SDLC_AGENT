@@ -28,12 +28,26 @@ export interface TestUser {
 
 export async function register(app: NestExpressApplication, name = 'Test User'): Promise<TestUser> {
   const email = `it-${uid()}@forgeline.test`;
-  const res = await request(app.getHttpServer()).post('/api/auth/register').send({ email, name, password: PASSWORD, organizationName: `Org ${uid()}` }).expect(201);
-  return { token: res.body.accessToken, userId: res.body.user.id, orgId: res.body.memberships[0].organizationId, email, cookies: setCookies(res) };
+  const res = await request(app.getHttpServer())
+    .post('/api/auth/register')
+    .send({ email, name, password: PASSWORD, organizationName: `Org ${uid()}` })
+    .expect(201);
+  return {
+    token: res.body.accessToken,
+    userId: res.body.user.id,
+    orgId: res.body.memberships[0].organizationId,
+    email,
+    cookies: setCookies(res),
+  };
 }
 
 /** Invites a new user into `owner`'s organisation with the given role and returns their session. */
-export async function invite(app: NestExpressApplication, owner: TestUser, role: 'ADMIN' | 'MEMBER' | 'VIEWER', name = `${role} user`): Promise<TestUser> {
+export async function invite(
+  app: NestExpressApplication,
+  owner: TestUser,
+  role: 'ADMIN' | 'MEMBER' | 'VIEWER',
+  name = `${role} user`,
+): Promise<TestUser> {
   const email = `it-${uid()}@forgeline.test`;
   const inv = await authed(app, owner).post('/api/organizations/current/invitations').send({ email, role }).expect(201);
   const token = new URL(inv.body.inviteUrl).searchParams.get('token');

@@ -47,7 +47,10 @@ const EXT_LANGUAGE: Record<string, SupportedTextSplitterLanguage> = {
   rst: 'rst',
 };
 
-export function detectKind(path: string | null | undefined, fallback: ContentKind = 'text'): { kind: ContentKind; language?: SupportedTextSplitterLanguage } {
+export function detectKind(
+  path: string | null | undefined,
+  fallback: ContentKind = 'text',
+): { kind: ContentKind; language?: SupportedTextSplitterLanguage } {
   if (!path) return { kind: fallback };
   const ext = path.split('.').pop()?.toLowerCase() ?? '';
   const language = EXT_LANGUAGE[ext];
@@ -65,9 +68,17 @@ export function contentHash(text: string): string {
   return createHash('sha256').update(text.replace(/\r\n/g, '\n').trim()).digest('hex');
 }
 
+/** NUL bytes are stripped: Postgres text columns reject them. */
+const NUL = new RegExp(String.fromCharCode(0), 'g');
+
 /** Normalise whitespace and strip binary-looking content. */
 export function normalizeContent(text: string): string {
-  return text.replace(/\r\n/g, '\n').replace(/\u0000/g, '').replace(/[ \t]+$/gm, '').replace(/\n{4,}/g, '\n\n\n').trim();
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(NUL, '')
+    .replace(/[ \t]+$/gm, '')
+    .replace(/\n{4,}/g, '\n\n\n')
+    .trim();
 }
 
 export function looksBinary(text: string): boolean {
@@ -106,7 +117,10 @@ export async function chunkContent(
     }
     return lo + 1;
   };
-  const headingRe = options.kind === 'markdown' ? /^#{1,6}\s+(.+)$/gm : /^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:class|interface|function|def|func|type|enum|struct|impl|module)\s+([\w$]+)/gm;
+  const headingRe =
+    options.kind === 'markdown'
+      ? /^#{1,6}\s+(.+)$/gm
+      : /^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:class|interface|function|def|func|type|enum|struct|impl|module)\s+([\w$]+)/gm;
   const headings: { offset: number; title: string }[] = [];
   for (const m of text.matchAll(headingRe)) headings.push({ offset: m.index ?? 0, title: m[1]!.trim() });
 

@@ -38,7 +38,12 @@ export function ExecutionsPage() {
       />
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="w-full sm:w-72">
-          <Input icon={<Search className="size-3.5" />} placeholder="Search runs…" value={search} onChange={(e) => (setSearch(e.target.value), setPage(1))} />
+          <Input
+            icon={<Search className="size-3.5" />}
+            placeholder="Search runs…"
+            value={search}
+            onChange={(e) => (setSearch(e.target.value), setPage(1))}
+          />
         </div>
         <Select value={status} onChange={(e) => (setStatus(e.target.value), setPage(1))} className="w-44" aria-label="Status">
           <option value="">All statuses</option>
@@ -78,7 +83,11 @@ export function ExecutionsPage() {
               {data?.items.map((r) => (
                 <Tr key={r.id} onClick={() => navigate(`/executions/${r.id}`)}>
                   <Td>
-                    <Link to={`/executions/${r.id}`} className="block max-w-[420px] truncate font-medium" onClick={(e) => e.stopPropagation()}>
+                    <Link
+                      to={`/executions/${r.id}`}
+                      className="block max-w-[420px] truncate font-medium"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {r.title}
                     </Link>
                     <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-fg-subtle">
@@ -86,7 +95,9 @@ export function ExecutionsPage() {
                       <ModeBadge mode={r.mode} className="ml-1" />
                     </div>
                   </Td>
-                  <Td className="hidden md:table-cell">{r.project ? <span className="text-fg-muted">{r.project.name}</span> : <span className="text-fg-subtle">—</span>}</Td>
+                  <Td className="hidden md:table-cell">
+                    {r.project ? <span className="text-fg-muted">{r.project.name}</span> : <span className="text-fg-subtle">—</span>}
+                  </Td>
                   <Td>
                     <StatusBadge status={r.status} />
                   </Td>
@@ -104,7 +115,9 @@ export function ExecutionsPage() {
                     )}
                   </Td>
                   <Td className="text-right text-[12px] whitespace-nowrap text-fg-muted">{timeAgo(r.createdAt)}</Td>
-                  <Td className="hidden text-right font-mono text-[12px] text-fg-muted sm:table-cell">{formatDuration(durationBetween(r.startedAt, r.completedAt))}</Td>
+                  <Td className="hidden text-right font-mono text-[12px] text-fg-muted sm:table-cell">
+                    {formatDuration(durationBetween(r.startedAt, r.completedAt))}
+                  </Td>
                 </Tr>
               ))}
             </tbody>

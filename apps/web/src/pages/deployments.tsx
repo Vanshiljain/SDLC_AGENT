@@ -56,7 +56,17 @@ export function DeploymentsPage() {
           <Skeleton className="h-40" />
         ) : !byProject.size ? (
           <Card>
-            <EmptyState compact icon={<Rocket />} title="No environments yet" description="Add development, staging and production environments to a project to deploy with Forgeline." action={<Link to="/projects"><Button size="sm">Open projects</Button></Link>} />
+            <EmptyState
+              compact
+              icon={<Rocket />}
+              title="No environments yet"
+              description="Add development, staging and production environments to a project to deploy with Forgeline."
+              action={
+                <Link to="/projects">
+                  <Button size="sm">Open projects</Button>
+                </Link>
+              }
+            />
           </Card>
         ) : (
           <div className="space-y-4">
@@ -69,9 +79,11 @@ export function DeploymentsPage() {
                   <Mono>{envs[0]!.project.key}</Mono>
                 </div>
                 <div className="grid divide-line md:grid-cols-3 md:divide-x">
-                  {[...envs].sort((a, b) => ENV_ORDER[a.type] - ENV_ORDER[b.type]).map((env) => (
-                    <EnvColumn key={env.id} env={env} onOpen={setOpen} />
-                  ))}
+                  {[...envs]
+                    .sort((a, b) => ENV_ORDER[a.type] - ENV_ORDER[b.type])
+                    .map((env) => (
+                      <EnvColumn key={env.id} env={env} onOpen={setOpen} />
+                    ))}
                 </div>
               </Card>
             ))}
@@ -84,7 +96,12 @@ export function DeploymentsPage() {
         className="mt-8"
         actions={
           <div className="flex gap-2">
-            <Select value={projectId} onChange={(e) => (setProjectId(e.target.value), setPage(1))} className="h-7 w-48 text-[12px]" aria-label="Project">
+            <Select
+              value={projectId}
+              onChange={(e) => (setProjectId(e.target.value), setPage(1))}
+              className="h-7 w-48 text-[12px]"
+              aria-label="Project"
+            >
               <option value="">All projects</option>
               {projects.data?.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -92,7 +109,12 @@ export function DeploymentsPage() {
                 </option>
               ))}
             </Select>
-            <Select value={status} onChange={(e) => (setStatus(e.target.value), setPage(1))} className="h-7 w-40 text-[12px]" aria-label="Status">
+            <Select
+              value={status}
+              onChange={(e) => (setStatus(e.target.value), setPage(1))}
+              className="h-7 w-40 text-[12px]"
+              aria-label="Status"
+            >
               <option value="">All statuses</option>
               {DEPLOYMENT_STATUSES.map((s) => (
                 <option key={s} value={s}>
@@ -154,7 +176,9 @@ export function DeploymentsPage() {
             </tbody>
           </Table>
           {history.data && !history.data.items.length && <EmptyState compact icon={<Rocket />} title="No deployments match" />}
-          {history.data && <Pagination page={history.data.page} pageSize={history.data.pageSize} total={history.data.total} onPage={setPage} />}
+          {history.data && (
+            <Pagination page={history.data.page} pageSize={history.data.pageSize} total={history.data.total} onPage={setPage} />
+          )}
         </Card>
       </Section>
       <DeploymentSheet deployment={open} onClose={() => setOpen(null)} />
@@ -167,17 +191,32 @@ function EnvColumn({ env, onOpen }: { env: EnvironmentBoardItem; onOpen: (d: Dep
   return (
     <div className="px-4 py-3.5">
       <div className="flex items-center gap-2">
-        <span className={cn('size-2 rounded-full', env.type === 'PRODUCTION' ? 'bg-accent' : env.type === 'STAGING' ? 'bg-arc' : 'bg-fg-subtle')} />
+        <span
+          className={cn(
+            'size-2 rounded-full',
+            env.type === 'PRODUCTION' ? 'bg-accent' : env.type === 'STAGING' ? 'bg-arc' : 'bg-fg-subtle',
+          )}
+        />
         <span className="text-[12.5px] font-semibold">{env.name}</span>
         {env.requiresApproval && <Badge tone="accent">gated</Badge>}
         {env.url && (
-          <a href={env.url} target="_blank" rel="noreferrer" className="ml-auto text-fg-subtle hover:text-fg" aria-label={`Open ${env.name}`}>
+          <a
+            href={env.url}
+            target="_blank"
+            rel="noreferrer"
+            className="ml-auto text-fg-subtle hover:text-fg"
+            aria-label={`Open ${env.name}`}
+          >
             <ExternalLink className="size-3.5" />
           </a>
         )}
       </div>
       {cur ? (
-        <button type="button" onClick={() => onOpen(cur)} className="mt-2.5 w-full rounded-md border border-line bg-sunken/50 px-3 py-2 text-left hover:border-line-strong">
+        <button
+          type="button"
+          onClick={() => onOpen(cur)}
+          className="mt-2.5 w-full rounded-md border border-line bg-sunken/50 px-3 py-2 text-left hover:border-line-strong"
+        >
           <div className="flex items-center gap-2">
             <StatusDot status={cur.status} />
             <span className="flex-1 truncate font-mono text-[12px]">{cur.version}</span>
@@ -188,13 +227,19 @@ function EnvColumn({ env, onOpen }: { env: EnvironmentBoardItem; onOpen: (d: Dep
           </div>
         </button>
       ) : (
-        <div className="mt-2.5 rounded-md border border-dashed border-line px-3 py-3 text-center text-[11.5px] text-fg-subtle">Nothing deployed yet</div>
+        <div className="mt-2.5 rounded-md border border-dashed border-line px-3 py-3 text-center text-[11.5px] text-fg-subtle">
+          Nothing deployed yet
+        </div>
       )}
       {env.recent.length > 1 && (
         <ol className="mt-2 space-y-1">
           {env.recent.slice(1, 4).map((d) => (
             <li key={d.id}>
-              <button type="button" onClick={() => onOpen(d)} className="flex w-full items-center gap-2 text-left text-[11.5px] text-fg-muted hover:text-fg">
+              <button
+                type="button"
+                onClick={() => onOpen(d)}
+                className="flex w-full items-center gap-2 text-left text-[11.5px] text-fg-muted hover:text-fg"
+              >
                 <StatusDot status={d.status} className="size-1.5" />
                 <span className="flex-1 truncate font-mono">{d.version}</span>
                 <span className="text-fg-subtle">{timeAgo(d.createdAt)}</span>
@@ -209,7 +254,12 @@ function EnvColumn({ env, onOpen }: { env: EnvironmentBoardItem; onOpen: (d: Dep
 
 function DeploymentSheet({ deployment: d, onClose }: { deployment: Deployment | null; onClose: () => void }) {
   return (
-    <Sheet open={Boolean(d)} onOpenChange={(o) => !o && onClose()} title={d ? `${d.version} → ${d.environment?.name ?? ''}` : ''} subtitle={d?.project?.name}>
+    <Sheet
+      open={Boolean(d)}
+      onOpenChange={(o) => !o && onClose()}
+      title={d ? `${d.version} → ${d.environment?.name ?? ''}` : ''}
+      subtitle={d?.project?.name}
+    >
       {d && (
         <div className="space-y-5 p-5">
           <div className="flex flex-wrap items-center gap-2">

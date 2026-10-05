@@ -28,15 +28,19 @@ export function ChatPage() {
           </Button>
         </div>
         <div className="flex-1 overflow-y-auto p-2">
-          {conversations.isLoading &&
-            Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="mb-1.5 h-10" />)}
-          {!conversations.isLoading && !conversations.data?.length && <p className="px-2 py-6 text-center text-[12px] text-fg-subtle">Your conversations with Forge appear here.</p>}
+          {conversations.isLoading && Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="mb-1.5 h-10" />)}
+          {!conversations.isLoading && !conversations.data?.length && (
+            <p className="px-2 py-6 text-center text-[12px] text-fg-subtle">Your conversations with Forge appear here.</p>
+          )}
           {conversations.data?.map((c) => (
             <button
               key={c.id}
               type="button"
               onClick={() => navigate(`/chat/${c.id}`)}
-              className={cn('mb-0.5 flex w-full items-start gap-2 rounded-md px-2.5 py-2 text-left transition-colors', c.id === conversationId ? 'bg-sunken' : 'hover:bg-sunken/60')}
+              className={cn(
+                'mb-0.5 flex w-full items-start gap-2 rounded-md px-2.5 py-2 text-left transition-colors',
+                c.id === conversationId ? 'bg-sunken' : 'hover:bg-sunken/60',
+              )}
             >
               <MessageSquareText className="mt-0.5 size-3.5 shrink-0 text-fg-subtle" />
               <span className="min-w-0 flex-1">
