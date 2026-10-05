@@ -4,8 +4,6 @@ import { APP_CONFIG, type AppConfig } from '../config/configuration';
 import { MetricsService } from '../observability/metrics.service';
 import { RequestContext } from '../common/context/request-context';
 
-export const QUEUE_NAME = 'forgeline';
-
 export type JobName = 'step.execute' | 'run.advance' | 'run.compensate' | 'knowledge.ingest' | 'trigger.fire';
 
 export interface JobOptions {
@@ -45,7 +43,7 @@ export class BullJobQueue extends JobQueue implements OnApplicationBootstrap, On
     private readonly metrics: MetricsService,
   ) {
     super();
-    this.queue = new Queue(QUEUE_NAME, {
+    this.queue = new Queue(this.config.queueName, {
       connection: { url: config.redisUrl, maxRetriesPerRequest: null },
       defaultJobOptions: {
         attempts: 5,
@@ -63,7 +61,7 @@ export class BullJobQueue extends JobQueue implements OnApplicationBootstrap, On
   onApplicationBootstrap(): void {
     if (this.config.role === 'api') return;
     this.worker = new Worker(
-      QUEUE_NAME,
+      this.config.queueName,
       async (job: Job) => {
         const handler = this.handlers.get(job.name as JobName);
         if (!handler) throw new Error(`No handler registered for job ${job.name}`);
@@ -76,9 +74,9 @@ export class BullJobQueue extends JobQueue implements OnApplicationBootstrap, On
         maxStalledCount: 3,
       },
     );
-    this.worker.on('completed', (job) => this.metrics.queueJobs.inc({ queue: QUEUE_NAME, name: job.name, status: 'completed' }));
+    this.worker.on('completed', (job) => this.metrics.queueJobs.inc({ queue: this.config.queueName, name: job.name, status: 'completed' }));
     this.worker.on('failed', (job, err) => {
-      this.metrics.queueJobs.inc({ queue: QUEUE_NAME, name: job?.name ?? 'unknown', status: 'failed' });
+      this.metrics.queueJobs.inc({ queue: this.config.queueName, name: job?.name ?? 'unknown', status: 'failed' });
       this.logger.error({ err: err.message, job: job?.name, jobId: job?.id }, 'Job failed');
     });
     this.worker.on('error', (err) => this.logger.error({ err: err.message }, 'Worker error'));

@@ -8,6 +8,7 @@ import { AppException } from '../errors';
 import { RequestContext } from '../context/request-context';
 import { APP_CONFIG, type AppConfig } from '../../config/configuration';
 import { AuthorizationService } from '../../rbac/authorization.service';
+import { AuditService } from '../../audit/audit.service';
 import { ALLOW_NO_ORG, IS_PUBLIC, REQUIRED_PERMISSIONS, type AuthContext, type PermissionRequirement } from './auth-context';
 
 export interface AccessTokenPayload {
@@ -90,6 +91,7 @@ export class PermissionsGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly authz: AuthorizationService,
+    private readonly audit: AuditService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -108,7 +110,27 @@ export class PermissionsGuard implements CanActivate {
       if (projectId && !UUID_RE.test(projectId)) throw AppException.badRequest('Invalid project id');
     }
     for (const permission of requirement.permissions) {
-      await this.authz.assertPermission(auth as AuthContext, permission, projectId);
+      try {
+        await this.authz.assertPermission(auth as AuthContext, permission, projectId);
+      } catch (err) {
+        // Denied attempts are part of the audit trail (route template only — never query strings or bodies).
+        if (err instanceof AppException && err.getStatus() === 403) {
+          await this.audit
+            .record({
+              organizationId: auth.organizationId,
+              actorId: auth.userId,
+              actorType: 'USER',
+              action: 'permission.denied',
+              resourceType: 'route',
+              resourceId: null,
+              projectId: projectId ?? null,
+              status: 'DENIED',
+              input: { method: req.method, route: (req.route as { path?: string } | undefined)?.path ?? req.path, permission },
+            })
+            .catch(() => undefined);
+        }
+        throw err;
+      }
     }
     return true;
   }

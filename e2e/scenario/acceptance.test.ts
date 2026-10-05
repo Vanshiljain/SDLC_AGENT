@@ -173,7 +173,8 @@ describe('acceptance: password reset delivered end to end', { timeout: 10 * 60_0
     assert.equal(proposal.mode, 'LIVE');
     assert.deepEqual(proposal.missingIntegrations, [], 'all required integrations are connected');
     assert.ok((proposal.steps?.length ?? 0) > 20, 'full delivery flow proposed');
-    assert.ok(proposal.approvalsRequired?.some((a) => /production/i.test(a)), `production approval disclosed: ${JSON.stringify(proposal.approvalsRequired)}`);
+    assert.ok(proposal.approvalsRequired?.some((a) => a.includes('(deploy.production)')), `production approval disclosed: ${JSON.stringify(proposal.approvalsRequired)}`);
+    assert.ok(proposal.approvalsRequired?.some((a) => a.includes('(deploy.staging)')), `staging gate resolved to its environment type: ${JSON.stringify(proposal.approvalsRequired)}`);
     assert.ok(realtime.some((e) => e.type === 'agent.message.delta' || e.type === 'agent.message.completed'), 'assistant output should stream over realtime');
 
     // A viewer-level action would be rejected; the engineer may start it.

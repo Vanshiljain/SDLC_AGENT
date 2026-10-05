@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { flowPlanSchema, TEMPLATE_SYNTAX_HELP, type LlmProvider } from '@forgeline/ai';
 import { COMMANDS, type FlowProposalPart, type FlowProposalStep, type IntegrationProvider, type WorkflowDefinition, type WorkflowDefinitionInput } from '@forgeline/shared';
-import { resolveTemplates, validateWorkflowDefinition } from '@forgeline/workflow-engine';
+import { evaluateCondition, resolveTemplates, validateWorkflowDefinition } from '@forgeline/workflow-engine';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { ToolRegistry } from '../tools/tool-registry.service';
 import { ApprovalPolicyService } from '../approvals/approval-policy.service';
@@ -61,6 +61,7 @@ export class PlannerService {
   }
 
   async plan(params: { organizationId: string; userId: string; projectId: string | null; request: string; context?: string; executionContext?: { executionId?: string | null } }): Promise<PlanResult> {
+    if (!params.projectId) params = { ...params, projectId: await this.inferProject(params.organizationId, params.request) };
     const project = await this.projects.load(params.organizationId, params.projectId);
     let title: string;
     let summary: string;
@@ -144,6 +145,18 @@ export class PlannerService {
     return { proposal, part: await this.describe(params.organizationId, proposal) };
   }
 
+  /**
+   * When no project is in context, use the one the request names ("…my authentication service")
+   * or the workspace's only project. Ambiguity leaves it unset rather than guessing.
+   */
+  private async inferProject(organizationId: string, request: string): Promise<string | null> {
+    const projects = await this.prisma.project.findMany({ where: { organizationId, deletedAt: null }, select: { id: true, name: true, key: true } });
+    if (projects.length === 1) return projects[0]!.id;
+    const text = request.toLowerCase();
+    const named = projects.filter((p) => text.includes(p.name.toLowerCase()) || new RegExp(`\\b${p.key.toLowerCase()}\\b`).test(text));
+    return named.length === 1 ? named[0]!.id : null;
+  }
+
   /** Annotate a proposal with policy gates and missing integrations for the UI card. */
   async describe(organizationId: string, proposal: StoredProposal): Promise<FlowProposalPart> {
     const project = await this.projects.load(organizationId, proposal.projectId);
@@ -155,17 +168,34 @@ export class PlannerService {
     const withDefaults: Record<string, unknown> = { ...Object.fromEntries(Object.entries(proposal.definition.inputs).map(([k, v]) => [k, v.default])), ...proposal.input };
     for (const s of proposal.definition.steps) {
       const tool = s.tool ? this.registry.get(s.tool) : undefined;
+      // Conditions that depend only on inputs can be decided now (e.g. an optional plan-approval gate).
+      let skippedByInputs = false;
+      if (s.when && !/\b(steps|event|execution)\b/.test(s.when)) {
+        try {
+          skippedByInputs = !evaluateCondition(s.when, { inputs: withDefaults, variables: proposal.definition.variables, steps: {} });
+        } catch {
+          skippedByInputs = false; // depends on runtime outputs — decided during the run
+        }
+      }
+      if (skippedByInputs) {
+        steps.push({ key: s.key, name: s.name, tool: s.tool, type: s.type, dependsOn: s.dependsOn, requiresApproval: false, agent: s.agent ?? tool?.agent });
+        continue;
+      }
       let requiresApproval = s.type === 'approval';
       if (tool) {
         const action = this.policy.actionFor(tool, s.input);
         if (action) {
-          let resolved: Record<string, unknown> = {};
-          try {
-            resolved = resolveTemplates(s.input, { inputs: withDefaults, variables: proposal.definition.variables, steps: {} });
-          } catch {
-            resolved = {};
+          // Resolve only the target environment: other inputs may reference outputs of steps that have not run yet.
+          let envName: string | null = null;
+          const rawEnv = (s.input as Record<string, unknown>).environment;
+          if (typeof rawEnv === 'string') {
+            try {
+              const v = resolveTemplates(rawEnv, { inputs: withDefaults, variables: proposal.definition.variables, steps: {} });
+              envName = typeof v === 'string' && v ? v : null;
+            } catch {
+              envName = null; // unresolvable → the policy treats it as production (fail safe)
+            }
           }
-          const envName = typeof resolved.environment === 'string' && resolved.environment ? resolved.environment : null;
           const decision = await this.policy.evaluate(organizationId, project, action, envName);
           requiresApproval = decision.required;
           if (decision.required) approvals.push(`${s.name} (${decision.action})`);
@@ -176,7 +206,7 @@ export class PlannerService {
           if (!satisfied) missing.add(provider);
         }
       }
-      if (s.type === 'approval') approvals.push(s.approval?.title ?? s.name);
+      if (s.type === 'approval') approvals.push(s.approval?.title && !s.approval.title.includes('{{') ? s.approval.title : s.name);
       steps.push({ key: s.key, name: s.name, tool: s.tool, type: s.type, dependsOn: s.dependsOn, requiresApproval, agent: s.agent ?? tool?.agent });
     }
     return {

@@ -10,6 +10,7 @@ import { cn } from '@/lib/cn';
 import { durationBetween, formatDateTime, formatDuration, formatNumber, shortSha, timeAgo, titleCase, providerName } from '@/lib/format';
 import { realtime } from '@/lib/realtime';
 import { useDocumentTitle, usePageContext } from '@/lib/use-page-context';
+import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { DiffView, Disclosure, JsonView, MarkdownView } from '@/components/ui/content';
 import { Dialog, Sheet } from '@/components/ui/dialog';
@@ -30,6 +31,7 @@ export function ExecutionDetailPage() {
   const [artifactId, setArtifactId] = useState<string | null>(null);
   const [direction, setDirection] = useState<'LR' | 'TB'>('LR');
   const [tab, setTab] = useState('timeline');
+  const canAudit = useAuth().can('audit:read');
   useDocumentTitle(run?.title ?? 'Run');
   usePageContext(run ? { title: run.title, entity: { kind: 'execution', id: run.id, label: run.title }, projectId: run.projectId ?? undefined } : null, [run?.id]);
 
@@ -102,7 +104,7 @@ export function ExecutionDetailPage() {
             { value: 'effects', label: 'Side effects', count: run.externalResources.length + run.deployments.length },
             { value: 'approvals', label: 'Approvals', count: run.approvals.length },
             { value: 'agents', label: 'Agents & tools', count: run.toolExecutions.length },
-            { value: 'audit', label: 'Audit' },
+            ...(canAudit ? [{ value: 'audit', label: 'Audit' }] : []),
           ]}
         />
         <TabsContent value="timeline" className="pt-4">
@@ -123,9 +125,11 @@ export function ExecutionDetailPage() {
         <TabsContent value="agents" className="pt-4">
           <AgentsAndTools run={run} />
         </TabsContent>
-        <TabsContent value="audit" className="pt-4">
-          <RunAudit executionId={run.id} />
-        </TabsContent>
+        {canAudit && (
+          <TabsContent value="audit" className="pt-4">
+            <RunAudit executionId={run.id} />
+          </TabsContent>
+        )}
       </TabsRoot>
 
       <StepSheet run={run} step={step} open={Boolean(step)} onClose={() => setSelectedStep(null)} onApproval={setApprovalId} />
@@ -168,7 +172,9 @@ function Header({ run }: { run: ExecutionDetail }) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={run.status} />
+            <span data-testid="run-status">
+              <StatusBadge status={run.status} />
+            </span>
             <ModeBadge mode={run.mode} />
             {run.template && <Badge className="font-mono">{run.template}</Badge>}
           </div>
@@ -636,7 +642,8 @@ function AgentsAndTools({ run }: { run: ExecutionDetail }) {
 }
 
 function RunAudit({ executionId }: { executionId: string }) {
-  const { data, isLoading } = useAudit({ executionId, pageSize: 100 });
+  const { data, isLoading, error } = useAudit({ executionId, pageSize: 100 });
+  if (error) return <ErrorState error={error} />;
   return (
     <Card>
       {isLoading && <div className="p-4 text-[12px] text-fg-subtle">Loading…</div>}

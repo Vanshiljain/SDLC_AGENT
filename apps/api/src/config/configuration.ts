@@ -28,6 +28,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().default('redis://localhost:6379'),
   QUEUE_DRIVER: z.enum(['bullmq', 'inline']).default('bullmq'),
+  /** BullMQ queue name — separate environments sharing one Redis must use different names. */
+  QUEUE_NAME: z.string().regex(/^[a-z0-9][a-z0-9-]{0,62}$/).default('forgeline'),
   QDRANT_URL: z.string().default('http://localhost:6333'),
   QDRANT_API_KEY: z.string().optional(),
   QDRANT_COLLECTION: z.string().default('forgeline_knowledge'),
@@ -109,6 +111,7 @@ export interface AppConfig {
   databaseUrl: string;
   redisUrl: string;
   queueDriver: Env['QUEUE_DRIVER'];
+  queueName: string;
   qdrant: { url: string; apiKey?: string; collection: string };
   ai: {
     apiKey?: string;
@@ -175,6 +178,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
     databaseUrl: e.DATABASE_URL,
     redisUrl: e.REDIS_URL,
     queueDriver: e.QUEUE_DRIVER,
+    queueName: e.QUEUE_NAME,
     qdrant: { url: e.QDRANT_URL, apiKey: e.QDRANT_API_KEY, collection: e.QDRANT_COLLECTION },
     ai: {
       apiKey: e.OPENAI_API_KEY || undefined,

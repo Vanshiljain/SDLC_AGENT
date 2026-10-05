@@ -18,6 +18,7 @@ import { Tooltip } from '@/components/ui/menu';
 import { Segmented } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { AGENTS, agentOf, layout, NODE_H, NODE_W, nodeTypes, type StepNodeData } from '@/features/flow-graph';
+import { ancestors, uniqueKey, wouldCycle } from '@/features/flow-utils';
 
 // ─────────────── Draft hand-off (from "Describe a flow" / template preview) ───────────────
 interface BuilderDraft {
@@ -38,41 +39,6 @@ const EMPTY: WorkflowDefinition = { version: 1, inputs: {}, variables: {}, steps
 
 function newStep(partial: Partial<StepDefinition> & Pick<StepDefinition, 'key' | 'name'>): StepDefinition {
   return { type: 'tool', input: {}, dependsOn: [], runIf: 'all_success', continueOnError: false, ...partial };
-}
-
-function uniqueKey(base: string, steps: StepDefinition[]): string {
-  const clean = base.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').replace(/^(\d)/, 's_$1').slice(0, 50) || 'step';
-  let key = clean;
-  for (let i = 2; steps.some((s) => s.key === key); i++) key = `${clean}_${i}`;
-  return key;
-}
-
-function wouldCycle(steps: StepDefinition[], source: string, target: string): boolean {
-  // Adding source → target creates a cycle if target already reaches source.
-  const deps = new Map(steps.map((s) => [s.key, s.dependsOn]));
-  const stack = [source];
-  const seen = new Set<string>();
-  while (stack.length) {
-    const k = stack.pop()!;
-    if (k === target) return true;
-    if (seen.has(k)) continue;
-    seen.add(k);
-    stack.push(...(deps.get(k) ?? []));
-  }
-  return false;
-}
-
-function ancestors(steps: StepDefinition[], key: string): string[] {
-  const byKey = new Map(steps.map((s) => [s.key, s]));
-  const out = new Set<string>();
-  const stack = [...(byKey.get(key)?.dependsOn ?? [])];
-  while (stack.length) {
-    const k = stack.pop()!;
-    if (out.has(k)) continue;
-    out.add(k);
-    stack.push(...(byKey.get(k)?.dependsOn ?? []));
-  }
-  return [...out];
 }
 
 export function FlowBuilderPage() {

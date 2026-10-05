@@ -18,6 +18,6 @@ const base = {
 module.exports = {
   projects: [
     { ...base, displayName: 'unit', rootDir: '.', testMatch: ['<rootDir>/src/**/*.spec.ts'] },
-    { ...base, displayName: 'integration', rootDir: '.', testMatch: ['<rootDir>/test/**/*.e2e-spec.ts'], testTimeout: 120000 },
+    { ...base, displayName: 'integration', rootDir: '.', testMatch: ['<rootDir>/test/**/*.e2e-spec.ts'], setupFiles: ['<rootDir>/test/setup-env.ts'], testTimeout: 120000 },
   ],
 };

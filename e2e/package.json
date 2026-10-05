@@ -8,6 +8,7 @@
     "stack": "tsx scenario/stack.ts",
     "test:api": "tsx --test scenario/*.test.ts",
     "test:ui": "playwright test",
+    "stack:ui": "tsx scenario/stack.ts",
     "test": "pnpm test:api",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

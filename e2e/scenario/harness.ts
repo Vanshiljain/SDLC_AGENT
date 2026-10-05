@@ -80,6 +80,8 @@ export async function startStack(options: { apiPort?: number; mockPort?: number;
     ...process.env,
     NODE_ENV: 'test',
     APP_ROLE: 'all',
+    // Isolate this stack's background jobs from any other API sharing the same Redis.
+    QUEUE_NAME: `forgeline-e2e-${port}`,
     PORT: String(port),
     API_PUBLIC_URL: apiUrl,
     ...(options.webAppUrl && { WEB_APP_URL: options.webAppUrl, CORS_ORIGINS: options.webAppUrl }),

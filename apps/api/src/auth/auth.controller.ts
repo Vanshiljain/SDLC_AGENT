@@ -6,11 +6,13 @@ import { COOKIE_CSRF, COOKIE_REFRESH, HEADER_CSRF, type MeResponse, type Session
 import { AllowNoOrganization, CurrentUser, Public, type AuthContext, type AuthUserOnly } from '../common/auth/auth-context';
 import { AppException } from '../common/errors';
 import { EncryptionService } from '../common/crypto/encryption.service';
-import { APP_CONFIG, type AppConfig } from '../config/configuration';
+import { APP_CONFIG, loadConfig, type AppConfig } from '../config/configuration';
 import { AuthService, type IssuedSession } from './auth.service';
 import { AcceptInviteDto, ChangePasswordDto, LoginDto, RegisterDto } from './auth.dto';
 
-const AUTH_THROTTLE = { default: { limit: 20, ttl: 60_000 } };
+// Stricter limit for credential endpoints (AUTH_RATE_LIMIT_MAX per minute per client), resolved from config at runtime.
+let authLimit: number | undefined;
+const AUTH_THROTTLE = { default: { limit: () => (authLimit ??= loadConfig().rateLimit.authMax), ttl: 60_000 } };
 
 /**
  * Session endpoints. The access token is returned in the body (kept in memory
