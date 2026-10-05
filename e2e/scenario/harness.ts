@@ -63,14 +63,14 @@ async function waitForReady(url: string, child: ChildProcess | null, timeoutMs =
   throw new Error(`API did not become ready: ${last}`);
 }
 
-export async function startStack(): Promise<Stack> {
+export async function startStack(options: { apiPort?: number; mockPort?: number; webAppUrl?: string } = {}): Promise<Stack> {
   if (process.env.E2E_API_URL && process.env.E2E_MOCK_URL) {
     await waitForReady(process.env.E2E_API_URL, null);
     return { apiUrl: process.env.E2E_API_URL, mockUrl: process.env.E2E_MOCK_URL, mocks: null, stop: async () => undefined };
   }
 
-  const mocks = await startMockServices(0);
-  const port = await freePort();
+  const mocks = await startMockServices(options.mockPort ?? 0);
+  const port = options.apiPort ?? (await freePort());
   const apiUrl = `http://127.0.0.1:${port}`;
   const entry = join(ROOT, 'apps', 'api', 'dist', 'main.js');
   if (!existsSync(entry)) throw new Error('Build the API first: pnpm --filter @forgeline/api build');
@@ -82,6 +82,7 @@ export async function startStack(): Promise<Stack> {
     APP_ROLE: 'all',
     PORT: String(port),
     API_PUBLIC_URL: apiUrl,
+    ...(options.webAppUrl && { WEB_APP_URL: options.webAppUrl, CORS_ORIGINS: options.webAppUrl }),
     LOG_LEVEL: process.env.E2E_LOG_LEVEL ?? 'warn',
     OPENAI_API_KEY: 'mock-key',
     OPENAI_BASE_URL: `${mocks.url}/openai/v1`,

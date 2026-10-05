@@ -5,6 +5,7 @@
   "description": "End-to-end acceptance tests: mock external services + API scenario + browser tests",
   "scripts": {
     "mocks": "tsx mock-services/server.ts",
+    "stack": "tsx scenario/stack.ts",
     "test:api": "tsx --test scenario/*.test.ts",
     "test:ui": "playwright test",
     "test": "pnpm test:api",

@@ -1,0 +1,285 @@
+@import 'tailwindcss';
+@import '@xyflow/react/dist/style.css';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Forgeline design tokens.
+ * Graphite surfaces with a single molten "ember" accent; cool "arc" blue marks
+ * live activity, violet marks AI agents. Semantic tokens switch with .dark.
+ */
+@theme {
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-ember-50: #fff4ee;
+  --color-ember-100: #ffe4d5;
+  --color-ember-200: #ffc5a8;
+  --color-ember-300: #ff9f72;
+  --color-ember-400: #ff7f4a;
+  --color-ember-500: #ff6a3d;
+  --color-ember-600: #e5532a;
+  --color-ember-700: #bd3f1d;
+  --color-ember-800: #8f311a;
+  --color-ember-900: #5c2112;
+
+  --color-canvas: var(--fl-canvas);
+  --color-surface: var(--fl-surface);
+  --color-raised: var(--fl-raised);
+  --color-sunken: var(--fl-sunken);
+  --color-line: var(--fl-line);
+  --color-line-strong: var(--fl-line-strong);
+  --color-fg: var(--fl-fg);
+  --color-fg-muted: var(--fl-fg-muted);
+  --color-fg-subtle: var(--fl-fg-subtle);
+  --color-accent: var(--fl-accent);
+  --color-accent-fg: var(--fl-accent-fg);
+  --color-accent-soft: var(--fl-accent-soft);
+  --color-arc: var(--fl-arc);
+  --color-arc-soft: var(--fl-arc-soft);
+  --color-ok: var(--fl-ok);
+  --color-ok-soft: var(--fl-ok-soft);
+  --color-warn: var(--fl-warn);
+  --color-warn-soft: var(--fl-warn-soft);
+  --color-bad: var(--fl-bad);
+  --color-bad-soft: var(--fl-bad-soft);
+  --color-ai: var(--fl-ai);
+  --color-ai-soft: var(--fl-ai-soft);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --shadow-pop: 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 12px 32px -12px rgb(0 0 0 / 0.45), 0 2px 6px -2px rgb(0 0 0 / 0.25);
+  --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.03) inset, 0 1px 2px 0 rgb(0 0 0 / 0.12);
+
+  --animate-forge: forge-flow 1.6s linear infinite;
+  --animate-pulse-dot: pulse-dot 1.8s ease-in-out infinite;
+  --animate-fade-in: fade-in 0.18s ease-out;
+  --animate-slide-in: slide-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  @keyframes forge-flow {
+    from {
+      background-position: 0% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
+  @keyframes pulse-dot {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 color-mix(in oklab, currentColor 55%, transparent);
+    }
+    60% {
+      box-shadow: 0 0 0 5px color-mix(in oklab, currentColor 0%, transparent);
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(2px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+:root {
+  --fl-canvas: #f7f6f4;
+  --fl-surface: #ffffff;
+  --fl-raised: #ffffff;
+  --fl-sunken: #f1efec;
+  --fl-line: #e6e3df;
+  --fl-line-strong: #d4d0ca;
+  --fl-fg: #1a1817;
+  --fl-fg-muted: #57524d;
+  --fl-fg-subtle: #8a847d;
+  --fl-accent: #e5532a;
+  --fl-accent-fg: #ffffff;
+  --fl-accent-soft: #fde9e1;
+  --fl-arc: #0b84c6;
+  --fl-arc-soft: #e2f2fb;
+  --fl-ok: #11845b;
+  --fl-ok-soft: #e0f4ec;
+  --fl-warn: #b66a00;
+  --fl-warn-soft: #fcf0d9;
+  --fl-bad: #d0343a;
+  --fl-bad-soft: #fde6e6;
+  --fl-ai: #7051d9;
+  --fl-ai-soft: #eeeafd;
+  color-scheme: light;
+}
+
+.dark {
+  --fl-canvas: #0b0c0e;
+  --fl-surface: #111215;
+  --fl-raised: #17181c;
+  --fl-sunken: #0e0f11;
+  --fl-line: #222429;
+  --fl-line-strong: #2e3036;
+  --fl-fg: #ececee;
+  --fl-fg-muted: #a2a3ab;
+  --fl-fg-subtle: #6c6e77;
+  --fl-accent: #ff6a3d;
+  --fl-accent-fg: #160a05;
+  --fl-accent-soft: rgb(255 106 61 / 0.12);
+  --fl-arc: #5cc8ff;
+  --fl-arc-soft: rgb(92 200 255 / 0.12);
+  --fl-ok: #3dd68c;
+  --fl-ok-soft: rgb(61 214 140 / 0.12);
+  --fl-warn: #f5b14c;
+  --fl-warn-soft: rgb(245 177 76 / 0.13);
+  --fl-bad: #ff5a5f;
+  --fl-bad-soft: rgb(255 90 95 / 0.12);
+  --fl-ai: #a78bfa;
+  --fl-ai-soft: rgb(167 139 250 / 0.13);
+  color-scheme: dark;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    background: var(--color-canvas);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-feature-settings: 'ss01', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--color-accent) 30%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+  code,
+  kbd,
+  pre {
+    font-family: var(--font-mono);
+  }
+}
+
+@layer components {
+  /* The signature: a molten line that flows while work is in progress. */
+  .forge-line {
+    background-image: linear-gradient(90deg, transparent 0%, var(--color-accent) 25%, #ffc29b 50%, var(--color-accent) 75%, transparent 100%);
+    background-size: 200% 100%;
+    animation: var(--animate-forge);
+  }
+  .label-caps {
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--color-fg-subtle);
+  }
+  .demo-stripes {
+    background-image: repeating-linear-gradient(-45deg, color-mix(in oklab, var(--color-warn) 16%, transparent) 0 8px, transparent 8px 16px);
+  }
+  .grid-dots {
+    background-image: radial-gradient(color-mix(in oklab, var(--color-fg) 9%, transparent) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+  .prose-fl {
+    @apply text-[13.5px] leading-6 text-fg;
+  }
+  .prose-fl h1 {
+    @apply mt-5 mb-2 text-lg font-semibold;
+  }
+  .prose-fl h2 {
+    @apply mt-5 mb-2 text-[15px] font-semibold;
+  }
+  .prose-fl h3 {
+    @apply mt-4 mb-1.5 text-sm font-semibold;
+  }
+  .prose-fl p {
+    @apply my-2;
+  }
+  .prose-fl ul {
+    @apply my-2 list-disc pl-5;
+  }
+  .prose-fl ol {
+    @apply my-2 list-decimal pl-5;
+  }
+  .prose-fl li {
+    @apply my-0.5;
+  }
+  .prose-fl a {
+    @apply text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent;
+  }
+  .prose-fl code {
+    @apply rounded-xs bg-sunken px-1 py-0.5 text-[12px];
+  }
+  .prose-fl pre {
+    @apply my-3 overflow-x-auto rounded-md border border-line bg-sunken p-3 text-[12px] leading-5;
+  }
+  .prose-fl pre code {
+    @apply bg-transparent p-0;
+  }
+  .prose-fl table {
+    @apply my-3 w-full border-collapse text-[12.5px];
+  }
+  .prose-fl th,
+  .prose-fl td {
+    @apply border border-line px-2 py-1 text-left;
+  }
+  .prose-fl blockquote {
+    @apply my-2 border-l-2 border-line-strong pl-3 text-fg-muted;
+  }
+}
+
+/* React Flow theming */
+.react-flow {
+  --xy-background-color: transparent;
+  --xy-edge-stroke: var(--color-line-strong);
+  --xy-edge-stroke-selected: var(--color-accent);
+  --xy-minimap-background-color: var(--color-surface);
+  --xy-controls-button-background-color: var(--color-raised);
+  --xy-controls-button-background-color-hover: var(--color-sunken);
+  --xy-controls-button-color: var(--color-fg-muted);
+  --xy-controls-button-border-color: var(--color-line);
+  --xy-attribution-background-color: transparent;
+}
+.react-flow__controls {
+  @apply overflow-hidden rounded-md border border-line shadow-card;
+}
+.react-flow__handle {
+  @apply !h-2 !w-2 !border-line-strong !bg-raised;
+}
+.react-flow__edge.animated path {
+  stroke: var(--color-arc);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
