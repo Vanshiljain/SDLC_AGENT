@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { defineTool, type AnySdlcTool } from '../core/tool';
+import { BRAND } from '@forgeline/shared';
 
 export const slackPostMessage = defineTool({
   name: 'slack.postMessage',
@@ -17,7 +18,12 @@ export const slackPostMessage = defineTool({
       ...(input.title ? [{ type: 'header', text: { type: 'plain_text', text: input.title.slice(0, 150) } }] : []),
       { type: 'section', text: { type: 'mrkdwn', text: input.text } },
       ...(input.link
-        ? [{ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: 'Open in Forgeline' }, url: input.link }] }]
+        ? [
+            {
+              type: 'actions',
+              elements: [{ type: 'button', text: { type: 'plain_text', text: `Open in ${BRAND.name}` }, url: input.link }],
+            },
+          ]
         : []),
     ];
     await slack.postMessage({ text: input.title ? `${input.title}\n${input.text}` : input.text, blocks });

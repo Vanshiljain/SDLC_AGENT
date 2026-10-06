@@ -1,6 +1,6 @@
 # Integrations
 
-Forgeline works against real systems through **integrations**. These are organization-level
+Vanshil's SDLC works against real systems through **integrations**. These are organization-level
 connections whose credentials are encrypted at rest and never sent to the browser. **Tools**
 use them to act; see [Development](DEVELOPMENT.md#adding-a-tool) for how tools are built.
 
@@ -20,7 +20,7 @@ Go to **Integrations** in the UI (`integration:manage`). Each card shows which m
 available. OAuth methods appear only when the server has the OAuth app credentials
 (`*_CLIENT_ID` and `*_CLIENT_SECRET`, or `TRELLO_API_KEY`).
 
-- **Token connections are verified before they are saved.** Forgeline calls the provider (for
+- **Token connections are verified before they are saved.** Vanshil's SDLC calls the provider (for
   example `GET /user`, `GET /myself` or `GET /v1/health`), and a bad token is rejected with the
   provider's error.
 - **OAuth.**
@@ -57,7 +57,7 @@ Each **repository** declares how to validate code: `installCommand`, `lintComman
 Actions, `ciWorkflow` and `deployWorkflow`.
 
 Each **environment** declares `type` (`DEVELOPMENT`, `STAGING` or `PRODUCTION`), `url`,
-`healthCheckPath` and `smokeTests`. Forgeline runs the health checks and smoke tests itself, as
+`healthCheckPath` and `smokeTests`. Vanshil's SDLC runs the health checks and smoke tests itself, as
 real HTTP probes, after every deploy. A failed probe triggers the rollback path.
 
 ## Demo workspaces
@@ -72,7 +72,7 @@ Demo workspaces never use real credentials.
 `POST /api/webhooks/<provider>/<webhookId>`. Create a webhook with _Integration → Webhooks_ or
 `POST /api/integrations/:id/webhooks`:
 
-- For **GitHub** (with a repository) and **Trello** (with a board), Forgeline registers the
+- For **GitHub** (with a repository) and **Trello** (with a board), Vanshil's SDLC registers the
   webhook with the provider automatically.
 - For **Jira** and **DevOps**, the response shows the URL and the signing secret **once**. You
   configure them in the provider yourself.
@@ -120,7 +120,7 @@ on:
     inputs:
       stages: { type: string, default: 'lint,build,test' }
       forgeline_ref: { type: string, required: false }
-run-name: CI · ${{ inputs.forgeline_ref }} # lets Forgeline match its dispatch exactly
+run-name: CI · ${{ inputs.forgeline_ref }} # lets Vanshil's SDLC match its dispatch exactly
 ```
 
 ```yaml
@@ -136,15 +136,15 @@ on:
 run-name: Deploy ${{ inputs.environment }} · ${{ inputs.forgeline_ref }}
 ```
 
-Without `run-name`, Forgeline takes the newest dispatched run of that workflow, which is
+Without `run-name`, Vanshil's SDLC takes the newest dispatched run of that workflow, which is
 ambiguous when two Runs dispatch the same workflow within seconds.
 
-The integration health check reports when the workflows are missing. Forgeline still runs the
+The integration health check reports when the workflows are missing. Vanshil's SDLC still runs the
 health checks and smoke tests against the environment URL itself.
 
 ## Custom DevOps contract
 
-Forgeline's CI/CD layer depends only on the `CiCdProvider` interface
+The CI/CD layer in Vanshil's SDLC depends only on the `CiCdProvider` interface
 (`packages/integrations/src/devops/cicd.ts`). To plug in your own platform, implement this REST
 contract. The contract is what the `HttpDevOpsProvider` adapter speaks, and the e2e mock in
 `e2e/mock-services/server.ts` is a working reference implementation.
@@ -167,7 +167,7 @@ Your service should:
 - reject timestamps more than 5 minutes old;
 - treat a repeated `Idempotency-Key` as a replay, not a new request.
 
-Forgeline retries on `5xx`, on `429` (honouring `Retry-After`) and on network errors. It does
+Vanshil's SDLC retries on `5xx`, on `429` (honouring `Retry-After`) and on network errors. It does
 not retry other `4xx` responses.
 
 ### Endpoints
@@ -190,7 +190,7 @@ type RunStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 type PipelineStage = 'lint' | 'build' | 'test' | 'security_scan' | 'artifact' | 'container_build' | 'image_scan';
 
 interface PipelineRequest {
-  project: string; // Forgeline project key, e.g. "AUTH"
+  project: string; // Vanshil's SDLC project key, e.g. "AUTH"
   repository?: string; // "owner/name"
   ref: string;
   commitSha?: string;
@@ -217,7 +217,7 @@ interface PipelineRun {
 
 interface DeployRequest {
   project: string;
-  environment: string; // environment name in Forgeline, e.g. "staging"
+  environment: string; // environment name in Vanshil's SDLC, e.g. "staging"
   environmentType: 'DEVELOPMENT' | 'STAGING' | 'PRODUCTION';
   version: string;
   ref?: string;
@@ -255,14 +255,14 @@ interface CiCdEnvironment {
 }
 ```
 
-How Forgeline uses the contract:
+How Vanshil's SDLC uses the contract:
 
 - Pipelines and deployments are **asynchronous**. Return immediately with `queued` or `running`.
-  Forgeline polls `GET …/:id` with durable continuations, so a long deploy holds no worker and
+  Vanshil's SDLC polls `GET …/:id` with durable continuations, so a long deploy holds no worker and
   survives restarts.
 - The pipeline's status and summary appear in the approval context, so approvers see CI
   results before a production deploy.
-- A deployment reported `succeeded` is still verified with Forgeline's own health checks and
+- A deployment reported `succeeded` is still verified with the platform's own health checks and
   smoke tests before the step completes.
 
 ### Events (optional)

@@ -1,7 +1,7 @@
-# Forgeline — Architecture
+# Vanshil's SDLC — Architecture
 
-> **Forgeline** is an AI-native engineering control plane. Engineers describe an
-> outcome ("ship password reset to staging"), and Forgeline's agents plan it as a
+> **Vanshil's SDLC** is an AI-native engineering control plane. Engineers describe an
+> outcome ("ship password reset to staging"), and the platform's agents plan it as a
 > **Flow**, execute it as a durable **Run**, call real tools (Jira, GitHub,
 > GitHub Actions, Trello, Notion, your CI/CD), stop at **Gates** for human
 > approval, and record every action in an audit trail.
@@ -343,7 +343,7 @@ interface SdlcTool<I, O> {
   `getPipeline`, `getPipelineLogs`, `cancelPipeline`, `retryPipeline`, `deploy`,
   `getDeployment`, `rollback`, `listEnvironments`, `healthCheck`). Implementations: `HttpDevOpsProvider` (our
   DevOps platform's REST contract, HMAC-signed) and `GitHubActionsCiCdProvider`.
-  Health checks and smoke tests are executed by Forgeline itself as real HTTP
+  Health checks and smoke tests are executed by Vanshil's SDLC itself as real HTTP
   probes against the environment URL.
 - OAuth 2.0 (+PKCE where supported) for GitHub, Jira (Atlassian 3LO), Notion;
   API-token connections for Jira/GitHub PAT/Trello/DevOps/Slack webhook.

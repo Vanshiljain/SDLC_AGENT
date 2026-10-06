@@ -60,7 +60,7 @@ export function DeploymentsPage() {
               compact
               icon={<Rocket />}
               title="No environments yet"
-              description="Add development, staging and production environments to a project to deploy with Forgeline."
+              description="Add development, staging and production environments to a project to deploy with Vanshil’s SDLC."
               action={
                 <Link to="/projects">
                   <Button size="sm">Open projects</Button>

@@ -1,6 +1,6 @@
 # Development
 
-How to work on the Forgeline codebase. Start with [Setup](SETUP.md) to get a running
+How to work on the Vanshil's SDLC codebase. Start with [Setup](SETUP.md) to get a running
 environment, and read [Architecture](ARCHITECTURE.md) for the big picture.
 
 ## Workspace

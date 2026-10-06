@@ -1,6 +1,6 @@
 # AI agents
 
-Forgeline's AI layer has one job: turn engineering intent into **durable, governed work**.
+The AI layer in Vanshil's SDLC has one job: turn engineering intent into **durable, governed work**.
 
 Agents read freely within the caller's permissions. They never change the outside world
 directly. Every side effect is a Flow step that runs through the workflow engine and the tool

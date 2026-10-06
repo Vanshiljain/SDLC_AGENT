@@ -171,7 +171,7 @@ export class ConnectionResolver {
     if (!connected.includes('GITHUB_ACTIONS') && !connected.includes('GITHUB')) {
       throw new ToolError(
         'not_configured',
-        'No CI/CD provider connected. Connect Forgeline DevOps or GitHub Actions on the Integrations page.',
+        'No CI/CD provider connected. Connect Custom DevOps or GitHub Actions on the Integrations page.',
         { retryable: false },
       );
     }

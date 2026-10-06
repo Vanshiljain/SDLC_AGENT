@@ -1,8 +1,8 @@
-# Forgeline
+# Vanshil's SDLC
 
 **An AI-native control plane for the software delivery lifecycle.** Describe an outcome, such as
 _"Implement a password reset feature for my authentication service"_. **Forge**, the assistant,
-plans it as a **Flow**. Forgeline runs that Flow as a durable **Run** against your real tools:
+plans it as a **Flow**. Vanshil's SDLC runs that Flow as a durable **Run** against your real tools:
 Jira or Trello, GitHub, GitHub Actions or your own CI/CD, Notion and Slack. The Run stops at
 **Gates** for human approval, and every action lands in an audit trail.
 
@@ -79,7 +79,7 @@ See [docs/SETUP.md](docs/SETUP.md) for the details.
 
 The seed creates two workspaces:
 
-- **Forgeline Demo** is a demo workspace. Every Run there is **simulated** and labelled `DEMO`
+- **Vanshil's SDLC Demo** is a demo workspace. Every Run there is **simulated** and labelled `DEMO`
   throughout the UI and API. No real tickets, PRs or deployments are created.
 - **Acme Engineering** is a real workspace. Connect integrations under _Integrations_ and Runs
   call the real services.
@@ -117,7 +117,7 @@ flowchart LR
 | Guide                                      | Covers                                                                  |
 | ------------------------------------------ | ----------------------------------------------------------------------- |
 | [Architecture](docs/ARCHITECTURE.md)       | System, data, module, agent, workflow and security architecture         |
-| [Setup](docs/SETUP.md)                     | Installing, configuring and running Forgeline                           |
+| [Setup](docs/SETUP.md)                     | Installing, configuring and running Vanshil's SDLC                      |
 | [Development](docs/DEVELOPMENT.md)         | Repository workflow, adding tools and Flows, testing                    |
 | [API](docs/API.md)                         | REST conventions, endpoints, realtime events and errors                 |
 | [AI agents](docs/AI-AGENT.md)              | Orchestrator, agents, RAG, prompts, providers and safety                |

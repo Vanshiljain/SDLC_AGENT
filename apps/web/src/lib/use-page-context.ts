@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import type { PageContext } from '@forgeline/shared';
 import { useLocation } from 'react-router';
 import { ui } from './ui-store';
+import { BRAND } from '@forgeline/shared';
 
 /** Pages describe what the user is looking at so the global assistant can use it. */
 export function usePageContext(ctx: Omit<PageContext, 'route'> | null, deps: unknown[] = []): void {
@@ -14,6 +15,6 @@ export function usePageContext(ctx: Omit<PageContext, 'route'> | null, deps: unk
 
 export function useDocumentTitle(title: string | null | undefined): void {
   useEffect(() => {
-    document.title = title ? `${title} · Forgeline` : 'Forgeline';
+    document.title = title ? `${title} · ${BRAND.name}` : BRAND.name;
   }, [title]);
 }

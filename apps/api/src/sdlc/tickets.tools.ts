@@ -2,7 +2,7 @@ import { Injectable, type OnModuleInit } from '@nestjs/common';
 import { z } from 'zod';
 import type { Prisma } from '@forgeline/database';
 import { defineLooseTool, type AnySdlcTool, type ToolExecutionContext } from '@forgeline/integrations';
-import { ToolError, type TaskPriority, type TaskStatus } from '@forgeline/shared';
+import { BRAND, ToolError, type TaskPriority, type TaskStatus } from '@forgeline/shared';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { ToolRegistry } from '../tools/tool-registry.service';
 
@@ -23,7 +23,7 @@ const STATUS_MAP: Record<string, TaskStatus> = {
 /**
  * Provider-neutral ticket tools used by Flows. They delegate to the Jira or
  * Trello adapters (keeping their idempotency guarantees) and mirror tickets as
- * Forgeline Tasks. Without a tracker connected they create a Forgeline task
+ * built-in tasks. Without a tracker connected they create a built-in task
  * and say so explicitly — never pretending a Jira ticket exists.
  */
 @Injectable()
@@ -92,7 +92,7 @@ export class TicketTools implements OnModuleInit {
       defineLooseTool({
         name: 'ticket.create',
         title: 'Create ticket',
-        description: "Create a ticket in the project's tracker (Jira or Trello); falls back to a Forgeline task when none is connected.",
+        description: `Create a ticket in the project's tracker (Jira or Trello); falls back to a ${BRAND.name} task when none is connected.`,
         category: 'jira',
         provider: null,
         agent: 'planning',
@@ -134,7 +134,7 @@ export class TicketTools implements OnModuleInit {
             });
             return { ...res, output: { key: o.id, id: o.id, url: o.url, created: true, provider } };
           }
-          if (!ctx.project) throw new ToolError('validation', 'A project is required to create a Forgeline task', { retryable: false });
+          if (!ctx.project) throw new ToolError('validation', `A project is required to create a ${BRAND.name} task`, { retryable: false });
           const existing = await self.prisma.task.findFirst({
             where: {
               organizationId: ctx.organizationId,
@@ -155,7 +155,7 @@ export class TicketTools implements OnModuleInit {
           }
           return {
             output: { key, id: key, url: null, created: !existing, provider },
-            summary: `No issue tracker connected — created Forgeline task ${key}`,
+            summary: `No issue tracker connected — created ${BRAND.name} task ${key}`,
           };
         },
         async simulate(input, ctx) {
@@ -172,7 +172,7 @@ export class TicketTools implements OnModuleInit {
       defineLooseTool({
         name: 'ticket.get',
         title: 'Get ticket',
-        description: 'Read a ticket (Jira issue, Trello card or Forgeline task) by key.',
+        description: `Read a ticket (Jira issue, Trello card or ${BRAND.name} task) by key.`,
         category: 'jira',
         provider: null,
         agent: 'planning',
@@ -265,7 +265,7 @@ export class TicketTools implements OnModuleInit {
               where: { id: task.id },
               data: { description: `${task.description ?? ''}\n\n---\n**${new Date().toISOString()}** ${input.body}`.slice(-60_000) },
             });
-            return { output: { key: input.key, provider: 'FORGELINE' }, summary: `Added note to Forgeline task ${input.key}` };
+            return { output: { key: input.key, provider: 'FORGELINE' }, summary: `Added note to ${BRAND.name} task ${input.key}` };
           }
           return self.tool('jira.addComment').execute({ key: input.key, body: input.body }, ctx);
         },
@@ -299,7 +299,7 @@ export class TicketTools implements OnModuleInit {
             if (!task) throw new ToolError('not_found', `Ticket ${input.key} not found`, { retryable: false });
             return {
               output: { key: input.key, status: mapped ?? task.status, transitioned: Boolean(mapped) },
-              summary: `Forgeline task ${input.key} → ${mapped ?? task.status}`,
+              summary: `${BRAND.name} task ${input.key} → ${mapped ?? task.status}`,
             };
           }
           return self.tool('jira.transitionIssue').execute({ key: input.key, status: input.status }, ctx);

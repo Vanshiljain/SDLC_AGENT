@@ -1,6 +1,6 @@
 /** Product identity — single source for names used in UI, emails, prompts and docs. */
 export const BRAND = {
-  name: 'Forgeline',
+  name: "Vanshil's SDLC",
   tagline: 'The AI engineering control plane',
   assistantName: 'Forge',
   vocabulary: {

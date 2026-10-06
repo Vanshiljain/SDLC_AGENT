@@ -451,7 +451,7 @@ function IntegrationHealth({ data }: { data?: DashboardData }) {
           compact
           icon={<Plug />}
           title="Connect your tools"
-          description="GitHub, Jira or Trello, Notion and your CI/CD — Forgeline acts through them on your behalf."
+          description="GitHub, Jira or Trello, Notion and your CI/CD — Vanshil’s SDLC acts through them on your behalf."
           action={
             <Link to="/integrations">
               <Button size="sm" variant="primary" icon={<ArrowRight className="size-3.5" />}>

@@ -1,6 +1,6 @@
 # Security
 
-Forgeline holds credentials for an organization's engineering systems and can act on them, up to
+Vanshil's SDLC holds credentials for an organization's engineering systems and can act on them, up to
 merging code and deploying to production. This page describes how that power is constrained.
 
 ## Reporting a vulnerability
@@ -119,7 +119,7 @@ untrusted. With `SANDBOX_DRIVER=docker`, each command runs in a fresh container 
 - `--pids-limit 512`, plus memory and CPU limits (`SANDBOX_MEMORY_MB`, `SANDBOX_CPUS`);
 - a wall-clock timeout (`SANDBOX_TIMEOUT_MS`);
 - network `SANDBOX_NETWORK`: `bridge` for dependency installation, or `none`;
-- no Forgeline secrets in its environment. The worker downloads the repository as a GitHub
+- no Vanshil's SDLC secrets in its environment. The worker downloads the repository as a GitHub
   tarball and extracts it with path traversal blocked. The token never enters the container.
 
 The worker needs the Docker socket to start these containers, and **that socket is equivalent

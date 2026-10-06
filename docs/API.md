@@ -1,6 +1,6 @@
 # API
 
-Forgeline exposes a REST API under `/api` and a Socket.IO namespace at `/realtime`. The web app
+Vanshil's SDLC exposes a REST API under `/api` and a Socket.IO namespace at `/realtime`. The web app
 uses exactly these APIs. Nothing is private to the UI.
 
 Set `SWAGGER_ENABLED=true` to serve the full, generated OpenAPI document at `/api/docs`

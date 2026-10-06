@@ -1,3 +1,4 @@
+import { BRAND } from '@forgeline/shared';
 const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
 const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ['year', 31_536_000],
@@ -81,7 +82,7 @@ const PROVIDER_NAMES: Record<string, string> = {
   NOTION: 'Notion',
   CUSTOM_DEVOPS: 'Custom DevOps',
   SLACK: 'Slack',
-  FORGELINE: 'Forgeline',
+  FORGELINE: BRAND.name,
   SIMULATED: 'Simulated',
 };
 

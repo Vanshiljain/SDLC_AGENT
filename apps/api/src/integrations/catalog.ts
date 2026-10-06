@@ -175,7 +175,7 @@ export function providerCatalog(config: AppConfig): ProviderDescriptor[] {
     },
     {
       provider: 'CUSTOM_DEVOPS',
-      name: 'Forgeline DevOps (CI/CD)',
+      name: 'Custom DevOps (CI/CD)',
       description: 'Your CI/CD platform: build, test, lint, security scans, artifacts, containers, deploy, rollback, environments.',
       capabilities: [
         'Build',

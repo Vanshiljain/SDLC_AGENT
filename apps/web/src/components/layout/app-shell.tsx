@@ -31,6 +31,7 @@ import { CommandPalette } from '@/features/command-palette';
 import { AssistantPanel } from '@/features/assistant/assistant-panel';
 import { LogoMark } from './logo';
 import { NAV } from './nav';
+import { BRAND } from '@forgeline/shared';
 
 export function AppShell() {
   const [mobileNav, setMobileNav] = useState(false);
@@ -86,7 +87,7 @@ function Sidebar({ className, onClose }: { className?: string; onClose?: () => v
       <div className="flex h-12 items-center justify-between px-3.5">
         <NavLink to="/dashboard" className="flex items-center gap-2 rounded-md">
           <LogoMark className="size-6" />
-          <span className="text-[14.5px] font-semibold tracking-[-0.02em]">Forgeline</span>
+          <span className="text-[14.5px] font-semibold tracking-[-0.02em]">{BRAND.name}</span>
         </NavLink>
         {onClose && (
           <Button size="icon-sm" variant="ghost" aria-label="Close navigation" onClick={onClose} icon={<X className="size-4" />} />

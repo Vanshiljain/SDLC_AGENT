@@ -1,4 +1,5 @@
 import { cn } from '@/lib/cn';
+import { BRAND } from '@forgeline/shared';
 
 export function LogoMark({ className }: { className?: string }) {
   return (
@@ -14,7 +15,7 @@ export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cn('flex items-center gap-2', className)}>
       <LogoMark />
-      <span className="text-[15px] font-semibold tracking-[-0.02em]">Forgeline</span>
+      <span className="text-[15px] font-semibold tracking-[-0.02em]">{BRAND.name}</span>
     </span>
   );
 }

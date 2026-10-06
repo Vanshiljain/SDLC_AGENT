@@ -7,6 +7,7 @@ import { useDocumentTitle } from '@/lib/use-page-context';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/form';
 import { Wordmark } from '@/components/layout/logo';
+import { BRAND } from '@forgeline/shared';
 
 const SHOW_DEMO_HINT = import.meta.env.DEV || import.meta.env.VITE_DEMO_LOGIN_HINT === 'true';
 
@@ -101,7 +102,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const { error, loading, onSubmit } = useSubmit(() => login(email, password));
   return (
-    <AuthLayout title="Welcome back" subtitle="Sign in to your Forgeline workspace.">
+    <AuthLayout title="Welcome back" subtitle={`Sign in to your ${BRAND.name} workspace.`}>
       <form onSubmit={(e) => void onSubmit(e)} className="space-y-4">
         <Field label="Email">
           <Input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoFocus />
@@ -132,7 +133,7 @@ export function LoginPage() {
         </button>
       )}
       <p className="mt-6 text-[12.5px] text-fg-muted">
-        New to Forgeline?{' '}
+        New to {BRAND.name}?{' '}
         <Link to="/register" className="font-medium text-accent hover:underline">
           Create a workspace
         </Link>
@@ -194,7 +195,7 @@ export function AcceptInvitePage() {
     navigate('/dashboard');
   });
   return (
-    <AuthLayout title="Join your team" subtitle="You’ve been invited to a Forgeline workspace. Set up your account to continue.">
+    <AuthLayout title="Join your team" subtitle={`You’ve been invited to a ${BRAND.name} workspace. Set up your account to continue.`}>
       {!token ? (
         <p className="rounded-md bg-bad-soft px-3 py-2 text-[12.5px] text-bad">
           This invitation link is missing its token. Ask your admin for a new link.

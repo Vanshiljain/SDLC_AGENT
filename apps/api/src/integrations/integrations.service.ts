@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { z } from 'zod';
 import type { Integration, Prisma } from '@forgeline/database';
-import { ToolError, type IntegrationAuthType, type IntegrationProvider } from '@forgeline/shared';
+import { BRAND, ToolError, type IntegrationAuthType, type IntegrationProvider } from '@forgeline/shared';
 import {
   buildAuthorizeUrl,
   exchangeCode,
@@ -552,7 +552,7 @@ export class IntegrationsService {
         registered = true;
       } else if (provider === 'TRELLO' && options.boardId) {
         const trello = await this.resolver.clientsFor(auth.organizationId, null).trello();
-        const hook = await trello.createWebhook(url, options.boardId, 'Forgeline');
+        const hook = await trello.createWebhook(url, options.boardId, BRAND.name);
         await this.prisma.webhook.update({ where: { id: webhook.id }, data: { externalHookId: hook.id } });
         registered = true;
       } else {

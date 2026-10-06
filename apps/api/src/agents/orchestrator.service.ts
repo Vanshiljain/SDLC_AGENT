@@ -335,7 +335,7 @@ export class OrchestratorService {
         },
         {
           name: 'get_ticket',
-          description: 'Read a Jira/Trello/Forgeline ticket by key.',
+          description: `Read a Jira/Trello/${BRAND.name} ticket by key.`,
           schema: z.object({ key: z.string(), projectId: z.string().uuid().nullable().optional() }),
         },
       ),

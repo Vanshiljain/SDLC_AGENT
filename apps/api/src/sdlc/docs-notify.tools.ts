@@ -7,6 +7,7 @@ import { ToolRegistry } from '../tools/tool-registry.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AgentTaskRunner, forPrompt } from './agent-task-runner.service';
+import { BRAND } from '@forgeline/shared';
 
 /** Documentation agent and team notifications. */
 @Injectable()
@@ -69,11 +70,11 @@ export class DocsNotifyTools implements OnModuleInit {
       },
     });
     let notionUrl: string | null = null;
-    let publishNote = 'Saved in Forgeline';
+    let publishNote = `Saved in ${BRAND.name}`;
     if (input.publish) {
       const connected = await ctx.clients.connected();
-      if (!connected.includes('NOTION')) publishNote = 'Saved in Forgeline (Notion not connected)';
-      else if (!ctx.project?.settings.notionParentPageId) publishNote = 'Saved in Forgeline (no Notion parent page configured)';
+      if (!connected.includes('NOTION')) publishNote = `Saved in ${BRAND.name} (Notion not connected)`;
+      else if (!ctx.project?.settings.notionParentPageId) publishNote = `Saved in ${BRAND.name} (no Notion parent page configured)`;
       else {
         const res = await this.registry.get('notion.createPage')!.execute({ title, markdown: output.markdown, icon: '📘' }, ctx);
         const o = res.output as { pageId: string; url: string };

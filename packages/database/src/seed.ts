@@ -100,7 +100,7 @@ async function main() {
   const engineer = await user('engineer@forgeline.dev', 'Eli Engineer', hash);
   const lead = await user('lead@forgeline.dev', 'Lee Release-Lead', hash);
 
-  const demo = await org('forgeline-demo', 'Forgeline Demo', true);
+  const demo = await org('forgeline-demo', "Vanshil's SDLC Demo", true);
   const acme = await org('acme-engineering', 'Acme Engineering', false);
   for (const [o, u, role] of [
     [demo, admin, 'OWNER'],
@@ -168,7 +168,7 @@ async function main() {
       name: 'Core Platform',
       key: 'CORE',
       slug: 'core-platform',
-      description: 'Connect GitHub, Jira and your CI/CD to start delivering with Forgeline.',
+      description: "Connect GitHub, Jira and your CI/CD to start delivering with Vanshil's SDLC.",
       settings: { jiraProjectKey: 'CORE' } as Prisma.InputJsonValue,
     },
     update: {},
@@ -251,7 +251,7 @@ async function main() {
 
   console.log('Seed complete.');
   console.log(`  Users: admin@forgeline.dev (owner), lead@forgeline.dev (admin), engineer@forgeline.dev (member) — password: ${PASSWORD}`);
-  console.log('  Workspaces: "Forgeline Demo" (simulated runs only) and "Acme Engineering" (real integrations).');
+  console.log(`  Workspaces: "Vanshil's SDLC Demo" (simulated runs only) and "Acme Engineering" (real integrations).`);
 }
 
 main()

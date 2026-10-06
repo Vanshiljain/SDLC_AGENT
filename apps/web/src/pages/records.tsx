@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { CheckCheck, ExternalLink, FileText, GitPullRequestArrow, ListChecks, Pencil, Plus, Save } from 'lucide-react';
-import { DOCUMENT_TYPES, TASK_PRIORITIES, TASK_STATUSES } from '@forgeline/shared';
+import { BRAND, DOCUMENT_TYPES, TASK_PRIORITIES, TASK_STATUSES } from '@forgeline/shared';
 import { api } from '@/api/client';
 import { qk, useAction, useDocument, useDocuments, useProjects, useQaRuns, useReview, useReviews, useTasks } from '@/api/queries';
 import type { QaRun, ReviewFinding, Task } from '@/api/types';
@@ -53,7 +53,7 @@ export function TasksPage() {
     <Page wide>
       <PageHeader
         title="Tasks"
-        description="Work items created by flows and people. When Jira or Trello is connected, tickets live there and are mirrored here; otherwise Forgeline tracks them natively."
+        description="Work items created by flows and people. When Jira or Trello is connected, tickets live there and are mirrored here; otherwise Vanshil’s SDLC tracks them natively."
         actions={
           <>
             <ProjectFilter value={projectId} onChange={(v) => (setProjectId(v), setPage(1))} />
@@ -113,9 +113,7 @@ export function TasksPage() {
                         </a>
                       )}
                     </div>
-                    <div className="text-[11.5px] text-fg-subtle">
-                      {t.externalProvider ? providerName(t.externalProvider) : 'Forgeline'}
-                    </div>
+                    <div className="text-[11.5px] text-fg-subtle">{t.externalProvider ? providerName(t.externalProvider) : BRAND.name}</div>
                   </Td>
                   <Td className="hidden text-fg-muted md:table-cell">{t.project?.name ?? '—'}</Td>
                   <Td>

@@ -9,7 +9,7 @@ import {
   type TechnicalSpec,
 } from '@forgeline/ai';
 import { defineLooseTool } from '@forgeline/integrations';
-import { ToolError } from '@forgeline/shared';
+import { BRAND, ToolError } from '@forgeline/shared';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { ToolRegistry } from '../tools/tool-registry.service';
 import { AgentTaskRunner, forPrompt } from './agent-task-runner.service';
@@ -399,7 +399,7 @@ export class PlanningTools implements OnModuleInit {
             summarize: (d) => d.title,
           });
           const title = input.ticketKey && !output.title.includes(input.ticketKey) ? `${output.title} (${input.ticketKey})` : output.title;
-          const body = `${output.body}\n\n---\n_Generated and validated by Forgeline. Sandbox validation: ${(cg.validation as { summary?: string } | null)?.summary ?? 'not run'}._`;
+          const body = `${output.body}\n\n---\n_Generated and validated by ${BRAND.name}. Sandbox validation: ${(cg.validation as { summary?: string } | null)?.summary ?? 'not run'}._`;
           return {
             output: { title: title.slice(0, 250), body },
             summary: `PR title: ${title}`,

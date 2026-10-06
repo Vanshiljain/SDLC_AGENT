@@ -1,6 +1,6 @@
 # Setup
 
-This guide covers running Forgeline locally, with either the full Docker stack or a hot-reload
+This guide covers running Vanshil's SDLC locally, with either the full Docker stack or a hot-reload
 development setup, and every configuration variable.
 
 ## Requirements
@@ -80,7 +80,7 @@ state, so you can inspect what was "created" at `http://localhost:4010/__state`.
 
 ## AI provider
 
-Without `OPENAI_API_KEY`, Forgeline still works with these limits:
+Without `OPENAI_API_KEY`, Vanshil's SDLC still works with these limits:
 
 - Flows run and integrations work. Steps that need a model fail clearly with
   `AI provider is not configured`; they are never faked.

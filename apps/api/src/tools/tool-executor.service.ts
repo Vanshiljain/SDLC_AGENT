@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Prisma } from '@forgeline/database';
 import { isUniqueViolation } from '@forgeline/database';
-import { ToolError, type ExecutionMode, type IntegrationProvider, type Permission } from '@forgeline/shared';
+import { BRAND, ToolError, type ExecutionMode, type IntegrationProvider, type Permission } from '@forgeline/shared';
 import type { AnySdlcTool, ProjectContext, ToolExecutionContext, ToolExecutionResult, ToolLogger } from '@forgeline/integrations';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AuthorizationService } from '../rbac/authorization.service';
@@ -143,7 +143,7 @@ export class ToolExecutor {
           organizationId: inv.organizationId,
           actorId: inv.userId,
           actorType: 'AGENT',
-          actorLabel: 'Forgeline agent',
+          actorLabel: `${BRAND.name} agent`,
           action: `tool.${tool.name}`,
           resourceType: 'tool',
           resourceId: ledger.id,
@@ -393,7 +393,7 @@ export class ToolExecutor {
         organizationId: inv.organizationId,
         actorId: inv.userId,
         actorType: 'AGENT',
-        actorLabel: 'Forgeline agent',
+        actorLabel: `${BRAND.name} agent`,
         action: `tool.${tool.name}`,
         resourceType: primary?.type?.toLowerCase() ?? 'tool',
         resourceId: primary?.key ?? primary?.externalId ?? ledgerId,

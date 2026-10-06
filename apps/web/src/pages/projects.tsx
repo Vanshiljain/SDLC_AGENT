@@ -66,7 +66,7 @@ export function ProjectsPage() {
     <Page wide>
       <PageHeader
         title="Projects"
-        description="Services Forgeline delivers: repositories, environments, ticket and CI/CD settings, and who can do what."
+        description="Services Vanshil’s SDLC delivers: repositories, environments, ticket and CI/CD settings, and who can do what."
         actions={
           can('project:create') && (
             <Button variant="primary" icon={<Plus className="size-3.5" />} onClick={() => setCreating(true)}>

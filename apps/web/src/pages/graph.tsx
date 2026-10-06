@@ -41,6 +41,7 @@ import { Card, Skeleton } from '@/components/ui/primitives';
 import { EmptyState, ErrorState } from '@/components/ui/page';
 import { StatusDot } from '@/components/ui/status';
 import { layout } from '@/features/flow-graph';
+import { BRAND } from '@forgeline/shared';
 
 /** Visual identity per entity type in the Engineering Graph. */
 const TYPES: Record<string, { label: string; icon: LucideIcon; color: string }> = {
@@ -268,7 +269,7 @@ export function GraphPage() {
                   onClick={() => navigate(selected.link!)}
                   className="text-[12px] font-medium text-accent hover:underline"
                 >
-                  Open in Forgeline →
+                  Open in {BRAND.name} →
                 </button>
               )}
               {selected.url && (

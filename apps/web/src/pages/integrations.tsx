@@ -68,7 +68,7 @@ export function IntegrationsPage() {
     <Page wide>
       <PageHeader
         title="Integrations"
-        description="Forgeline acts in your tools on your behalf. Credentials are verified before they are stored, encrypted at rest, and never sent to the browser."
+        description="Vanshil’s SDLC acts in your tools on your behalf. Credentials are verified before they are stored, encrypted at rest, and never sent to the browser."
       />
       {providers.error || integrations.error ? (
         <ErrorState error={providers.error ?? integrations.error} onRetry={() => (void providers.refetch(), void integrations.refetch())} />
@@ -296,7 +296,7 @@ function ConnectDialog({ provider: p, onClose }: { provider: ProviderInfo; onClo
         </p>
       ) : current.type === 'OAUTH2' ? (
         <p className="text-[13px] text-fg-muted">
-          You’ll be redirected to {p.name} to approve access. Forgeline stores the resulting tokens encrypted and refreshes them
+          You’ll be redirected to {p.name} to approve access. Vanshil’s SDLC stores the resulting tokens encrypted and refreshes them
           automatically.
         </p>
       ) : (
@@ -369,7 +369,7 @@ function WebhookDialog({ integration: i, onClose }: { integration: Integration; 
           </Field>
         ) : (
           <p className="text-[13px] text-fg-muted">
-            Forgeline will create an endpoint and a signing secret for you to configure in {providerName(i.provider)}.
+            Vanshil’s SDLC will create an endpoint and a signing secret for you to configure in {providerName(i.provider)}.
           </p>
         )
       ) : (

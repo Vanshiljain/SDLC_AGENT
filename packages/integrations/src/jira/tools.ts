@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ToolError } from '@forgeline/shared';
+import { BRAND, ToolError } from '@forgeline/shared';
 import { defineTool, idempotencyMarker, type AnySdlcTool, type ToolExecutionContext } from '../core/tool';
 import { demoNumber } from '../core/helpers';
 import { adfToText } from './adf';
@@ -177,7 +177,7 @@ export const jiraAddComment = defineTool({
     const { comments } = await jira.listComments(input.key);
     const dup = comments.find((c) => adfToText(c.body).includes(marker));
     if (dup) return { output: { key: input.key, commentId: dup.id }, summary: `Comment already on ${input.key}` };
-    const c = await jira.addComment(input.key, `${input.body}\n\n_Forgeline · ${marker}_`);
+    const c = await jira.addComment(input.key, `${input.body}\n\n_${BRAND.name} · ${marker}_`);
     return { output: { key: input.key, commentId: c.id }, summary: `Commented on ${input.key}` };
   },
   async simulate(input) {

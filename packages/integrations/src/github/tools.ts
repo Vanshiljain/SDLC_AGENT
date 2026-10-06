@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ToolError } from '@forgeline/shared';
+import { BRAND, ToolError } from '@forgeline/shared';
 import { defineTool, idempotencyMarker, type AnySdlcTool } from '../core/tool';
 import { demoNumber, resolveRepo, truncate } from '../core/helpers';
 
@@ -384,7 +384,12 @@ export const githubCreatePullRequest = defineTool({
     const repo = resolveRepo(input.repository, ctx);
     const gh = await ctx.clients.github();
     await gh.updatePullRequest(repo.owner, repo.name, output.number, { state: 'closed' });
-    await gh.createIssueComment(repo.owner, repo.name, output.number, 'Closed by Forgeline: the run that opened this PR was rolled back.');
+    await gh.createIssueComment(
+      repo.owner,
+      repo.name,
+      output.number,
+      `Closed by ${BRAND.name}: the run that opened this PR was rolled back.`,
+    );
     return { summary: `Closed PR #${output.number}` };
   },
   async simulate(input, ctx) {

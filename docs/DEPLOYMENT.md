@@ -1,6 +1,6 @@
 # Deployment
 
-Forgeline runs as three stateless services (**web**, **api** and **worker**) on top of
+Vanshil's SDLC runs as three stateless services (**web**, **api** and **worker**) on top of
 PostgreSQL, Redis and Qdrant. This guide covers the images, a single-host Compose deployment,
 scaling out, and day-2 operations. Read [Security](SECURITY.md#hardening-checklist-production)
 before exposing an installation.

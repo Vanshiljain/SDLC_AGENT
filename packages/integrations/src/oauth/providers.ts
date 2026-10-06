@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { ToolError, type IntegrationProvider } from '@forgeline/shared';
+import { BRAND, ToolError, type IntegrationProvider } from '@forgeline/shared';
 import { HttpClient } from '../core/http';
 
 /**
@@ -102,7 +102,7 @@ export function buildAuthorizeUrl(
       const c = params.config as { apiKey: string };
       const u = new URL('/1/authorize', endpoints.trelloWebUrl);
       u.searchParams.set('expiration', 'never');
-      u.searchParams.set('name', params.appName ?? 'Forgeline');
+      u.searchParams.set('name', params.appName ?? BRAND.name);
       u.searchParams.set('scope', 'read,write');
       u.searchParams.set('response_type', 'token');
       u.searchParams.set('key', c.apiKey);

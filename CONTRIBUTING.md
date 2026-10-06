@@ -1,4 +1,4 @@
-# Contributing to Forgeline
+# Contributing to Vanshil's SDLC
 
 Thank you for helping. This page explains how to propose a change. To get a working environment
 and learn the code conventions, see [docs/SETUP.md](docs/SETUP.md) and

@@ -1,6 +1,6 @@
 # Workflow engine
 
-Every action Forgeline takes runs as a **Run** of a **Flow**. The engine makes Runs durable (they
+Every action Vanshil's SDLC takes runs as a **Run** of a **Flow**. The engine makes Runs durable (they
 survive crashes and deploys), observable (every transition is an event and a log line), and
 governed (gates, permissions, idempotency).
 
